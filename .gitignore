@@ -1,0 +1,27 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+Recordings/
+
+# Generated IDE and solution files
+*.csproj
+*.sln
+*.slnx
+*.unityproj
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.tmp
+
+# Visual Studio Code workspace settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
