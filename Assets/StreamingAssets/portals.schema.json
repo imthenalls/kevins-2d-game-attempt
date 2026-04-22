@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/portals.schema.json",
+  "title": "Portal Database",
+  "type": "object",
+  "required": ["version", "portals"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "portals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/portal"
+      }
+    }
+  },
+  "$defs": {
+    "vector3": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "z": { "type": "number" }
+      }
+    },
+    "metadataEntry": {
+      "type": "object",
+      "required": ["key", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "value": { "type": "string" }
+      }
+    },
+    "destination": {
+      "type": "object",
+      "required": ["scene", "useSpawnPoint", "spawnId", "position", "rotationEuler"],
+      "additionalProperties": false,
+      "properties": {
+        "scene": { "type": "string" },
+        "useSpawnPoint": { "type": "boolean" },
+        "spawnId": { "type": "string" },
+        "position": { "$ref": "#/$defs/vector3" },
+        "rotationEuler": { "$ref": "#/$defs/vector3" }
+      }
+    },
+    "portal": {
+      "type": "object",
+      "required": ["id", "destination"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "destination": { "$ref": "#/$defs/destination" },
+        "metadata": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/metadataEntry" }
+        }
+      }
+    }
+  }
+}

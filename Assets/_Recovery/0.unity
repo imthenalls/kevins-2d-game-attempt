@@ -1,5 +1,3 @@
-%YAML 1.1
-%TAG !u! tag:unity3d.com,2011:
 --- !u!29 &1
 OcclusionCullingSettings:
   m_ObjectHideFlags: 0
@@ -567,20 +565,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &457561332
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 457561329}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5e035929f573c64ba73df032c92ad80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomTransitionTrigger2D
-  targetRoom: {fileID: 1521834110}
-  targetSpawnPoint: {fileID: 1436648486}
 --- !u!61 &457561333
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1341,20 +1325,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1521834111}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
---- !u!114 &1024740068
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1024740066}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5e035929f573c64ba73df032c92ad80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomTransitionTrigger2D
-  targetRoom: {fileID: 0}
-  targetSpawnPoint: {fileID: 0}
 --- !u!61 &1024740069
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1477,24 +1447,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1136316417
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1136316416}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3b8b804cdb2cf7498ab7a2ce985c0b3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomManager2D
-  player: {fileID: 783276205}
-  startingRoom: {fileID: 1521834110}
-  keepOnlyCurrentRoomActive: 1
-  transitionCooldown: 0.15
-  enforce2DDepth: 1
-  playerZ: 0
 --- !u!4 &1136316418
 Transform:
   m_ObjectHideFlags: 0
@@ -1548,23 +1500,6 @@ Transform:
   - {fileID: 457561330}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1410325712
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1410325710}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2020dc5e5e2e6848aa14e80942b052b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Room2D
-  roomId: room_2
-  defaultSpawnPoint: {fileID: 0}
-  mapGridPosition: {x: 0, y: 0}
-  cameraAnchor: {fileID: 0}
-  roomWorldSize: {x: 16, y: 9}
 --- !u!1 &1436648485
 GameObject:
   m_ObjectHideFlags: 0
@@ -1599,20 +1534,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1521834111}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1436648487
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1436648485}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5e035929f573c64ba73df032c92ad80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomTransitionTrigger2D
-  targetRoom: {fileID: 1410325712}
-  targetSpawnPoint: {fileID: 457561330}
 --- !u!61 &1436648488
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1826,23 +1747,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1521834110
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1521834109}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2020dc5e5e2e6848aa14e80942b052b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Room2D
-  roomId: room_2
-  defaultSpawnPoint: {fileID: 0}
-  mapGridPosition: {x: 0, y: 0}
-  cameraAnchor: {fileID: 0}
-  roomWorldSize: {x: 16, y: 9}
 --- !u!4 &1521834111
 Transform:
   m_ObjectHideFlags: 0
@@ -2169,20 +2073,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1410325711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
---- !u!114 &1899480667
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1899480665}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5e035929f573c64ba73df032c92ad80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomTransitionTrigger2D
-  targetRoom: {fileID: 0}
-  targetSpawnPoint: {fileID: 0}
 --- !u!61 &1899480668
 BoxCollider2D:
   m_ObjectHideFlags: 0

@@ -1,5 +1,11 @@
 # AGENT.md
 
+## Safety Rules
+
+1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.
+2. Default to script-only changes for gameplay updates.
+3. If a task would require scene edits, stop and ask for confirmation first.
+
 ## Game Basics
 
 This project is a **2D top-down** game.

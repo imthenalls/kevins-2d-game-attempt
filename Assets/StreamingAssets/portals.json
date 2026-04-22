@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "portals": [
+    {
+      "id": "portal_a",
+      "destination": {
+        "scene": "NewScene",
+        "useSpawnPoint": false,
+        "spawnId": "",
+        "usePortalExitOffset": true,
+        "destinationPortalId": "portal_b",
+        "exitSide": "Left",
+        "exitDistance": 1.2,
+        "position": { "x": -41.0, "y": 0.2, "z": 0.0 },
+        "rotationEuler": { "x": 0.0, "y": 0.0, "z": 0.0 }
+      },
+      "metadata": [
+        { "key": "biome", "value": "wetlands" },
+        { "key": "requiresKey", "value": "false" }
+      ]
+    },
+    {
+      "id": "portal_b",
+      "destination": {
+        "scene": "NewScene",
+        "useSpawnPoint": false,
+        "spawnId": "",
+        "usePortalExitOffset": true,
+        "destinationPortalId": "portal_a",
+        "exitSide": "Right",
+        "exitDistance": 1.2,
+        "position": { "x": -13.0, "y": 0.2, "z": 0.0 },
+        "rotationEuler": { "x": 0.0, "y": 0.0, "z": 180.0 }
+      },
+      "metadata": [
+        { "key": "biome", "value": "wetlands" }
+      ]
+    }
+  ]
+}
