@@ -13,6 +13,9 @@ public class PlayerController2D : MonoBehaviour
 
     private Rigidbody2D rb;
     private Vector2 moveInput;
+    private bool movementEnabled = true;
+
+    public bool MovementEnabled => movementEnabled;
 
     private void Awake()
     {
@@ -31,6 +34,12 @@ public class PlayerController2D : MonoBehaviour
 
     private void Update()
     {
+        if (!movementEnabled)
+        {
+            moveInput = Vector2.zero;
+            return;
+        }
+
 #if ENABLE_INPUT_SYSTEM
         Vector2 input = Vector2.zero;
 
@@ -69,6 +78,16 @@ public class PlayerController2D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        rb.linearVelocity = moveInput * moveSpeed;
+        rb.linearVelocity = movementEnabled ? moveInput * moveSpeed : Vector2.zero;
+    }
+
+    public void SetMovementEnabled(bool enabled)
+    {
+        movementEnabled = enabled;
+        if (!movementEnabled)
+        {
+            moveInput = Vector2.zero;
+            rb.linearVelocity = Vector2.zero;
+        }
     }
 }

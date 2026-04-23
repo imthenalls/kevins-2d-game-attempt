@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "dialogues": [
+    {
+      "dialogueId": "npc_guard_intro",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Gate Guard",
+          "text": "State your business, traveler.",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "Just passing through.",
+              "nextNodeId": "pass",
+              "endConversation": false
+            },
+            {
+              "text": "None of your concern.",
+              "nextNodeId": "rude",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "pass",
+          "speakerName": "Gate Guard",
+          "text": "Then keep moving and stay out of trouble.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "rude",
+          "speakerName": "Gate Guard",
+          "text": "Watch your tone. Move along.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    }
+  ]
+}

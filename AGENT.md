@@ -36,3 +36,4 @@ This project is a **2D top-down** game.
 ### Notes
 - No jump logic is needed for this controller.
 - Movement is normalized so diagonal speed is not faster than straight movement.
+- Do not add on-screen gameplay instructions or control hints for the player. Interaction and mechanics should be discoverable through play without hand-holding.

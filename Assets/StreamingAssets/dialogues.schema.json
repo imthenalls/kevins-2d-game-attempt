@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/dialogues.schema.json",
+  "title": "Dialogue Database",
+  "type": "object",
+  "required": ["version", "dialogues"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "dialogues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dialogueGraph"
+      }
+    }
+  },
+  "$defs": {
+    "choice": {
+      "type": "object",
+      "required": ["text", "nextNodeId", "endConversation"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string" },
+        "nextNodeId": { "type": "string" },
+        "endConversation": { "type": "boolean" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "speakerName", "text", "nextNodeId", "endConversation", "choices"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "speakerName": { "type": "string" },
+        "text": { "type": "string" },
+        "nextNodeId": { "type": "string" },
+        "endConversation": { "type": "boolean" },
+        "choices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/choice" }
+        }
+      }
+    },
+    "dialogueGraph": {
+      "type": "object",
+      "required": ["dialogueId", "startNodeId", "nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "dialogueId": { "type": "string", "minLength": 1 },
+        "startNodeId": { "type": "string", "minLength": 1 },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/node" }
+        }
+      }
+    }
+  }
+}
