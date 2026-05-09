@@ -6,6 +6,7 @@ public class NpcController : MonoBehaviour
     [Header("Identity")]
     [SerializeField] private string npcId = "npc";
     [SerializeField] private string displayName = "NPC";
+    [SerializeField] private NpcType npcType = NpcType.Generic;
 
     [Header("Interaction")]
     [SerializeField] private NpcBehaviorState behaviorState = NpcBehaviorState.Idle;
@@ -14,6 +15,7 @@ public class NpcController : MonoBehaviour
 
     public string NpcId => npcId;
     public string DisplayName => string.IsNullOrEmpty(displayName) ? gameObject.name : displayName;
+    public NpcType NpcType => npcType;
     public NpcBehaviorState BehaviorState => behaviorState;
     public float InteractionRange => interactionRange;
     public Vector3 InteractionPosition => interactionPoint != null ? interactionPoint.position : transform.position;
@@ -45,4 +47,12 @@ public enum NpcBehaviorState
     Idle,
     Talking,
     Disabled
+}
+
+public enum NpcType
+{
+    Generic,
+    QuestGiver,
+    Vendor,
+    Trainer,
 }
