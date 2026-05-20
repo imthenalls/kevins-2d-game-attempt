@@ -96,7 +96,11 @@ public class PortalManager : MonoBehaviour
         pendingFallbackPosition = portal.destination.position.ToVector3();
         pendingRotationEuler = portal.destination.rotationEuler.ToVector3();
 
-        SceneManager.LoadScene(destinationScene);
+        if (SceneLoader.Instance != null)
+            SceneLoader.Instance.LoadScene(destinationScene);
+        else
+            SceneManager.LoadScene(destinationScene);
+
         return true;
     }
 
