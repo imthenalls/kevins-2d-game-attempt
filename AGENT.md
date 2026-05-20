@@ -15,6 +15,8 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/FUNCTIONS.md](Documents/FUNCTIONS.md) | Per-script function reference |
 | [Documents/DEVNOTES.md](Documents/DEVNOTES.md) | Known issues and fixes |
 | [Documents/TODO.md](Documents/TODO.md) | Planned features and backlog |
+| [Documents/SAVE_SYSTEM.md](Documents/SAVE_SYSTEM.md) | Save/load system, setup steps, extending save data |
+| [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
 
 ---
 
@@ -23,6 +25,12 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.
 2. Default to script-only changes for gameplay updates.
 3. If a task would require scene edits, stop and ask for confirmation first.
+
+## Documentation Rules
+
+1. Whenever a new feature or system is implemented, create a corresponding `.md` file in the `Documents/` folder explaining what it does and how to set it up in Unity.
+2. The document must cover: what components/scripts to add, which GameObjects they go on, how to wire them up in the Inspector, and any required scene setup steps.
+3. After creating the document, add a row for it in the **Reference Documents** table at the top of this file.
 
 ## Game Basics
 

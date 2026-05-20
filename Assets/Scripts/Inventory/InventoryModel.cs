@@ -24,6 +24,12 @@ public class InventoryModel
     public InventorySlot GetSlot(int index) => slots[index];
 
     /// <summary>
+    /// Forces all UI subscribers to re-render from current slot state.
+    /// Call after directly setting slots (e.g. on save load).
+    /// </summary>
+    public void ForceRefresh() => OnChanged?.Invoke();
+
+    /// <summary>
     /// Adds items to the inventory. Returns the leftover amount that did not fit.
     /// </summary>
     public int AddItem(ItemData item, int amount = 1)

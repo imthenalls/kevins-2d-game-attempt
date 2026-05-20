@@ -116,6 +116,31 @@ public class QuestManager : MonoBehaviour
         public int count;
     }
 
+    /// <summary>
+    /// Restores active quest instances from a save file entry list.
+    /// Uses QuestInstance.FromSave so onEnterActions are NOT re-fired.
+    /// Called by SaveManager on load.
+    /// </summary>
+    public void LoadSaveData(List<QuestSaveEntry> entries)
+    {
+        _activeQuests.Clear();
+        foreach (var entry in entries)
+        {
+            if (!_allGraphs.TryGetValue(entry.questId, out var graph))
+            {
+                Debug.LogWarning($"[QuestManager] Quest '{entry.questId}' not found during load — skipping.");
+                continue;
+            }
+
+            var counts = new Dictionary<string, int>();
+            foreach (var oc in entry.objectiveCounts)
+                counts[oc.objectiveId] = oc.count;
+
+            _activeQuests.Add(QuestInstance.FromSave(graph, entry.activeNodeIds, counts));
+        }
+        Debug.Log($"[QuestManager] Restored {_activeQuests.Count} quest(s) from save.");
+    }
+
     /// <summary>Returns serializable save data for all active quests.</summary>
     public List<QuestSaveEntry> GetSaveData()
     {

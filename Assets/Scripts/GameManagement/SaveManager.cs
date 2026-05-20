@@ -1,0 +1,203 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+/// <summary>
+/// Singleton that handles writing and reading the save file.
+///
+/// Scene setup: add to a persistent GameObject in your bootstrap scene
+/// (alongside WorldStateDB, QuestManager, SceneLoader).
+///
+/// Usage:
+///   SaveManager.Instance.Save();
+///   SaveManager.Instance.Load();
+///   bool exists = SaveManager.Instance.HasSave();
+/// </summary>
+[DisallowMultipleComponent]
+public class SaveManager : MonoBehaviour
+{
+    public static SaveManager Instance { get; private set; }
+
+    private const string FileName = "save.json";
+    private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
+
+    // ── Unity lifecycle ───────────────────────────────────────────────────────
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    // ── Public API ────────────────────────────────────────────────────────────
+
+    public bool HasSave() => File.Exists(SavePath);
+
+    /// <summary>Collects all game state and writes it to disk as JSON.</summary>
+    public void Save()
+    {
+        var data = new SaveData();
+        data.currentScene = SceneManager.GetActiveScene().name;
+
+        // Player position + stats
+        var player = FindFirstObjectByType<PlayerController2D>();
+        if (player != null)
+        {
+            data.playerX = player.transform.position.x;
+            data.playerY = player.transform.position.y;
+
+            if (player.TryGetComponent<EntityStats>(out var stats))
+            {
+                data.playerHp    = stats.Hp;
+                data.playerMp    = stats.Mp;
+                data.playerMaxHp = stats.MaxHp;
+                data.playerMaxMp = stats.MaxMp;
+            }
+        }
+
+        // World facts
+        if (WorldStateDB.Instance != null)
+        {
+            foreach (var kv in WorldStateDB.Instance.GetSnapshot())
+                data.worldFacts.Add(SerializeFact(kv.Key, kv.Value));
+        }
+
+        // Active quests
+        if (QuestManager.Instance != null)
+            data.activeQuests = QuestManager.Instance.GetSaveData();
+
+        // Inventory — only occupied slots, keyed by asset name
+        var inv = InventoryUI.Model;
+        if (inv != null)
+        {
+            for (int i = 0; i < inv.SlotCount; i++)
+            {
+                var slot = inv.GetSlot(i);
+                if (!slot.IsEmpty)
+                    data.inventorySlots.Add(new InventorySlotEntry
+                    {
+                        slotIndex     = i,
+                        itemAssetName = slot.item.name,
+                        quantity      = slot.quantity,
+                    });
+            }
+        }
+
+        File.WriteAllText(SavePath, JsonUtility.ToJson(data, prettyPrint: true));
+        Debug.Log($"[SaveManager] Saved → {SavePath}");
+    }
+
+    /// <summary>
+    /// Reads the save file, restores world-state and quest data immediately,
+    /// then loads the saved scene and restores the player + inventory once it is ready.
+    /// </summary>
+    public void Load()
+    {
+        if (!HasSave())
+        {
+            Debug.LogWarning("[SaveManager] No save file found.");
+            return;
+        }
+
+        var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
+
+        // Restore world facts before the scene loads so quest conditions are
+        // already correct when newly-placed triggers evaluate on Awake/Start.
+        if (WorldStateDB.Instance != null)
+        {
+            var snapshot = new Dictionary<string, object>();
+            foreach (var fe in data.worldFacts)
+                snapshot[fe.key] = DeserializeFact(fe);
+            WorldStateDB.Instance.LoadSnapshot(snapshot);
+        }
+
+        // Restore quest instances (no onEnterActions re-fired)
+        QuestManager.Instance?.LoadSaveData(data.activeQuests);
+
+        // Everything that depends on scene objects is deferred until after load
+        Action callback = null;
+        callback = () =>
+        {
+            SceneLoader.Instance.OnLoadComplete -= callback;
+            RestoreSceneState(data);
+        };
+        SceneLoader.Instance.OnLoadComplete += callback;
+        SceneLoader.Instance.LoadScene(data.currentScene);
+    }
+
+    // ── Scene-dependent restore ───────────────────────────────────────────────
+
+    private void RestoreSceneState(SaveData data)
+    {
+        // Player position + stats
+        var player = FindFirstObjectByType<PlayerController2D>();
+        if (player != null)
+        {
+            player.transform.position = new Vector3(data.playerX, data.playerY, 0f);
+
+            if (player.TryGetComponent<EntityStats>(out var stats))
+            {
+                stats.Configure(data.playerMaxHp, data.playerMaxMp);
+                stats.SetHp(data.playerHp);
+                stats.SetMp(data.playerMp);
+            }
+        }
+
+        // Inventory
+        var inv = InventoryUI.Model;
+        if (inv != null)
+        {
+            // Clear all slots first
+            for (int i = 0; i < inv.SlotCount; i++)
+                inv.GetSlot(i).Clear();
+
+            // Restore occupied slots
+            // Items must live in Assets/Resources/Items/<assetName>.asset
+            foreach (var entry in data.inventorySlots)
+            {
+                var item = Resources.Load<ItemData>($"Items/{entry.itemAssetName}");
+                if (item == null)
+                {
+                    Debug.LogWarning($"[SaveManager] Item not found at Resources/Items/{entry.itemAssetName}");
+                    continue;
+                }
+                inv.GetSlot(entry.slotIndex).Set(item, entry.quantity);
+            }
+
+            inv.ForceRefresh();
+        }
+
+        Debug.Log("[SaveManager] Scene state restored.");
+    }
+
+    // ── Serialization helpers ─────────────────────────────────────────────────
+
+    private static FactEntry SerializeFact(string key, object value)
+    {
+        return value switch
+        {
+            bool  b => new FactEntry { key = key, value = b.ToString(), type = "bool" },
+            int   i => new FactEntry { key = key, value = i.ToString(), type = "int" },
+            float f => new FactEntry { key = key, value = f.ToString(System.Globalization.CultureInfo.InvariantCulture), type = "float" },
+            _       => new FactEntry { key = key, value = value?.ToString() ?? "", type = "string" },
+        };
+    }
+
+    private static object DeserializeFact(FactEntry fe)
+    {
+        return fe.type switch
+        {
+            "bool"  => bool.Parse(fe.value),
+            "int"   => int.Parse(fe.value),
+            "float" => float.Parse(fe.value, System.Globalization.CultureInfo.InvariantCulture),
+            _       => fe.value,
+        };
+    }
+}

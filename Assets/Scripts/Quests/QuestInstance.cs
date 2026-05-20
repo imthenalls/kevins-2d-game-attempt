@@ -25,6 +25,32 @@ public class QuestInstance
         EnterNode(graph.startNodeId);
     }
 
+    // Private constructor used by FromSave — builds the node map but does NOT
+    // call EnterNode so that onEnterActions are not re-fired on load.
+    private QuestInstance(QuestGraphData graph, bool _restoreMode)
+    {
+        Graph = graph;
+        foreach (var node in graph.nodes)
+            _nodeMap[node.id] = node;
+    }
+
+    /// <summary>
+    /// Reconstructs a QuestInstance from saved state without firing onEnterActions.
+    /// Called by QuestManager.LoadSaveData.
+    /// </summary>
+    public static QuestInstance FromSave(
+        QuestGraphData graph,
+        System.Collections.Generic.List<string> nodeIds,
+        System.Collections.Generic.Dictionary<string, int> counts)
+    {
+        var inst = new QuestInstance(graph, _restoreMode: true);
+        foreach (var id in nodeIds)
+            inst._activeNodeIds.Add(id);
+        foreach (var kv in counts)
+            inst._objectiveCounts[kv.Key] = kv.Value;
+        return inst;
+    }
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
