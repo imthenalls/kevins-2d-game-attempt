@@ -1,5 +1,23 @@
 # AGENT.md
 
+## Reference Documents
+
+Full documentation for each system lives in the `Documents/` folder. Read the relevant file before making changes to that system.
+
+| Document | Contents |
+|---|---|
+| [Documents/PLAYER.md](Documents/PLAYER.md) | Player components, movement, interaction, stats UI |
+| [Documents/STATS.md](Documents/STATS.md) | EntityStats HP/MP system, events, and methods |
+| [Documents/NPC.md](Documents/NPC.md) | NPC controller, behaviors, dialogue, enemy setup |
+| [Documents/INVENTORY.md](Documents/INVENTORY.md) | Inventory model, UI, item data, canvas setup |
+| [Documents/PORTAL.md](Documents/PORTAL.md) | Portal trigger, manager, spawn points, JSON schema |
+| [Documents/QUEST_SYSTEM.md](Documents/QUEST_SYSTEM.md) | Quest graph architecture, JSON schema, runtime flow |
+| [Documents/FUNCTIONS.md](Documents/FUNCTIONS.md) | Per-script function reference |
+| [Documents/DEVNOTES.md](Documents/DEVNOTES.md) | Known issues and fixes |
+| [Documents/TODO.md](Documents/TODO.md) | Planned features and backlog |
+
+---
+
 ## Safety Rules
 
 1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.
@@ -37,3 +55,49 @@ This project is a **2D top-down** game.
 - No jump logic is needed for this controller.
 - Movement is normalized so diagonal speed is not faster than straight movement.
 - Do not add on-screen gameplay instructions or control hints for the player. Interaction and mechanics should be discoverable through play without hand-holding.
+
+### Common Issues
+- Not moving: script not attached, missing `Rigidbody2D`, or speed is 0
+- Falling: gravity scale is not 0
+- Spinning: rotation not frozen
+- Fast diagonal movement: input not normalized
+
+See [Documents/PLAYER.md](Documents/PLAYER.md) for full player system documentation.
+
+## HP/MP System
+
+### Overview
+- `EntityStats.cs` — shared by the player and enemy NPCs. Tracks HP and MP with events.
+- `PlayerStatsUI.cs` — listens to `EntityStats` events and drives two `Image` fills in a Canvas.
+
+### Player
+- `PlayerController2D` has `[RequireComponent(typeof(EntityStats))]`, so the component is always present.
+- Configure `Max Hp`, `Starting Hp`, `Max Mp`, `Starting Mp` in the Inspector.
+
+### Enemy NPCs
+- Set `Npc Type = Enemy` on any `NpcController`. `Awake()` automatically calls `AddComponent<EntityStats>()` and `Configure(enemyMaxHp)`.
+- Tune `Enemy Max Hp` per prefab in the Inspector.
+- Access via `npcController.Stats` (returns `null` for non-enemy NPCs).
+
+### Key Methods
+| Method | Description |
+|---|---|
+| `TakeDamage(int)` | Reduces HP; fires `OnDeath` when HP reaches 0 |
+| `Heal(int)` | Restores HP up to `maxHp` |
+| `SpendMp(int)` | Returns `true` and deducts cost; `false` if insufficient MP |
+| `RestoreMp(int)` | Restores MP up to `maxMp` |
+| `Configure(int hp, int mp)` | Sets stats at runtime after `AddComponent` |
+| `IncreaseMaxHp/Mp(int)` | Scales max stat (e.g. on level-up) |
+
+### Events
+- `OnHpChanged(int current, int max)` — fired on any HP change
+- `OnMpChanged(int current, int max)` — fired on any MP change
+- `OnDeath` — fired once when HP hits 0
+
+### UI Setup
+1. Create a Canvas (Screen Space – Overlay).
+2. For each bar: add a background `Image` and a child "Fill" `Image` with `Image Type = Filled`, `Fill Method = Horizontal`.
+3. Assign the Fill Images (not the backgrounds) to `hpFill` / `mpFill` on `PlayerStatsUI`.
+4. Assign `PlayerStats` or leave null — it will auto-find via `FindFirstObjectByType<EntityStats>()`.
+
+See [Documents/STATS.md](Documents/STATS.md) for full stats system documentation.

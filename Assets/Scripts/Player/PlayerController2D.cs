@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 #endif
 
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(EntityStats))]
 public class PlayerController2D : MonoBehaviour
 {
     [Header("Top-Down Movement")]

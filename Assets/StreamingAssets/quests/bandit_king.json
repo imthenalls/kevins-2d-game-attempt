@@ -1,0 +1,102 @@
+{
+  "questId": "bandit_king",
+  "startNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "objectives": [
+        {
+          "id": "obj_talk_sheriff",
+          "eventType": "NpcTalkedTo",
+          "targetId": "sheriff",
+          "requiredCount": 1
+        }
+      ],
+      "onEnterActions": [],
+      "transitions": [
+        {
+          "targetNodeId": "investigation",
+          "automatic": false,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_talk_sheriff" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "investigation",
+      "objectives": [
+        {
+          "id": "obj_kill",
+          "eventType": "EnemyKilled",
+          "targetId": "bandit_king",
+          "requiredCount": 1
+        },
+        {
+          "id": "obj_pay",
+          "eventType": "NpcTalkedTo",
+          "targetId": "bandit_king",
+          "requiredCount": 1
+        },
+        {
+          "id": "obj_proof",
+          "eventType": "ItemCollected",
+          "targetId": "evidence_letter",
+          "requiredCount": 1
+        }
+      ],
+      "onEnterActions": [],
+      "transitions": [
+        {
+          "targetNodeId": "ending_kill",
+          "automatic": true,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_kill" }
+          ]
+        },
+        {
+          "targetNodeId": "ending_paid",
+          "automatic": true,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_pay" }
+          ]
+        },
+        {
+          "targetNodeId": "ending_expose",
+          "automatic": true,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_proof" },
+            { "type": "Fact", "key": "sheriffTrusted", "value": "True" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ending_kill",
+      "objectives": [],
+      "onEnterActions": [
+        { "type": "SetFact", "key": "banditKingDead", "value": "True" },
+        { "type": "GiveItem", "itemId": "bounty_gold", "count": 1 }
+      ],
+      "transitions": []
+    },
+    {
+      "id": "ending_paid",
+      "objectives": [],
+      "onEnterActions": [
+        { "type": "SetFact", "key": "banditKingPaid", "value": "True" }
+      ],
+      "transitions": []
+    },
+    {
+      "id": "ending_expose",
+      "objectives": [],
+      "onEnterActions": [
+        { "type": "SetFact", "key": "banditKingExposed", "value": "True" },
+        { "type": "RemoveItem", "itemId": "evidence_letter", "count": 1 },
+        { "type": "StartQuest", "questId": "sheriffs_gratitude" }
+      ],
+      "transitions": []
+    }
+  ]
+}
