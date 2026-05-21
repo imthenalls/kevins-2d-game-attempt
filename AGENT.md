@@ -16,6 +16,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/DEVNOTES.md](Documents/DEVNOTES.md) | Known issues and fixes |
 | [Documents/TODO.md](Documents/TODO.md) | Planned features and backlog |
 | [Documents/SAVE_SYSTEM.md](Documents/SAVE_SYSTEM.md) | Save/load system, setup steps, extending save data |
+| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, PlayerCombat, scene setup |
 | [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
 
 ---

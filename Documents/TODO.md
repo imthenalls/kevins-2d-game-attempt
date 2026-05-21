@@ -20,7 +20,7 @@
 ## Backlog
 
 - [ ] **Save / Load** — Serialize `WorldStateDB.facts` and active `QuestInstance` state (node IDs + objective counts) to a save file
-- [ ] **Combat** — Basic attack, hit detection, damage via `EntityStats.TakeDamage`; fire `QuestEventBus.Raise("EnemyKilled", id)` on death
+- [x] **Combat** — `DamageInfo`, `Combatant`, `PlayerCombat`; damage via `EntityStats.TakeDamage`; fires `QuestEventBus.Raise("EnemyKilled", id)` on enemy death
 - [ ] **Stack splitting** — Shift+click to split a stack in the inventory
 - [ ] **Item rarity tiers** — Common / Uncommon / Rare / Unique with slot border color
 - [ ] **Equipment slots** — Separate panel (weapon, armor, accessory) alongside the inventory grid

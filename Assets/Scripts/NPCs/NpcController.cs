@@ -23,16 +23,17 @@ public class NpcController : MonoBehaviour
     public float InteractionRange => interactionRange;
     public Vector3 InteractionPosition => interactionPoint != null ? interactionPoint.position : transform.position;
 
-    public EntityStats Stats { get; private set; }
+    public EntityStats Stats     { get; private set; }
+    public Combatant  Combatant  { get; private set; }
 
     private void Awake()
     {
         if (npcType == NpcType.Enemy)
         {
-            Stats = gameObject.GetComponent<EntityStats>();
-            if (Stats == null)
-                Stats = gameObject.AddComponent<EntityStats>();
+            Stats = gameObject.GetComponent<EntityStats>() ?? gameObject.AddComponent<EntityStats>();
             Stats.Configure(enemyMaxHp);
+
+            Combatant = gameObject.GetComponent<Combatant>() ?? gameObject.AddComponent<Combatant>();
         }
     }
 
