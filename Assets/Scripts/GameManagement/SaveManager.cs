@@ -73,7 +73,7 @@ public class SaveManager : MonoBehaviour
         if (QuestManager.Instance != null)
             data.activeQuests = QuestManager.Instance.GetSaveData();
 
-        // Inventory — only occupied slots, keyed by asset name
+        // Inventory — only occupied slots, keyed by itemId
         var inv = InventoryUI.Model;
         if (inv != null)
         {
@@ -83,9 +83,9 @@ public class SaveManager : MonoBehaviour
                 if (!slot.IsEmpty)
                     data.inventorySlots.Add(new InventorySlotEntry
                     {
-                        slotIndex     = i,
-                        itemAssetName = slot.item.name,
-                        quantity      = slot.quantity,
+                        slotIndex = i,
+                        itemId    = slot.item.itemId,
+                        quantity  = slot.quantity,
                     });
             }
         }
@@ -158,14 +158,16 @@ public class SaveManager : MonoBehaviour
             for (int i = 0; i < inv.SlotCount; i++)
                 inv.GetSlot(i).Clear();
 
-            // Restore occupied slots
-            // Items must live in Assets/Resources/Items/<assetName>.asset
+            // Restore occupied slots via ItemDatabase
             foreach (var entry in data.inventorySlots)
             {
-                var item = Resources.Load<ItemData>($"Items/{entry.itemAssetName}");
+                var item = ItemDatabase.Instance != null
+                    ? ItemDatabase.Instance.Get(entry.itemId)
+                    : null;
+
                 if (item == null)
                 {
-                    Debug.LogWarning($"[SaveManager] Item not found at Resources/Items/{entry.itemAssetName}");
+                    Debug.LogWarning($"[SaveManager] Item not found in ItemDatabase: '{entry.itemId}'");
                     continue;
                 }
                 inv.GetSlot(entry.slotIndex).Set(item, entry.quantity);

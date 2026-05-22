@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "health_potion",
+      "name": "Health Potion",
+      "description": "A red vial that restores 50 HP.",
+      "type": "Consumable",
+      "isEquip": false,
+      "maxStackSize": 20,
+      "sellValue": 15,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "mana_potion",
+      "name": "Mana Potion",
+      "description": "A blue vial that restores 30 MP.",
+      "type": "Consumable",
+      "isEquip": false,
+      "maxStackSize": 20,
+      "sellValue": 20,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "antidote",
+      "name": "Antidote",
+      "description": "Cures poison and other status ailments.",
+      "type": "Consumable",
+      "isEquip": false,
+      "maxStackSize": 10,
+      "sellValue": 25,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "description": "Raw iron ore. Can be smelted into iron bars.",
+      "type": "Material",
+      "isEquip": false,
+      "maxStackSize": 99,
+      "sellValue": 5,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "wood_log",
+      "name": "Wood Log",
+      "description": "A sturdy log. Used in basic crafting.",
+      "type": "Material",
+      "isEquip": false,
+      "maxStackSize": 99,
+      "sellValue": 2,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "cloth_scrap",
+      "name": "Cloth Scrap",
+      "description": "Rough fabric scraps useful for basic armor.",
+      "type": "Material",
+      "isEquip": false,
+      "maxStackSize": 99,
+      "sellValue": 3,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "description": "A dependable iron sword. Not flashy, but reliable.",
+      "type": "Equipment",
+      "isEquip": true,
+      "maxStackSize": 1,
+      "sellValue": 80,
+      "flags": ["Unique"],
+      "iconPath": ""
+    },
+    {
+      "id": "leather_armor",
+      "name": "Leather Armor",
+      "description": "Light armor made from tanned hide. Offers modest protection.",
+      "type": "Equipment",
+      "isEquip": true,
+      "maxStackSize": 1,
+      "sellValue": 60,
+      "flags": ["Unique"],
+      "iconPath": ""
+    },
+    {
+      "id": "iron_shield",
+      "name": "Iron Shield",
+      "description": "A heavy shield that can absorb significant blows.",
+      "type": "Equipment",
+      "isEquip": true,
+      "maxStackSize": 1,
+      "sellValue": 70,
+      "flags": ["Unique"],
+      "iconPath": ""
+    },
+    {
+      "id": "amulet_of_swiftness",
+      "name": "Amulet of Swiftness",
+      "description": "A magical amulet that subtly quickens the wearer's step.",
+      "type": "Equipment",
+      "isEquip": true,
+      "maxStackSize": 1,
+      "sellValue": 150,
+      "flags": ["Unique"],
+      "iconPath": ""
+    },
+    {
+      "id": "golden_key",
+      "name": "Golden Key",
+      "description": "A heavy key stamped with an unfamiliar crest.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 1,
+      "sellValue": 0,
+      "flags": ["Unique", "KeyItem"],
+      "iconPath": ""
+    },
+    {
+      "id": "rusty_coin",
+      "name": "Rusty Coin",
+      "description": "An old corroded coin. Worth almost nothing.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 99,
+      "sellValue": 1,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "ancient_amulet",
+      "name": "Ancient Amulet",
+      "description": "You were asked to retrieve this. Don't lose it.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 1,
+      "sellValue": 0,
+      "flags": ["Unique", "QuestItem"],
+      "iconPath": ""
+    }
+  ]
+}

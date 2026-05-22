@@ -52,6 +52,6 @@ public class FactEntry
 public class InventorySlotEntry
 {
     public int    slotIndex;
-    public string itemAssetName; // matches the ScriptableObject asset name
+    public string itemId;    // matches ItemData.itemId (registered in ItemDatabase)
     public int    quantity;
 }
