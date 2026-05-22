@@ -12,15 +12,15 @@ Attack types, elements, and status effects are not implemented yet. `DamageInfo`
 
 | File | Description |
 |---|---|
-| `Assets/Scripts/Combat/DamageInfo.cs` | Struct describing one hit (amount + source) |
-| `Assets/Scripts/Combat/Combatant.cs` | Combat component for any entity; wraps EntityStats |
-| `Assets/Scripts/Combat/PlayerCombat.cs` | Player attack input and nearest-enemy hit detection |
+| `Assets/Scripts/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
+| `Assets/Scripts/Entity/Combatant.cs` | Combat component for any entity; wraps EntityStats |
+| `Assets/Scripts/Entity/CombatAttacker.cs` | Melee attack — shared by player and NPCs |
 
 ---
 
 ## DamageInfo
 
-**File:** `Assets/Scripts/Combat/DamageInfo.cs`
+**File:** `Assets/Scripts/Entity/DamageInfo.cs`
 
 Plain struct — no MonoBehaviour. Passed into `Combatant.ReceiveHit()`.
 
@@ -38,7 +38,7 @@ combatant.ReceiveHit(new DamageInfo(25, gameObject));
 
 ## Combatant
 
-**File:** `Assets/Scripts/Combat/Combatant.cs`
+**File:** `Assets/Scripts/Entity/Combatant.cs`
 
 Add to any entity (player or enemy) that should participate in combat.
 `RequireComponent` automatically adds `EntityStats` if it isn't already present.
@@ -84,23 +84,25 @@ This satisfies any quest objective with `"eventType": "EnemyKilled"` and the mat
 
 ---
 
-## PlayerCombat
+## CombatAttacker
 
-**File:** `Assets/Scripts/Combat/PlayerCombat.cs`
+**File:** `Assets/Scripts/Entity/CombatAttacker.cs`
 
-Attach to the **Player** GameObject alongside `PlayerController2D`.
+Shared melee attack component used by both the player and NPCs.
+The only difference between the two is the **Use Player Input** toggle.
 
 ### Inspector fields
 
 | Field | Default | Description |
 |---|---|---|
 | Attack Damage | 10 | Damage dealt per hit |
-| Attack Range | 1.5 | World-space radius scanned for enemy colliders |
+| Attack Range | 1.5 | World-space radius scanned for target colliders |
 | Attack Cooldown | 0.5 | Seconds between attacks |
-| Enemy Layers | DefaultRaycastLayers | Layer mask for enemy colliders |
-| Legacy Attack Key | Space | Fallback when Input System is off |
+| Target Layers | DefaultRaycastLayers | Layer mask this entity is allowed to hit |
+| Use Player Input | true | **Player:** on. **NPC:** off — AI calls `TryAttack()` directly |
+| Legacy Attack Key | Space | Fallback input when Input System is off (player only) |
 
-### Input
+### Input (player)
 
 | Action | New Input System | Legacy |
 |---|---|---|
@@ -108,13 +110,15 @@ Attach to the **Player** GameObject alongside `PlayerController2D`.
 
 ### How it works
 
-1. Player presses the attack key.
-2. `OverlapCircleNonAlloc` scans `attackRange` for colliders on `enemyLayers`.
-3. The nearest living `Combatant` is found (skips self).
+1. When **Use Player Input** is on, `Update` reads input and calls `TryAttack()`.
+2. `OverlapCircleNonAlloc` scans `attackRange` for colliders on `targetLayers`.
+3. The nearest living `Combatant` is found (always skips self).
 4. `nearest.ReceiveHit(new DamageInfo(attackDamage, gameObject))` is called.
 5. A cooldown timer blocks further attacks until it expires.
 
-A red wire circle gizmo shows the attack range in Scene view when the Player is selected.
+For **NPC attackers**, an AI behavior script calls `combatAttacker.TryAttack()` on a timer instead of relying on input.
+
+A red wire circle gizmo shows the attack range in Scene view when the GameObject is selected.
 
 ---
 
@@ -126,7 +130,7 @@ A red wire circle gizmo shows the attack range in Scene view when the Player is 
 Player (GameObject)
   ├── EntityStats      — HP/MP (already present)
   ├── Combatant        — add if the player can also take hits from enemies
-  └── PlayerCombat     — add for attack input and hit detection
+  └── CombatAttacker   — Use Player Input: ON  |  Target Layers: Enemy
 ```
 
 ### Enemy NPC GameObject
@@ -134,7 +138,8 @@ Player (GameObject)
 ```
 Enemy NPC (GameObject)
   ├── NpcController    — set NpcType = Enemy (auto-adds EntityStats and Combatant)
-  └── Collider2D       — must be on an enemy layer for PlayerCombat to detect it
+  ├── CombatAttacker   — Use Player Input: OFF  |  Target Layers: Player
+  └── Collider2D       — must be on the Enemy layer for the player's CombatAttacker to detect it
 ```
 
 `NpcController.Awake` adds both `EntityStats` and `Combatant` automatically when `NpcType = Enemy`. Do not add them manually — access them via `npcController.Stats` and `npcController.Combatant`.
@@ -142,9 +147,10 @@ Enemy NPC (GameObject)
 ### Layer setup
 
 1. Open **Edit → Project Settings → Tags and Layers**.
-2. Create an **"Enemy"** layer.
-3. Set all enemy GameObjects to that layer.
-4. On `PlayerCombat`, set **Enemy Layers** to include the **"Enemy"** layer.
+2. Create an **"Enemy"** layer and a **"Player"** layer.
+3. Set the Player GameObject to the **Player** layer; all enemy GameObjects to the **Enemy** layer.
+4. On the player's `CombatAttacker`, set **Target Layers** to **Enemy**.
+5. On each enemy's `CombatAttacker`, set **Target Layers** to **Player**.
 
 ---
 
@@ -154,7 +160,7 @@ Enemy NPC (GameObject)
 |---|---|
 | **Attack types / elements** | Add an `AttackType` enum field to `DamageInfo`; read it in `Combatant.ReceiveHit` for resistance/weakness logic |
 | **Defence / armor** | Add a `defense` field to `Combatant`; subtract it from `info.Amount` before calling `TakeDamage` |
-| **Hit all enemies in range** | In `PlayerCombat.TryAttack`, loop all found combatants instead of picking nearest |
+| **Hit all targets in range** | In `CombatAttacker.TryAttack`, loop all found combatants instead of picking nearest |
 | **Ranged attacks / projectiles** | Create `Projectile.cs`; carry a `DamageInfo`; call `ReceiveHit` on `OnTriggerEnter2D` |
-| **Enemy attacks player** | Add an attack behavior script (similar to `NpcWanderBehavior`) that calls `playerCombatant.ReceiveHit(...)` on a timer |
+| **Enemy attacks player** | Add an attack behavior script (similar to `NpcWanderBehavior`) that calls `combatAttacker.TryAttack()` on a timer |
 | **On-hit VFX / SFX** | Subscribe to `Combatant.OnHit` and spawn a particle or play a clip |

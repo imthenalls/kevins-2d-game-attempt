@@ -8,7 +8,7 @@
 
 ## EntityStats
 
-**File:** `Assets/Scripts/EntityStats.cs`
+**File:** `Assets/Scripts/Entity/EntityStats.cs`
 
 ### Inspector fields
 

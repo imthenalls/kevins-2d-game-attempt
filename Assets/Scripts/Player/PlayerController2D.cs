@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(EntityStats))]
-public class PlayerController2D : MonoBehaviour
+public class PlayerController2D : MonoBehaviour, IEntityController
 {
     [Header("Top-Down Movement")]
     [SerializeField] private float moveSpeed = 6f;
@@ -16,11 +16,16 @@ public class PlayerController2D : MonoBehaviour
     private Vector2 moveInput;
     private bool movementEnabled = true;
 
-    public bool MovementEnabled => movementEnabled;
+    public string     DisplayName     => gameObject.name;
+    public EntityStats Stats          { get; private set; }
+    public Combatant   Combatant      { get; private set; }
+    public bool        MovementEnabled => movementEnabled;
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
+        rb       = GetComponent<Rigidbody2D>();
+        Stats    = GetComponent<EntityStats>();
+        Combatant = GetComponent<Combatant>(); // may be null if Combatant is not added
 
         if (forceNoGravity)
         {

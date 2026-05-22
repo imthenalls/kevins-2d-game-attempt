@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class NpcController : MonoBehaviour
+public class NpcController : MonoBehaviour, IEntityController
 {
     [Header("Identity")]
     [SerializeField] private string npcId = "npc";
@@ -25,6 +25,11 @@ public class NpcController : MonoBehaviour
 
     public EntityStats Stats     { get; private set; }
     public Combatant  Combatant  { get; private set; }
+
+    /// <summary>False while behavior state is Disabled (movement lock).</summary>
+    public bool MovementEnabled => behaviorState != NpcBehaviorState.Disabled;
+
+    private NpcBehaviorState _stateBeforeMovementLock = NpcBehaviorState.Idle;
 
     private void Awake()
     {
@@ -50,6 +55,23 @@ public class NpcController : MonoBehaviour
     public void SetBehaviorState(NpcBehaviorState newState)
     {
         behaviorState = newState;
+    }
+
+    /// <summary>
+    /// Lock or unlock NPC movement by toggling behavior state.
+    /// Saves and restores the previous state so callers don't need to track it.
+    /// </summary>
+    public void SetMovementEnabled(bool enabled)
+    {
+        if (!enabled)
+        {
+            _stateBeforeMovementLock = behaviorState;
+            behaviorState = NpcBehaviorState.Disabled;
+        }
+        else
+        {
+            behaviorState = _stateBeforeMovementLock;
+        }
     }
 
     private void OnDrawGizmosSelected()

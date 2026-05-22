@@ -86,7 +86,7 @@ Runs an `OverlapCircleNonAlloc` search each frame the player presses E. Finds th
 
 ## EntityStats (Player)
 
-**File:** `Assets/Scripts/EntityStats.cs`
+**File:** `Assets/Scripts/Entity/EntityStats.cs`
 
 See [STATS.md](STATS.md) for full documentation. On the player, configure `Max Hp`, `Starting Hp`, `Max Mp`, `Starting Mp` from the Inspector. `Awake()` initialises from those values automatically.
 

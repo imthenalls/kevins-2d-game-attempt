@@ -2,20 +2,21 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Drives HP and MP UI bars by listening to PlayerStats events.
-/// 
+/// Drives HP and MP UI bars by listening to EntityStats events.
+/// Works for any entity — player, NPC, or enemy.
+///
 /// Setup:
 ///   1. Create a Canvas (Screen Space – Overlay).
 ///   2. For each bar, add a background Image and a child "Fill" Image
 ///      with Image Type = Filled, Fill Method = Horizontal.
 ///   3. Assign the Fill Images (not the backgrounds) to hpFill / mpFill.
-///   4. Assign the PlayerStats component to playerStats, or leave it null
+///   4. Assign the EntityStats component to entityStats, or leave it null
 ///      and this script will find it on Start via FindFirstObjectByType.
 /// </summary>
-public class PlayerStatsUI : MonoBehaviour
+public class EntityStatsUI : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private EntityStats playerStats;
+    [SerializeField] private EntityStats entityStats;
 
     [Header("HP Bar")]
     [SerializeField] private Image hpFill;
@@ -25,17 +26,17 @@ public class PlayerStatsUI : MonoBehaviour
 
     private void Start()
     {
-        if (playerStats == null)
-            playerStats = FindFirstObjectByType<EntityStats>();
+        if (entityStats == null)
+            entityStats = FindFirstObjectByType<EntityStats>();
 
-        if (playerStats == null)
+        if (entityStats == null)
         {
-            Debug.LogWarning("[PlayerStatsUI] No EntityStats found in scene.");
+            Debug.LogWarning("[EntityStatsUI] No EntityStats found in scene.");
             return;
         }
 
-        playerStats.OnHpChanged += HandleHpChanged;
-        playerStats.OnMpChanged += HandleMpChanged;
+        entityStats.OnHpChanged += HandleHpChanged;
+        entityStats.OnMpChanged += HandleMpChanged;
 
         // Initialise bars to current values
         RefreshBars();
@@ -43,10 +44,10 @@ public class PlayerStatsUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (playerStats != null)
+        if (entityStats != null)
         {
-            playerStats.OnHpChanged -= HandleHpChanged;
-            playerStats.OnMpChanged -= HandleMpChanged;
+            entityStats.OnHpChanged -= HandleHpChanged;
+            entityStats.OnMpChanged -= HandleMpChanged;
         }
     }
 
@@ -64,7 +65,7 @@ public class PlayerStatsUI : MonoBehaviour
 
     private void RefreshBars()
     {
-        HandleHpChanged(playerStats.Hp, playerStats.MaxHp);
-        HandleMpChanged(playerStats.Mp, playerStats.MaxMp);
+        HandleHpChanged(entityStats.Hp, entityStats.MaxHp);
+        HandleMpChanged(entityStats.Mp, entityStats.MaxMp);
     }
 }

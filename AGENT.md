@@ -8,6 +8,8 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 |---|---|
 | [Documents/PLAYER.md](Documents/PLAYER.md) | Player components, movement, interaction, stats UI |
 | [Documents/STATS.md](Documents/STATS.md) | EntityStats HP/MP system, events, and methods |
+| [Documents/ENTITY.md](Documents/ENTITY.md) | Entity folder: IEntityController, EntityStats, Combatant, CombatAttacker |
+| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, CombatAttacker, scene setup |
 | [Documents/NPC.md](Documents/NPC.md) | NPC controller, behaviors, dialogue, enemy setup |
 | [Documents/INVENTORY.md](Documents/INVENTORY.md) | Inventory model, UI, item data, canvas setup |
 | [Documents/PORTAL.md](Documents/PORTAL.md) | Portal trigger, manager, spawn points, JSON schema |
@@ -16,7 +18,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/DEVNOTES.md](Documents/DEVNOTES.md) | Known issues and fixes |
 | [Documents/TODO.md](Documents/TODO.md) | Planned features and backlog |
 | [Documents/SAVE_SYSTEM.md](Documents/SAVE_SYSTEM.md) | Save/load system, setup steps, extending save data |
-| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, PlayerCombat, scene setup |
+| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, CombatAttacker, scene setup |
 | [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
 
 ---
