@@ -11,6 +11,11 @@ public class NpcController : MonoBehaviour, IEntityController
     [Header("Enemy Stats")]
     [SerializeField] private int enemyMaxHp = 30;
 
+    [Header("Inventory")]
+    [SerializeField] private bool hasInventory = false;
+    [SerializeField, Min(1)] private int inventoryRows    = 3;
+    [SerializeField, Min(1)] private int inventoryColumns = 4;
+
     [Header("Interaction")]
     [SerializeField] private NpcBehaviorState behaviorState = NpcBehaviorState.Idle;
     [SerializeField, Min(0.25f)] private float interactionRange = 1.5f;
@@ -23,8 +28,9 @@ public class NpcController : MonoBehaviour, IEntityController
     public float InteractionRange => interactionRange;
     public Vector3 InteractionPosition => interactionPoint != null ? interactionPoint.position : transform.position;
 
-    public EntityStats Stats     { get; private set; }
-    public Combatant  Combatant  { get; private set; }
+    public EntityStats   Stats     { get; private set; }
+    public Combatant      Combatant { get; private set; }
+    public InventoryModel Inventory { get; private set; }
 
     /// <summary>False while behavior state is Disabled (movement lock).</summary>
     public bool MovementEnabled => behaviorState != NpcBehaviorState.Disabled;
@@ -40,6 +46,9 @@ public class NpcController : MonoBehaviour, IEntityController
 
             Combatant = gameObject.GetComponent<Combatant>() ?? gameObject.AddComponent<Combatant>();
         }
+
+        if (hasInventory)
+            Inventory = new InventoryModel(inventoryRows, inventoryColumns);
     }
 
     public bool CanInteract(Vector3 worldPosition)
