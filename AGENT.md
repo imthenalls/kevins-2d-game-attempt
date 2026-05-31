@@ -35,6 +35,19 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 2. The document must cover: what components/scripts to add, which GameObjects they go on, how to wire them up in the Inspector, and any required scene setup steps.
 3. After creating the document, add a row for it in the **Reference Documents** table at the top of this file.
 
+## Prefab Graph Rules
+
+Whenever a change affects the component layout of any prefab (adding/removing components, changing key Inspector fields, adding new prefabs, or changing component relationships), update both:
+1. **`Documents/PREFAB_GRAPH.md`** — edit the Mermaid `flowchart` source to reflect the new structure.
+2. **`Documents/PREFAB_GRAPH.svg`** — regenerate the SVG by rendering the updated Mermaid diagram and replacing the file contents.
+
+Changes that require a graph update include (but are not limited to):
+- A new `[RequireComponent]` or auto-`AddComponent` relationship.
+- A new serialized field that references another component/prefab shown in the graph.
+- Adding or removing a whole component from a prefab.
+- Changing a key label shown as node text (e.g. `usePlayerInput`, `NpcType`, `Gravity`).
+- Adding an entirely new prefab archetype that belongs in the graph.
+
 ## Scripting Rules
 
 Every new C# script file must begin with a `/// <summary>` XML doc comment block directly above the class (or above its `[Attribute]` lines). The comment must cover:
