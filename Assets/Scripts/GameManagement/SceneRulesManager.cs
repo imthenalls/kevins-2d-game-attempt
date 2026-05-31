@@ -196,6 +196,60 @@ public class SceneRulesManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Register an NPC that was spawned after Start so it is tracked and
+    /// has the current effective rules applied to it immediately.
+    /// Call this from your spawner after instantiating the NPC.
+    /// </summary>
+    public void RegisterNpc(NpcController npc)
+    {
+        if (npc == null || _npcs.Contains(npc)) return;
+
+        _npcs.Add(npc);
+
+        if (npc.CombatReceiver != null)
+            _npcReceivers.Add(npc.CombatReceiver);
+
+        var attacker = npc.GetComponent<CombatAttacker>();
+        if (attacker != null)
+            _npcAttackers.Add(attacker);
+
+        var dialogue = npc.GetComponent<NpcDialogue>();
+        if (dialogue != null)
+            _npcDialogues.Add(dialogue);
+
+        // Apply whichever rules are currently active to the new NPC.
+        var r = _appliedRules;
+        if (r == null) return;
+
+        if (npc.CombatReceiver != null)
+        {
+            npc.CombatReceiver.Invincible       = r.enemiesInvincible;
+            npc.CombatReceiver.DamageMultiplier = r.enemyDamageMultiplier;
+        }
+
+        if (attacker != null)
+            attacker.enabled = !r.disableNpcAttack;
+
+        if (r.lockNpcMovement)
+            npc.SetMovementEnabled(false);
+
+        if (r.forceNpcBehaviorState)
+        {
+            _originalNpcStates[npc] = npc.BehaviorState;
+            npc.SetBehaviorState(r.forcedNpcState);
+        }
+
+        if (dialogue != null && r.disableNpcDialogue)
+            dialogue.enabled = false;
+
+        if (r.npcAggroRangeMultiplier != 1f && npc.NpcType == NpcType.Enemy)
+        {
+            _originalAggroRanges[npc] = npc.AggroRange;
+            npc.AggroRange             = npc.AggroRange * r.npcAggroRangeMultiplier;
+        }
+    }
+
+    /// <summary>
     /// Start or stop the damage-over-time tick.
     /// Parameters (damage, interval, targets) are read from the current effective rules.
     /// </summary>
