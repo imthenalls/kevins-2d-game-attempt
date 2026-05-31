@@ -1,8 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-[DisallowMultipleComponent]
-public class InventoryContextMenu : MonoBehaviour
+/// <summary>
+/// Right-click context menu shown when the player right-clicks an occupied inventory slot.
+/// Dynamically shows or hides Use / Drop / Split / Inspect buttons based on the item's
+/// type and flags (e.g. Use only for Consumables; Drop hidden for Quest/Key items).
+///
+/// Unity setup:
+///   1. Place one instance on a GameObject inside the same Canvas as InventoryUI.
+///   2. Assign panel (RectTransform of the popup), and each Button reference
+///      (useButton, dropButton, splitButton, inspectButton, closeButton).
+///   3. The panel starts hidden; InventorySlotUI calls Show() automatically on right-click.
+///   Only one instance should exist in the scene — uses a static singleton pattern.
+/// </summary> : MonoBehaviour
 {
     private static InventoryContextMenu instance;
 

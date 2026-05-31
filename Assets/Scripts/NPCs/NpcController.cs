@@ -1,7 +1,27 @@
 using UnityEngine;
 
-[DisallowMultipleComponent]
-public class NpcController : MonoBehaviour, IEntityController
+/// <summary>
+/// Core identity and state component for every NPC in the game.
+/// Tracks the NPC's unique id, display name, type, interaction range, and behavior state.
+/// For Enemy NPCs it automatically adds EntityStats and CombatReceiver components.
+/// For loot/vendor NPCs it creates an InventoryModel when Has Inventory is enabled.
+/// Implements IEntityController so the same code paths work for player and NPCs.
+///
+/// Unity setup:
+///   1. Add to an NPC GameObject.
+///   2. Set NPC Id (unique string used by quests, e.g. "sheriff_tom").
+///   3. Set Display Name shown in dialogue.
+///   4. Set NPC Type:
+///        Generic     — no combat, no stats (e.g. villagers).
+///        QuestGiver  — no combat; triggers quest dialogue.
+///        Vendor      — enable Has Inventory for a shop inventory.
+///        Trainer     — no combat, no default inventory.
+///        Enemy       — auto-adds EntityStats + CombatReceiver; set Enemy Max Hp.
+///   5. Optionally assign an Interaction Point child Transform to offset the
+///      interaction origin (defaults to the GameObject's own position).
+///   6. Add NpcDialogue, NpcBehaviorManager, NpcIdleBehavior / NpcWanderBehavior as needed.
+///   The cyan/gray wire sphere in Scene view shows the current interaction range.
+/// </summary>
 {
     [Header("Identity")]
     [SerializeField] private string npcId = "npc";
@@ -29,7 +49,7 @@ public class NpcController : MonoBehaviour, IEntityController
     public Vector3 InteractionPosition => interactionPoint != null ? interactionPoint.position : transform.position;
 
     public EntityStats   Stats     { get; private set; }
-    public Combatant      Combatant { get; private set; }
+    public CombatReceiver CombatReceiver { get; private set; }
     public InventoryModel Inventory { get; private set; }
 
     /// <summary>False while behavior state is Disabled (movement lock).</summary>
@@ -44,7 +64,7 @@ public class NpcController : MonoBehaviour, IEntityController
             Stats = gameObject.GetComponent<EntityStats>() ?? gameObject.AddComponent<EntityStats>();
             Stats.Configure(enemyMaxHp);
 
-            Combatant = gameObject.GetComponent<Combatant>() ?? gameObject.AddComponent<Combatant>();
+            CombatReceiver = gameObject.GetComponent<CombatReceiver>() ?? gameObject.AddComponent<CombatReceiver>();
         }
 
         if (hasInventory)

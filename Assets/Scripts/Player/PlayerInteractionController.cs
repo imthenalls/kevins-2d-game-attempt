@@ -4,8 +4,25 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-[DisallowMultipleComponent]
-public class PlayerInteractionController : MonoBehaviour
+/// <summary>
+/// Handles player–NPC interaction and walks through a dialogue graph node by node.
+/// Each frame it listens for the interact key (E / gamepad South), then does an
+/// OverlapCircle search for the nearest NpcDialogue within interactionSearchRadius
+/// and begins the conversation. While in dialogue it routes input to choice navigation
+/// and node advancement until the graph ends or the player cancels.
+///
+/// Unity setup:
+///   1. Add to the player GameObject alongside PlayerController2D.
+///   2. Set NPC Layers to the Physics layer(s) your NPC GameObjects are on.
+///   3. Optionally assign Dialogue UI (DialogueUIController) and Player Controller;
+///      both are found automatically in the scene if left blank.
+///   4. Adjust Interaction Search Radius to match your intended interaction range.
+///
+/// Controls while in dialogue:
+///   Interact (E / gamepad South)  — advance to the next node / confirm selected choice.
+///   Up / Down (W–S / D-pad)       — navigate multi-choice option lists.
+///   Cancel (Escape / gamepad East) — exit the dialogue early.
+/// </summary> : MonoBehaviour
 {
     [Header("Interaction")]
     [SerializeField, Min(0.5f)] private float interactionSearchRadius = 2f;

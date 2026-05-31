@@ -2,9 +2,23 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-[DisallowMultipleComponent]
-[RequireComponent(typeof(NpcController))]
-public class NpcDialogue : MonoBehaviour
+/// <summary>
+/// Bridges an NPC's identity (NpcController) with a dialogue graph so that
+/// PlayerInteractionController can start, navigate, and end conversations.
+///
+/// Dialogue can come from two sources — assign whichever you use:
+///   A) dialogueAsset  — a DialogueGraphAsset ScriptableObject assigned in the Inspector.
+///   B) dialogueId     — a string id matching an entry in StreamingAssets/dialogues.json.
+///   If both are set, the asset takes precedence.
+///
+/// Unity setup:
+///   1. Add to an NPC GameObject that already has NpcController (required component).
+///   2. Either drag a DialogueGraphAsset into the Dialogue Asset field, or
+///      type a Dialogue Id that matches an entry in dialogues.json.
+///   3. No further wiring needed — PlayerInteractionController discovers and drives this.
+///   The NPC enters NpcBehaviorState.Talking while a conversation is active, pausing
+///   any NpcBehaviorManager-driven movement.
+/// </summary>
 {
     [SerializeField] private string dialogueId;
     [SerializeField] private DialogueGraphAsset dialogueAsset;

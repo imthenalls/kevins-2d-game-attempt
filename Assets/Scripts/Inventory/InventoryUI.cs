@@ -5,14 +5,27 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Main inventory controller. Owns the InventoryModel and manages the grid UI.
+/// Main inventory panel controller. Owns the InventoryModel and drives the slot grid UI.
+/// Handles drag-and-drop reordering, the I-key / gamepad toggle, and player movement lock
+/// while the inventory is open. Exposes InventoryUI.Model for global read/write access.
 ///
-/// Inspector setup required:
-///   - Assign slotPrefab (a GameObject with InventorySlotUI + its child Image/TMP components)
-///   - Assign panelRoot, gridContainer, dragGhostImage, sortButton, closeButton
-///   - Assign playerController (or it will be found in the scene)
-///   - InventoryTooltip and InventoryContextMenu should live on sibling GameObjects
-///     under the same Canvas so their static Show/Hide calls work.
+/// Unity setup (recommended Canvas hierarchy):
+///   Canvas (Screen Space \u2013 Overlay)
+///     InventoryUI (this component + DontDestroyOnLoad)
+///       Panel Root        \u2014 assign to panelRoot
+///       Grid Container    \u2014 assign to gridContainer; GridLayoutGroup added automatically
+///       Drag Ghost Image  \u2014 assign to dragGhostImage (Image, raycastTarget = false)
+///       Sort Button       \u2014 assign to sortButton
+///       Close Button      \u2014 assign to closeButton
+///       InventoryTooltip  \u2014 sibling component on its own child GameObject
+///       InventoryContextMenu \u2014 sibling component on its own child GameObject
+///
+///   Inspector fields:
+///     Slot Prefab       \u2014 prefab with InventorySlotUI + background/icon Images + TMP quantity text
+///     Rows / Columns    \u2014 grid dimensions (default 5 \u00d7 6)
+///     Slot Size / Spacing \u2014 cell pixel size and gap fed into GridLayoutGroup
+///     Player Controller \u2014 optional; found automatically if left blank
+///     Legacy Toggle Key \u2014 fallback key when the new Input System is disabled (default I)
 /// </summary>
 [DisallowMultipleComponent]
 public class InventoryUI : MonoBehaviour

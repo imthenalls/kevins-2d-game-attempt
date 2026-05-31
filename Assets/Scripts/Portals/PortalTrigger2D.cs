@@ -1,7 +1,26 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Collider2D))]
-public class PortalTrigger2D : MonoBehaviour
+/// <summary>
+/// Physics trigger that initiates a portal transition when a tagged collider enters.
+/// Supports two modes selectable in the Inspector:
+///
+///   Manager Mode (Use Manager Config = true):
+///     Delegates to PortalManager using a portalId defined in portals.json.
+///     Supports cross-scene teleportation via SceneLoader (fade transition included).
+///
+///   Local Mode (Use Manager Config = false):
+///     Wires directly to another PortalTrigger2D in the same scene.
+///     No PortalManager needed. Calculates exit position by ExitSide + distance offset
+///     or uses a manually assigned Destination Spawn Point Transform.
+///
+/// Unity setup:
+///   1. Add to a GameObject with a Collider2D (Is Trigger set automatically on Reset).
+///   2. Manager Mode: tick Use Manager Config; set Portal Id (must match portals.json).
+///   3. Local Mode:   assign Destination Portal (the exit PortalTrigger2D);
+///      optionally assign a Destination Spawn Point for precise exit placement.
+///   4. Set Required Tag (default "Player") and Travel Cooldown.
+///   5. Toggle Reset Velocity and set Exit Velocity to control exit momentum.
+/// </summary>
 {
     public enum ExitSide
     {

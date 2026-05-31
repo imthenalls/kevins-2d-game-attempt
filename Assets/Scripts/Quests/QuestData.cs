@@ -1,8 +1,30 @@
 using System.Collections.Generic;
 
 /// <summary>
-/// Raw data classes that map 1-to-1 with the JSON quest files.
-/// Deserialized by QuestLoader using Newtonsoft.Json.
+/// Plain C# data classes that map 1-to-1 with the JSON quest file format.
+/// Deserialized by QuestLoader using Newtonsoft.Json. Not MonoBehaviours.
+///
+/// Quest graph structure:
+///   QuestGraphData      — one quest (questId, startNodeId, list of nodes).
+///     QuestNodeData     — one quest stage (objectives to complete, transitions, onEnter actions).
+///       QuestObjectiveData  — one thing the player must do (eventType + targetId + requiredCount).
+///       QuestTransitionData — an edge in the graph; conditions gate when it fires.
+///       QuestActionData     — side effect executed when the node is entered (give item, set fact, etc.).
+///
+/// Condition types (QuestConditionData.type):
+///   ObjectiveComplete — objectiveId must be satisfied.
+///   Fact              — WorldStateDB[key] == value.
+///   QuestInNode       — another quest is at a specific node.
+///   HasItem           — player inventory contains itemId × count.
+///
+/// Action types (QuestActionData.type):
+///   SetFact   — write a key/value pair to WorldStateDB.
+///   GiveItem  — add itemId × count to the player inventory.
+///   RemoveItem— remove itemId × count from the player inventory.
+///   StartQuest— activate another quest by questId.
+///
+/// Unity setup: none — purely data containers.
+///   Define quests in JSON files inside Assets/StreamingAssets/quests/.
 /// </summary>
 
 public class QuestGraphData

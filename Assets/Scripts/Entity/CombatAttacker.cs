@@ -45,7 +45,7 @@ public class CombatAttacker : MonoBehaviour
     // ── Public API ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Attempt an attack. Finds the nearest living Combatant within attackRange
+    /// Attempt an attack. Finds the nearest living CombatReceiver within attackRange
     /// on targetLayers and calls ReceiveHit on it.
     /// No-op while the cooldown is active.
     /// Called automatically by Update when usePlayerInput is true.
@@ -58,13 +58,13 @@ public class CombatAttacker : MonoBehaviour
         int hitCount = Physics2D.OverlapCircleNonAlloc(
             transform.position, attackRange, _overlapResults, targetLayers);
 
-        Combatant nearest        = null;
-        float     nearestDistSqr = float.MaxValue;
+        CombatReceiver nearest        = null;
+        float          nearestDistSqr = float.MaxValue;
 
         for (int i = 0; i < hitCount; i++)
         {
             // Walk up to parent in case the collider is on a child object.
-            var combatant = _overlapResults[i].GetComponentInParent<Combatant>();
+            var combatant = _overlapResults[i].GetComponentInParent<CombatReceiver>();
 
             if (combatant == null)                  continue;
             if (!combatant.Stats.IsAlive)            continue;
@@ -140,13 +140,13 @@ public class CombatAttacker : MonoBehaviour
         int hitCount = Physics2D.OverlapCircleNonAlloc(
             transform.position, attackRange, _overlapResults, enemyLayers);
 
-        Combatant nearest        = null;
-        float     nearestDistSqr = float.MaxValue;
+        CombatReceiver nearest        = null;
+        float          nearestDistSqr = float.MaxValue;
 
         for (int i = 0; i < hitCount; i++)
         {
             // Walk up to parent in case collider is on a child object.
-            var combatant = _overlapResults[i].GetComponentInParent<Combatant>();
+            var combatant = _overlapResults[i].GetComponentInParent<CombatReceiver>();
 
             if (combatant == null)                            continue;
             if (!combatant.Stats.IsAlive)                     continue;

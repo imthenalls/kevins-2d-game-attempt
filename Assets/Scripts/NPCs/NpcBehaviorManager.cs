@@ -2,9 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Attach this to an NPC alongside one or more INpcBehavior components.
-/// The manager auto-discovers every INpcBehavior on the same GameObject.
-/// Set the Weight on each behavior component to control how often it is chosen.
+/// State-machine driver that picks and runs INpcBehavior components on the same GameObject.
+/// Auto-discovers every INpcBehavior via GetComponents on Awake, then randomly selects
+/// the next behavior by weighted probability when the current one completes.
+/// Pauses automatically while the NPC is in Talking or Disabled state.
+///
+/// Unity setup:
+///   1. Add to an NPC GameObject that also has NpcController.
+///   2. Add one or more behavior components (NpcIdleBehavior, NpcWanderBehavior, or custom)
+///      to the same GameObject.
+///   3. Set the Weight on each behavior to control its relative selection frequency.
+///   The manager runs continuously — no manual start/stop is needed at runtime.
 /// </summary>
 [DisallowMultipleComponent]
 public class NpcBehaviorManager : MonoBehaviour

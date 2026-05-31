@@ -4,7 +4,23 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class PortalManager : MonoBehaviour
+/// <summary>
+/// Singleton that loads portal definitions from JSON and handles cross-scene teleportation.
+/// PortalTrigger2D calls TryUsePortal() when a traveler enters; PortalManager resolves
+/// the destination (same-scene warp or SceneLoader scene transition) and places the
+/// traveler at the correct PortalSpawnPoint after the new scene finishes loading.
+///
+/// Unity setup:
+///   1. Add to a persistent bootstrap GameObject (alongside SceneLoader, SaveManager).
+///   2. Optional: assign a Portal Config Json TextAsset, or leave blank to load
+///      StreamingAssets/portals.json automatically (default filename).
+///   3. Set Default Traveler Tag (default "Player"), cooldown, and velocity settings.
+///   4. In every scene that portals lead to, place PortalSpawnPoint GameObjects with
+///      matching spawnId values so the manager knows where to place the traveler.
+///
+/// Runtime API:
+///   PortalManager.Instance.TryUsePortal("village_gate", travelerTransform);
+/// </summary>
 {
     public static PortalManager Instance { get; private set; }
 

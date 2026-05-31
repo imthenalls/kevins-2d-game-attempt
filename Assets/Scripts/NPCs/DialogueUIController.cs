@@ -3,8 +3,24 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-[DisallowMultipleComponent]
-public class DialogueUIController : MonoBehaviour
+/// <summary>
+/// Singleton UI panel that renders the currently active dialogue line.
+/// Displays the speaker name, dialogue text, and numbered player choice list.
+/// Driven by PlayerInteractionController, which calls ShowDialogue / HideDialogue.
+///
+/// Unity setup (manual — recommended for full control):
+///   1. Add to a persistent GameObject in your first scene (DontDestroyOnLoad).
+///   2. Assign rootCanvas, panelRoot (RectTransform of the dialogue box),
+///      speakerNameText, dialogueText, and choicesText (all TextMeshProUGUI).
+///
+/// Unity setup (automatic — zero-config fallback):
+///   Leave all Inspector fields blank. BuildRuntimeUi() auto-generates a
+///   bottom-third dialogue panel with default styling at runtime.
+///   PlayerInteractionController calls DialogueUIController.GetOrCreate() so a
+///   controller is always available even if none exists in the scene.
+///
+/// Only one instance should exist in the scene — uses a static singleton pattern.
+/// </summary>
 {
     private static DialogueUIController instance;
 

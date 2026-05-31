@@ -2,7 +2,18 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InventoryModel
+/// <summary>
+/// Pure-data inventory container — no MonoBehaviour, no Unity dependencies.
+/// Holds a flat array of InventorySlot entries and exposes high-level operations:
+/// AddItem, RemoveItem, MoveSlot, SplitStack, Sort, HasItem, CountItem.
+///
+/// Not a component — create with: new InventoryModel(rows, columns)
+///   - InventoryUI owns and displays the player's model.
+///   - NpcController creates one automatically when Has Inventory is enabled.
+///
+/// Subscribe to OnChanged to react to any modification (UI refresh, autosave, etc.).
+/// Raise ForceRefresh() after externally writing slot data (e.g. after a save load).
+/// </summary>
 {
     public readonly int Rows;
     public readonly int Columns;

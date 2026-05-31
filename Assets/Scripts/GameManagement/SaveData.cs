@@ -1,10 +1,23 @@
 using System;
 using System.Collections.Generic;
 
-// ---------------------------------------------------------------------------
-// SaveData — all game state that is written to / read from the save file.
-// Serialized with JsonUtility (no Dictionary fields — those become Lists).
-// ---------------------------------------------------------------------------
+/// <summary>
+/// Plain serializable snapshot of all persistent game state written to and read from disk.
+/// Serialized with JsonUtility — no Dictionary fields are used (uses List-of-entry types instead
+/// because JsonUtility cannot serialize Dictionaries).
+///
+/// Contains:
+///   - Current scene name and player world position
+///   - Player current and max HP / MP
+///   - WorldStateDB facts (serialized as a FactEntry list)
+///   - Active quest state (node positions + objective counts)
+///   - Occupied inventory slots (referenced by itemId, resolved via ItemDatabase on load)
+///
+/// Unity setup: none — this is a plain C# class, not a MonoBehaviour.
+///   Created and consumed entirely by SaveManager.Save() and SaveManager.Load().
+///   All ItemData assets must be inside Assets/Resources/Items/ OR registered in
+///   ItemDatabase so they can be resolved by itemId when the save is loaded.
+/// </summary>
 
 [Serializable]
 public class SaveData

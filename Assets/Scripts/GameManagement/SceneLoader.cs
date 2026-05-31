@@ -5,8 +5,15 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Singleton scene loader with a fade-in/out transition overlay.
-/// Persists across scenes via DontDestroyOnLoad.
+/// Singleton scene loader with a smooth fade-in / fade-out transition overlay.
+/// Automatically creates a fullscreen Canvas + CanvasGroup overlay at runtime;
+/// no prefab or UI setup is needed in the scene.
+///
+/// Unity setup:
+///   1. Add to a persistent bootstrap GameObject in your first scene (DontDestroyOnLoad).
+///   2. Adjust Fade Duration and Fade Color in the Inspector if needed.
+///   3. Call SceneLoader.Instance.LoadScene("SceneName") from any script to transition.
+///   4. Subscribe to OnLoadStart / OnLoadComplete for any loading-screen logic.
 ///
 /// Usage:
 ///   SceneLoader.Instance.LoadScene("MyScene");

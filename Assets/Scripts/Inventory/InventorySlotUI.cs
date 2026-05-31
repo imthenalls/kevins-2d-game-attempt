@@ -4,8 +4,19 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-[DisallowMultipleComponent]
-public class InventorySlotUI : MonoBehaviour,
+/// <summary>
+/// Visual representation of a single inventory slot cell inside the inventory grid.
+/// Handles hover highlighting, tooltip display, drag-and-drop item movement,
+/// and right-click context menu. Communicates with InventoryUI via C# events.
+///
+/// Unity setup (as a prefab):
+///   1. Create a prefab with this component.
+///   2. Assign backgroundImage (slot background Image), iconImage (item icon Image),
+///      and quantityText (TextMeshProUGUI for stack count) in the Inspector.
+///   3. Assign this prefab to the Slot Prefab field on InventoryUI.
+///   InventoryUI instantiates and configures slot UIs at runtime — do not place manually.
+///   The parent Canvas must have a GraphicRaycaster for drag-and-drop to work.
+/// </summary> : MonoBehaviour,
     IBeginDragHandler, IDragHandler, IEndDragHandler,
     IDropHandler,
     IPointerClickHandler,

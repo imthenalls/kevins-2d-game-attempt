@@ -1,12 +1,18 @@
 using UnityEngine;
 
 /// <summary>
-/// NPC walks to a random position within wanderRadius.
+/// NPC behavior that walks the NPC to a random position within a radius each activation.
 /// Uses Rigidbody2D.velocity so physics colliders stop it naturally.
-/// Raycasts ahead each frame — if a wall is close, gives up immediately
-/// rather than grinding into it. Tries several random targets on enter
-/// to avoid picking a point that is behind a wall.
-/// Requires a Rigidbody2D (Gravity Scale = 0, freeze Z rotation).
+/// Raycasts ahead each frame — gives up if a wall is detected rather than grinding into it.
+/// Tries up to 8 random target positions on enter to find an unobstructed path.
+///
+/// Unity setup:
+///   1. Add to an NPC GameObject alongside NpcBehaviorManager.
+///   2. Requires a Rigidbody2D: set Gravity Scale = 0, freeze Z rotation.
+///   3. Set Wander Radius (world units), Move Speed, and Arrival Threshold.
+///   4. Set Wall Layers to your obstacles layer so the raycast detects walls.
+///   5. Adjust Wall Look Ahead (~half the NPC's collider radius works well).
+///   6. Set Weight (0–100) relative to other behaviors on the same NPC.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class NpcWanderBehavior : MonoBehaviour, INpcBehavior

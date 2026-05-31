@@ -3,7 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-public static class DialogueDatabase
+/// <summary>
+/// Static runtime registry of all dialogue graphs loaded into memory.
+/// Graphs come from two sources:
+///   1. StreamingAssets/dialogues.json — loaded lazily on the first TryGetDialogue call.
+///   2. DialogueGraphAsset ScriptableObjects — registered via RegisterAsset(),
+///      which NpcDialogue calls automatically in Awake.
+///
+/// Unity setup: no MonoBehaviour needed — completely static.
+///   • JSON dialogues: place dialogues.json in Assets/StreamingAssets/.
+///   • Asset dialogues: assign a DialogueGraphAsset to NpcDialogue; registration is automatic.
+///   Both sources can coexist. JSON is loaded lazily; assets register eagerly on scene load.
+/// </summary>
 {
     private const string DialogueDatabaseFileName = "dialogues.json";
 

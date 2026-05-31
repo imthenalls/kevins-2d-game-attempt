@@ -3,9 +3,24 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-[RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(EntityStats))]
-public class PlayerController2D : MonoBehaviour, IEntityController
+/// <summary>
+/// Top-down 2D player controller. Reads WASD / left-stick directional input each frame
+/// and drives the Rigidbody2D via linearVelocity. Implements IEntityController so any
+/// system can accept either a player or NPC reference through the shared interface.
+///
+/// Unity setup:
+///   1. Add to the player root GameObject.
+///   2. Add a Rigidbody2D:
+///        • Gravity Scale = 0  (or enable Force No Gravity to apply it via script).
+///        • Freeze Z Rotation  (or enable Lock Rotation to apply it via script).
+///   3. EntityStats is required (enforced by RequireComponent) — configure HP/MP there.
+///   4. Optionally add CombatReceiver to the same GameObject so the player can take damage.
+///   5. Optionally add CombatAttacker if the player should be able to attack.
+///   6. Set Move Speed in the Inspector (default 6 units/s).
+///
+/// Movement is locked at runtime by SetMovementEnabled(false) — called automatically
+/// by dialogue, inventory, and cutscene systems.
+/// </summary> : MonoBehaviour, IEntityController
 {
     [Header("Top-Down Movement")]
     [SerializeField] private float moveSpeed = 6f;
@@ -18,14 +33,14 @@ public class PlayerController2D : MonoBehaviour, IEntityController
 
     public string     DisplayName     => gameObject.name;
     public EntityStats Stats          { get; private set; }
-    public Combatant   Combatant      { get; private set; }
+    public CombatReceiver CombatReceiver { get; private set; }
     public bool        MovementEnabled => movementEnabled;
 
     private void Awake()
     {
         rb       = GetComponent<Rigidbody2D>();
         Stats    = GetComponent<EntityStats>();
-        Combatant = GetComponent<Combatant>(); // may be null if Combatant is not added
+        CombatReceiver = GetComponent<CombatReceiver>(); // may be null if CombatReceiver is not added
 
         if (forceNoGravity)
         {

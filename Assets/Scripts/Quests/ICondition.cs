@@ -3,7 +3,17 @@ using UnityEngine;
 /// <summary>
 /// Evaluates to true or false given the current quest instance context.
 /// All conditions on a transition must evaluate to true for the transition to fire.
-/// To express OR logic, use multiple transitions pointing to the same target node.
+/// To express OR logic, use multiple transitions that point to the same target node.
+///
+/// Built-in implementations (created by QuestLoader from the "type" field in JSON):
+///   ObjectiveCompleteCondition — { "type": "ObjectiveComplete", "objectiveId": "..." }
+///   FactCondition              — { "type": "Fact", "key": "...", "value": "..." }
+///   QuestInNodeCondition       — { "type": "QuestInNode", "questId": "...", "nodeId": "..." }
+///   HasItemCondition           — { "type": "HasItem", "itemId": "...", "count": 1 }
+///
+/// Unity setup: none — conditions are pure C# objects, not MonoBehaviours.
+///   To add a custom condition: implement ICondition and register the type string
+///   in QuestLoader's condition factory method.
 /// </summary>
 public interface ICondition
 {

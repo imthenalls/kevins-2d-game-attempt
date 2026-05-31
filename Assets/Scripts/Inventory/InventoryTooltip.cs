@@ -5,8 +5,19 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 #endif
 
-[DisallowMultipleComponent]
-public class InventoryTooltip : MonoBehaviour
+/// <summary>
+/// Floating tooltip that displays item details (name, type flags, description, sell value)
+/// when the player hovers over an occupied inventory slot. The panel follows the cursor
+/// each frame via Update().
+///
+/// Unity setup:
+///   1. Place one instance on a GameObject inside the same Canvas as InventoryUI.
+///   2. Assign panel (tooltip RectTransform), nameText, typeText, descriptionText,
+///      and sellValueText (all TextMeshProUGUI).
+///   3. Adjust Cursor Offset to position the tooltip relative to the mouse pointer.
+///   InventorySlotUI calls the static Show(item) / Hide() methods automatically.
+///   Only one instance should exist in the scene — uses a static singleton pattern.
+/// </summary> : MonoBehaviour
 {
     private static InventoryTooltip instance;
 

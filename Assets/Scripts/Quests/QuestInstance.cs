@@ -6,7 +6,14 @@ using UnityEngine;
 /// which nodes are currently active and how far each objective has progressed.
 ///
 /// Supports multiple simultaneously active nodes (parallel objectives).
-/// Advancing through the graph is driven by QuestManager via OnEvent() and TryAdvance().
+/// Advancing through the graph is driven by QuestManager:
+///   • OnEvent()     — increments objective counters when a matching game event fires.
+///   • TryAdvance()  — evaluates all transition conditions on active nodes each frame.
+///
+/// Unity setup: none — created programmatically by QuestManager.StartQuest().
+///   QuestManager owns all active instances; never instantiate QuestInstance directly.
+///   Use FromSave() exclusively when restoring instances from a save file so that
+///   onEnterActions are not re-fired.
 /// </summary>
 public class QuestInstance
 {

@@ -20,7 +20,7 @@ using UnityEngine;
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityStats))]
-public class Combatant : MonoBehaviour
+public class CombatReceiver : MonoBehaviour
 {
     [Header("Combat")]
     [SerializeField] private bool combatEnabled = true;
@@ -39,7 +39,7 @@ public class Combatant : MonoBehaviour
     public event Action<DamageInfo, EntityStats> OnHit;
 
     /// <summary>Fired once when this entity's HP reaches 0.</summary>
-    public event Action<Combatant> OnDeath;
+    public event Action<CombatReceiver> OnDeath;
 
     /// <summary>The EntityStats component on this entity.</summary>
     public EntityStats Stats { get; private set; }

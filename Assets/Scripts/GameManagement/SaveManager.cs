@@ -6,14 +6,21 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Singleton that handles writing and reading the save file.
+/// Save data is written as JSON to Application.persistentDataPath/save.json.
 ///
-/// Scene setup: add to a persistent GameObject in your bootstrap scene
-/// (alongside WorldStateDB, QuestManager, SceneLoader).
+/// What it saves:
+///   - Active scene name and player position
+///   - Player HP / MP
+///   - All WorldStateDB facts
+///   - Active quest instances (node positions + objective counts)
+///   - Occupied inventory slots (by itemId)
 ///
-/// Usage:
-///   SaveManager.Instance.Save();
-///   SaveManager.Instance.Load();
-///   bool exists = SaveManager.Instance.HasSave();
+/// Unity setup:
+///   1. Add to a persistent bootstrap GameObject in your first scene
+///      (alongside WorldStateDB, QuestManager, SceneLoader, ItemDatabase).
+///   2. Call SaveManager.Instance.Save() from a pause menu or autosave trigger.
+///   3. Call SaveManager.Instance.Load() from a main menu "Continue" button.
+///   4. Use SaveManager.Instance.HasSave() to decide whether to show the button.
 /// </summary>
 [DisallowMultipleComponent]
 public class SaveManager : MonoBehaviour
