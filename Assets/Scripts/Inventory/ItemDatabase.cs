@@ -99,6 +99,15 @@ public class ItemDatabase : MonoBehaviour
             if (!string.IsNullOrEmpty(entry.iconPath))
                 data.icon = Resources.Load<Sprite>(entry.iconPath);
 
+            if (data.IsEquip)
+            {
+                data.equipSlot   = Enum.TryParse(entry.equipSlot, out EquipSlotType es) ? es : EquipSlotType.Weapon;
+                data.bonusMaxHp  = entry.bonusMaxHp;
+                data.bonusMaxMp  = entry.bonusMaxMp;
+                data.bonusAttack = entry.bonusAttack;
+                data.bonusDefense= entry.bonusDefense;
+            }
+
             _items[data.itemId] = data;
         }
 
@@ -137,4 +146,10 @@ internal class ItemEntry
     public int      sellValue;
     public string[] flags;        // Unique | QuestItem | KeyItem
     public string   iconPath;     // optional Resources path for the icon sprite
+    // equipment fields (only read when type == Equipment)
+    public string   equipSlot;    // Weapon | Armor | Accessory
+    public int      bonusMaxHp;
+    public int      bonusMaxMp;
+    public int      bonusAttack;
+    public int      bonusDefense;
 }

@@ -42,6 +42,13 @@ public class ItemData : ScriptableObject
     [Header("Economy")]
     [Min(0)] public int sellValue;
 
+    [Header("Equipment (only used when type = Equipment)")]
+    public EquipSlotType equipSlot;
+    [Min(0)] public int bonusMaxHp;
+    [Min(0)] public int bonusMaxMp;
+    [Min(0)] public int bonusAttack;
+    [Min(0)] public int bonusDefense;
+
     /// <summary>True when this item's type is Equipment.</summary>
     public bool IsEquip => type == ItemType.Equipment;
 

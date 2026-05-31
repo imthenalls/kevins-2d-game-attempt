@@ -20,12 +20,22 @@ public class EntityStats : MonoBehaviour
     private int _hp;
     private int _mp;
 
+    // equipment bonuses (tracked separately from base stats)
+    private int _bonusAttack;
+    private int _bonusDefense;
+
     // read-only accessors
     public int Hp => _hp;
     public int Mp => _mp;
     public int MaxHp => maxHp;
     public int MaxMp => maxMp;
     public bool IsAlive => _hp > 0;
+
+    /// <summary>Total attack bonus from equipped items.</summary>
+    public int BonusAttack => _bonusAttack;
+
+    /// <summary>Total defense bonus from equipped items.</summary>
+    public int BonusDefense => _bonusDefense;
 
     /// <summary>Fired whenever HP changes. Args: (currentHp, maxHp)</summary>
     public event Action<int, int> OnHpChanged;
@@ -148,5 +158,48 @@ public class EntityStats : MonoBehaviour
         maxMp += amount;
         if (restoreDelta) RestoreMp(amount);
         else OnMpChanged?.Invoke(_mp, maxMp);
+    }
+
+    // ── Equipment bonuses ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Apply stat bonuses from an equipped item.
+    /// HP and MP maximums increase by the given amounts; current values are healed by the delta.
+    /// Attack and defense bonuses are accumulated and exposed via BonusAttack / BonusDefense.
+    /// </summary>
+    public void ApplyStatBonus(int hp, int mp, int atk, int def)
+    {
+        if (hp > 0) IncreaseMaxHp(hp, healDelta: true);
+        if (mp > 0) IncreaseMaxMp(mp, restoreDelta: true);
+        _bonusAttack  += atk;
+        _bonusDefense += def;
+    }
+
+    /// <summary>
+    /// Remove stat bonuses from an unequipped item.
+    /// HP and MP maximums are reduced; current values are clamped to the new maximums.
+    /// </summary>
+    public void RemoveStatBonus(int hp, int mp, int atk, int def)
+    {
+        if (hp > 0) DecreaseMaxHp(hp);
+        if (mp > 0) DecreaseMaxMp(mp);
+        _bonusAttack  = Mathf.Max(0, _bonusAttack  - atk);
+        _bonusDefense = Mathf.Max(0, _bonusDefense - def);
+    }
+
+    private void DecreaseMaxHp(int amount)
+    {
+        if (amount <= 0) return;
+        maxHp = Mathf.Max(1, maxHp - amount);
+        _hp   = Mathf.Min(_hp, maxHp);
+        OnHpChanged?.Invoke(_hp, maxHp);
+    }
+
+    private void DecreaseMaxMp(int amount)
+    {
+        if (amount <= 0) return;
+        maxMp = Mathf.Max(0, maxMp - amount);
+        _mp   = Mathf.Min(_mp, maxMp);
+        OnMpChanged?.Invoke(_mp, maxMp);
     }
 }
