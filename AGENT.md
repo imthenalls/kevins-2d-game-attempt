@@ -35,6 +35,34 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 2. The document must cover: what components/scripts to add, which GameObjects they go on, how to wire them up in the Inspector, and any required scene setup steps.
 3. After creating the document, add a row for it in the **Reference Documents** table at the top of this file.
 
+## Scripting Rules
+
+Every new C# script file must begin with a `/// <summary>` XML doc comment block directly above the class (or above its `[Attribute]` lines). The comment must cover:
+
+1. **What it does** — one or two sentences explaining the script's responsibility.
+2. **Unity setup** — step-by-step instructions for wiring it up in the Unity Editor:
+   - Which GameObject to attach it to.
+   - Required or auto-added sibling components (`[RequireComponent]` or manual).
+   - Every Inspector-visible field that the user must assign or configure.
+   - Any scene hierarchy requirements (e.g. must be inside a Canvas, must be on a DontDestroyOnLoad object).
+3. **Runtime API** — public methods or events that other scripts call, if any.
+4. If the script is a pure C# class (no `MonoBehaviour`), note "Unity setup: none" and describe how it is created and accessed instead.
+
+Example format:
+```csharp
+/// <summary>
+/// One-line description of what this component does.
+///
+/// Unity setup:
+///   1. Add to [which GameObject].
+///   2. Assign [field] to [what].
+///   3. Requires [Component] (added automatically / add manually).
+///
+/// Runtime API:
+///   MyClass.Instance.DoSomething();
+/// </summary>
+```
+
 ## Game Basics
 
 This project is a **2D top-down** game.

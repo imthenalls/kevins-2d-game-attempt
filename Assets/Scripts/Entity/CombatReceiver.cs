@@ -24,15 +24,27 @@ public class CombatReceiver : MonoBehaviour
 {
     [Header("Combat")]
     [SerializeField] private bool combatEnabled = true;
+    [Tooltip("When true, the entity takes no damage (immune to all hits).")]
+    [SerializeField] private bool invincible = false;
 
     /// <summary>
     /// When false, ReceiveHit is a no-op — the entity cannot take damage.
-    /// Toggle at runtime for invincibility, cutscenes, etc.
+    /// Toggle at runtime for cutscenes, opt-out, etc.
     /// </summary>
     public bool CombatEnabled
     {
         get => combatEnabled;
         set => combatEnabled = value;
+    }
+
+    /// <summary>
+    /// When true, the entity takes no damage from any hit.
+    /// Toggle at runtime or set in the Inspector for god-mode / invincibility frames.
+    /// </summary>
+    public bool Invincible
+    {
+        get => invincible;
+        set => invincible = value;
     }
 
     /// <summary>Fired whenever this entity receives a hit. Args: (info, stats)</summary>
@@ -69,7 +81,7 @@ public class CombatReceiver : MonoBehaviour
     /// </summary>
     public void ReceiveHit(DamageInfo info)
     {
-        if (!combatEnabled || !Stats.IsAlive) return;
+        if (!combatEnabled || invincible || !Stats.IsAlive) return;
 
         Stats.TakeDamage(info.Amount);
         OnHit?.Invoke(info, Stats);
