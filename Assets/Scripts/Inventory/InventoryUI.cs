@@ -67,6 +67,13 @@ public class InventoryUI : MonoBehaviour
 
     public bool IsOpen => panelRoot != null && panelRoot.gameObject.activeSelf;
 
+    /// <summary>
+    /// When true, player input cannot open or toggle the inventory.
+    /// Set by SceneRulesManager for scenes that disable inventory access.
+    /// Programmatic calls to Open() / Close() still work.
+    /// </summary>
+    public bool InputLocked { get; set; }
+
     // -------------------------------------------------------------------------
     // Unity lifecycle
     // -------------------------------------------------------------------------
@@ -108,7 +115,7 @@ public class InventoryUI : MonoBehaviour
 
     private void Update()
     {
-        if (WasTogglePressedThisFrame())
+        if (!InputLocked && WasTogglePressedThisFrame())
             Toggle();
 
         if (IsOpen && dragFromIndex >= 0)
@@ -233,7 +240,7 @@ public class InventoryUI : MonoBehaviour
     // Open / close
     // -------------------------------------------------------------------------
 
-    public void Toggle() => SetPanelVisible(!IsOpen);
+    public void Toggle() { if (!InputLocked) SetPanelVisible(!IsOpen); }
     public void Open()   => SetPanelVisible(true);
     public void Close()  => SetPanelVisible(false);
 

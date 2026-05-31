@@ -47,6 +47,13 @@ public class CombatReceiver : MonoBehaviour
         set => invincible = value;
     }
 
+    /// <summary>
+    /// Multiplies all incoming damage before it reaches HP.
+    /// 1.0 = normal, 2.0 = double damage, 0.5 = half damage.
+    /// Set by SceneRulesManager; defaults to 1.0.
+    /// </summary>
+    public float DamageMultiplier { get; set; } = 1f;
+
     /// <summary>Fired whenever this entity receives a hit. Args: (info, stats)</summary>
     public event Action<DamageInfo, EntityStats> OnHit;
 
@@ -83,7 +90,7 @@ public class CombatReceiver : MonoBehaviour
     {
         if (!combatEnabled || invincible || !Stats.IsAlive) return;
 
-        Stats.TakeDamage(info.Amount);
+        Stats.TakeDamage(Mathf.RoundToInt(info.Amount * DamageMultiplier));
         OnHit?.Invoke(info, Stats);
     }
 

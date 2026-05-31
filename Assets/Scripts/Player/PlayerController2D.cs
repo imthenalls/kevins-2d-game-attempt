@@ -36,6 +36,13 @@ using UnityEngine.InputSystem;
     public CombatReceiver CombatReceiver { get; private set; }
     public bool        MovementEnabled => movementEnabled;
 
+    /// <summary>Movement speed in units/s. Can be read or overridden at runtime (e.g. by SceneRulesManager).</summary>
+    public float MoveSpeed
+    {
+        get => moveSpeed;
+        set => moveSpeed = value;
+    }
+
     private void Awake()
     {
         rb       = GetComponent<Rigidbody2D>();

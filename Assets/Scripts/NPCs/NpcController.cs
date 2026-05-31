@@ -30,6 +30,8 @@ using UnityEngine;
 
     [Header("Enemy Stats")]
     [SerializeField] private int enemyMaxHp = 30;
+    [Tooltip("Radius at which this enemy detects the player. Scaled by SceneRulesManager.")]
+    [SerializeField, Min(0.1f)] private float aggroRange = 3f;
 
     [Header("Inventory")]
     [SerializeField] private bool hasInventory = false;
@@ -46,6 +48,13 @@ using UnityEngine;
     public NpcType NpcType => npcType;
     public NpcBehaviorState BehaviorState => behaviorState;
     public float InteractionRange => interactionRange;
+
+    /// <summary>Detection radius for enemy NPCs. Scaled at runtime by SceneRulesManager.</summary>
+    public float AggroRange
+    {
+        get => aggroRange;
+        set => aggroRange = value;
+    }
     public Vector3 InteractionPosition => interactionPoint != null ? interactionPoint.position : transform.position;
 
     public EntityStats   Stats     { get; private set; }
@@ -107,6 +116,12 @@ using UnityEngine;
     {
         Gizmos.color = behaviorState == NpcBehaviorState.Disabled ? Color.gray : Color.cyan;
         Gizmos.DrawWireSphere(InteractionPosition, interactionRange);
+
+        if (npcType == NpcType.Enemy)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(InteractionPosition, aggroRange);
+        }
     }
 }
 

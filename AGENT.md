@@ -20,6 +20,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/SAVE_SYSTEM.md](Documents/SAVE_SYSTEM.md) | Save/load system, setup steps, extending save data |
 | [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, CombatAttacker, scene setup |
 | [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
+| [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock |
 
 ---
 

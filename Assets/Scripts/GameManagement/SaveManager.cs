@@ -47,9 +47,16 @@ public class SaveManager : MonoBehaviour
 
     public bool HasSave() => File.Exists(SavePath);
 
+    /// <summary>
+    /// When false, Save() is a no-op. Set by SceneRulesManager for scenes where
+    /// saving should be blocked (dungeons, boss arenas, cutscenes, etc.).
+    /// </summary>
+    public bool SaveEnabled { get; set; } = true;
+
     /// <summary>Collects all game state and writes it to disk as JSON.</summary>
     public void Save()
     {
+        if (!SaveEnabled) return;
         var data = new SaveData();
         data.currentScene = SceneManager.GetActiveScene().name;
 
