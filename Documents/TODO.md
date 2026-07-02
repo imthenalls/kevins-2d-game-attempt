@@ -16,7 +16,7 @@
 
 ## In Progress / Next
 
-- [ ] **Sprite flipping on NPC wander** — `NpcWanderBehavior` moves the NPC but never flips the sprite to face direction of travel
+- [x] **Sprite flipping on NPC wander** — `NpcWanderBehavior` now flips `SpriteRenderer.flipX` based on horizontal movement direction
 
 ---
 

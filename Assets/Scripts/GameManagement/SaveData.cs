@@ -12,6 +12,7 @@ using System.Collections.Generic;
 ///   - WorldStateDB facts (serialized as a FactEntry list)
 ///   - Active quest state (node positions + objective counts)
 ///   - Occupied inventory slots (referenced by itemId, resolved via ItemDatabase on load)
+///   - NPC / enemy state: world position, HP / MP (enemies only), and inventory slots
 ///
 /// Unity setup: none — this is a plain C# class, not a MonoBehaviour.
 ///   Created and consumed entirely by SaveManager.Save() and SaveManager.Load().
@@ -47,6 +48,10 @@ public class SaveData
     // so they can be reloaded via Resources.Load<ItemData>("Items/<name>").
     // Place all ItemData ScriptableObjects inside Assets/Resources/Items/.
     public List<InventorySlotEntry> inventorySlots = new();
+
+    // ── NPC / Enemy state ─────────────────────────────────────────────────────
+    // One entry per NPC in the current scene. Keyed by NpcController.NpcId.
+    public List<NpcSaveEntry> npcStates = new();
 }
 
 // ---------------------------------------------------------------------------
@@ -67,4 +72,24 @@ public class InventorySlotEntry
     public int    slotIndex;
     public string itemId;    // matches ItemData.itemId (registered in ItemDatabase)
     public int    quantity;
+}
+
+[Serializable]
+public class NpcSaveEntry
+{
+    public string npcId;
+
+    // World position
+    public float x;
+    public float y;
+
+    // Stats (populated only when the NPC has an EntityStats component, e.g. enemies)
+    public bool hasStats;
+    public int  hp;
+    public int  mp;
+    public int  maxHp;
+    public int  maxMp;
+
+    // Inventory (populated only when the NPC has an InventoryModel)
+    public List<InventorySlotEntry> inventorySlots = new();
 }

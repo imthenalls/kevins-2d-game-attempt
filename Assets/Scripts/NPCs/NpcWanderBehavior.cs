@@ -5,6 +5,7 @@ using UnityEngine;
 /// Uses Rigidbody2D.velocity so physics colliders stop it naturally.
 /// Raycasts ahead each frame — gives up if a wall is detected rather than grinding into it.
 /// Tries up to 8 random target positions on enter to find an unobstructed path.
+/// Flips the SpriteRenderer horizontally to face the direction of travel.
 ///
 /// Unity setup:
 ///   1. Add to an NPC GameObject alongside NpcBehaviorManager.
@@ -13,6 +14,8 @@ using UnityEngine;
 ///   4. Set Wall Layers to your obstacles layer so the raycast detects walls.
 ///   5. Adjust Wall Look Ahead (~half the NPC's collider radius works well).
 ///   6. Set Weight (0–100) relative to other behaviors on the same NPC.
+///   7. Sprite Renderer is auto-detected (self then children); assign manually if needed.
+///      flipX = false → facing right (default). flipX = true → facing left.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
@@ -24,6 +27,7 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     /// <summary>How far ahead to raycast for walls. ~half the NPC width works well.</summary>
     [SerializeField] private float wallLookAhead = 0.3f;
     [SerializeField] private LayerMask wallLayers = ~0; // set to your walls layer in Inspector
+    [SerializeField] private SpriteRenderer spriteRenderer;
 
     public float Weight => weight;
 
@@ -38,6 +42,8 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     {
         _rb = GetComponent<Rigidbody2D>();
         _ownColliders = GetComponents<Collider2D>();
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
 
     public void OnEnter()
@@ -66,6 +72,9 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
             Stop();
             return;
         }
+
+        if (spriteRenderer != null)
+            spriteRenderer.flipX = direction.x < 0f;
 
         _rb.linearVelocity = direction * moveSpeed;
     }

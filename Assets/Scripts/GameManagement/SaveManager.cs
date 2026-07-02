@@ -104,6 +104,43 @@ public class SaveManager : MonoBehaviour
             }
         }
 
+        // NPCs — position, stats (enemies), and inventory (vendors/loot)
+        foreach (var npc in FindObjectsByType<NpcController>(FindObjectsSortMode.None))
+        {
+            var entry = new NpcSaveEntry
+            {
+                npcId = npc.NpcId,
+                x     = npc.transform.position.x,
+                y     = npc.transform.position.y,
+            };
+
+            if (npc.Stats != null)
+            {
+                entry.hasStats = true;
+                entry.hp       = npc.Stats.Hp;
+                entry.mp       = npc.Stats.Mp;
+                entry.maxHp    = npc.Stats.MaxHp;
+                entry.maxMp    = npc.Stats.MaxMp;
+            }
+
+            if (npc.Inventory != null)
+            {
+                for (int i = 0; i < npc.Inventory.SlotCount; i++)
+                {
+                    var slot = npc.Inventory.GetSlot(i);
+                    if (!slot.IsEmpty)
+                        entry.inventorySlots.Add(new InventorySlotEntry
+                        {
+                            slotIndex = i,
+                            itemId    = slot.item.itemId,
+                            quantity  = slot.quantity,
+                        });
+                }
+            }
+
+            data.npcStates.Add(entry);
+        }
+
         File.WriteAllText(SavePath, JsonUtility.ToJson(data, prettyPrint: true));
         Debug.Log($"[SaveManager] Saved → {SavePath}");
     }
@@ -188,6 +225,54 @@ public class SaveManager : MonoBehaviour
             }
 
             inv.ForceRefresh();
+        }
+
+        // NPCs — restore position, stats, and inventory
+        if (data.npcStates != null && data.npcStates.Count > 0)
+        {
+            // Build a lookup by npcId for O(1) access
+            var npcLookup = new Dictionary<string, NpcController>();
+            foreach (var npc in FindObjectsByType<NpcController>(FindObjectsSortMode.None))
+                npcLookup[npc.NpcId] = npc;
+
+            foreach (var entry in data.npcStates)
+            {
+                if (!npcLookup.TryGetValue(entry.npcId, out var npc))
+                {
+                    Debug.LogWarning($"[SaveManager] NPC not found in scene: '{entry.npcId}'");
+                    continue;
+                }
+
+                npc.transform.position = new Vector3(entry.x, entry.y, 0f);
+
+                if (entry.hasStats && npc.Stats != null)
+                {
+                    npc.Stats.Configure(entry.maxHp, entry.maxMp);
+                    npc.Stats.SetHp(entry.hp);
+                    npc.Stats.SetMp(entry.mp);
+                }
+
+                if (entry.inventorySlots != null && entry.inventorySlots.Count > 0 && npc.Inventory != null)
+                {
+                    for (int i = 0; i < npc.Inventory.SlotCount; i++)
+                        npc.Inventory.GetSlot(i).Clear();
+
+                    foreach (var slotEntry in entry.inventorySlots)
+                    {
+                        var item = ItemDatabase.Instance != null
+                            ? ItemDatabase.Instance.Get(slotEntry.itemId)
+                            : null;
+
+                        if (item == null)
+                        {
+                            Debug.LogWarning($"[SaveManager] NPC '{entry.npcId}': item not found '{slotEntry.itemId}'");
+                            continue;
+                        }
+                        npc.Inventory.GetSlot(slotEntry.slotIndex).Set(item, slotEntry.quantity);
+                    }
+                    npc.Inventory.ForceRefresh();
+                }
+            }
         }
 
         Debug.Log("[SaveManager] Scene state restored.");
