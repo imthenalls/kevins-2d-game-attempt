@@ -22,6 +22,8 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
 | [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock |
 | [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
+| [Documents/CHARACTER_STATISTICS.md](Documents/CHARACTER_STATISTICS.md) | CharacterStatistics component: attack/kill/damage/item/money tracking, per-stat events, CombatAttacker integration |
+| [Documents/WORLD_OBJECTS.md](Documents/WORLD_OBJECTS.md) | ItemPickup, WorldObject, IInteractable interface, InventoryHelper utility |
 
 ---
 

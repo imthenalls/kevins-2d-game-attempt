@@ -77,22 +77,7 @@ public class WorldObject : MonoBehaviour, IInteractable
         bool completed = _currentLine >= (lines != null ? lines.Length : 0);
 
         if (completed && rewardItem != null)
-        {
-            var inv = InventoryUI.Model;
-            if (inv != null)
-            {
-                int leftover = inv.AddItem(rewardItem, rewardQuantity);
-                int taken    = rewardQuantity - leftover;
-
-                if (taken > 0)
-                {
-                    if (interactor.TryGetComponent<CharacterStatistics>(out var stats))
-                        stats.RecordItemGathered(taken);
-
-                    QuestEventBus.Raise("ItemCollected", rewardItem.itemId, taken);
-                }
-            }
-        }
+            InventoryHelper.GiveItem(rewardItem, rewardQuantity, interactor);
 
         if (completed)
             QuestEventBus.Raise("ObjectInteracted", displayName);

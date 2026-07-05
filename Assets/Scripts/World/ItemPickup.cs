@@ -47,26 +47,11 @@ public class ItemPickup : MonoBehaviour
         // Layer check first — avoids GetComponent calls for non-player objects
         if (((1 << other.gameObject.layer) & playerLayers) == 0) return;
 
-        var inv = InventoryUI.Model;
-        if (inv == null) return;
+        int taken = InventoryHelper.GiveItem(item, quantity, other.gameObject);
 
-        int leftover = inv.AddItem(item, quantity);
-        int taken    = quantity - leftover;
+        if (taken <= 0) return; // inventory full — item stays on the ground
 
-        if (taken <= 0)
-        {
-            Debug.Log($"[ItemPickup] Inventory full — could not pick up '{item.itemName}'.");
-            return;
-        }
-
-        // Notify CharacterStatistics (optional — component may not be present)
-        if (other.TryGetComponent<CharacterStatistics>(out var stats))
-            stats.RecordItemGathered(taken);
-
-        // Notify quest system
-        QuestEventBus.Raise("ItemCollected", item.itemId, taken);
-
-        quantity = leftover;
+        quantity -= taken;
 
         if (quantity <= 0)
             Destroy(gameObject);
