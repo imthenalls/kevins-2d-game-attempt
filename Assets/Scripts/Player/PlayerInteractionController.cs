@@ -27,6 +27,8 @@ using UnityEngine.InputSystem;
     [Header("Interaction")]
     [SerializeField, Min(0.5f)] private float interactionSearchRadius = 2f;
     [SerializeField] private LayerMask npcLayers = Physics2D.DefaultRaycastLayers;
+    [Tooltip("Layer(s) that WorldObject and other IInteractable objects are on.")]
+    [SerializeField] private LayerMask interactableLayers = Physics2D.DefaultRaycastLayers;
     [SerializeField] private DialogueUIController dialogueUI;
     [SerializeField] private PlayerController2D playerController;
 
@@ -37,6 +39,7 @@ using UnityEngine.InputSystem;
     private NpcDialogue activeDialogue;
     private DialogueNodeDefinition activeNode;
     private int selectedChoiceIndex;
+    private IInteractable activeInteractable;
 
     private void Awake()
     {
@@ -45,6 +48,7 @@ using UnityEngine.InputSystem;
     }
     private void OnDisable()
     {
+        activeInteractable = null;
         SetPlayerMovementLocked(false);
     }
     private void Update()
@@ -83,9 +87,23 @@ using UnityEngine.InputSystem;
             return;
         }
 
+        if (activeInteractable != null)
+        {
+            if (WasCancelPressedThisFrame())
+            {
+                EndInteractable();
+                return;
+            }
+            if (WasInteractPressedThisFrame())
+                AdvanceInteractable();
+            return;
+        }
+
         if (WasInteractPressedThisFrame())
         {
             TryStartNearestDialogue();
+            if (activeDialogue == null)
+                TryStartNearestInteractable();
         }
     }
 
@@ -246,6 +264,62 @@ using UnityEngine.InputSystem;
             dialogueUI.HideDialogue();
         }
 
+        SetPlayerMovementLocked(false);
+    }
+
+    // ── World interactable flow ───────────────────────────────────────────────
+
+    private void TryStartNearestInteractable()
+    {
+        int hitCount = Physics2D.OverlapCircleNonAlloc(
+            transform.position, interactionSearchRadius, overlapResults, interactableLayers);
+
+        IInteractable nearest         = null;
+        float         nearestDistSqr  = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (overlapResults[i] == null) continue;
+            var candidate = overlapResults[i].GetComponentInParent<IInteractable>();
+            if (candidate == null || !candidate.CanInteract(transform.position)) continue;
+
+            float distSqr = (overlapResults[i].transform.position - transform.position).sqrMagnitude;
+            if (distSqr < nearestDistSqr)
+            {
+                nearestDistSqr = distSqr;
+                nearest        = candidate;
+            }
+        }
+
+        if (nearest == null) return;
+
+        activeInteractable = nearest;
+        SetPlayerMovementLocked(true);
+        ShowCurrentInteractableLine();
+    }
+
+    private void ShowCurrentInteractableLine()
+    {
+        if (activeInteractable == null || dialogueUI == null) return;
+
+        if (activeInteractable.TryGetCurrentLine(out string line))
+            dialogueUI.ShowDialogue(activeInteractable.GetDisplayName(), line, null, 0);
+        else
+            EndInteractable();
+    }
+
+    private void AdvanceInteractable()
+    {
+        if (activeInteractable == null) return;
+        activeInteractable.Advance();
+        ShowCurrentInteractableLine();
+    }
+
+    private void EndInteractable()
+    {
+        activeInteractable?.EndInteraction(gameObject);
+        activeInteractable = null;
+        dialogueUI?.HideDialogue();
         SetPlayerMovementLocked(false);
     }
 

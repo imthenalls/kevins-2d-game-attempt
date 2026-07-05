@@ -36,6 +36,12 @@ public class CharacterStatistics : MonoBehaviour
     /// <summary>Number of critical hits landed. Incremented by RecordCriticalHit().</summary>
     public int CriticalHits { get; private set; }
 
+    /// <summary>Total number of items picked up. Incremented by RecordItemGathered().</summary>
+    public int TotalItemsGathered { get; private set; }
+
+    /// <summary>Total currency earned. Incremented by RecordMoneyGained().</summary>
+    public int TotalMoneyGained { get; private set; }
+
     // ── Per-stat change events ────────────────────────────────────────────────
     // External systems (achievements, quests, analytics, UI, save/load) subscribe
     // to exactly the events they need — zero coupling to this class's internals.
@@ -51,6 +57,12 @@ public class CharacterStatistics : MonoBehaviour
 
     /// <summary>Fired whenever CriticalHits increments. Argument is the new total.</summary>
     public event Action<int> OnCriticalHitsChanged;
+
+    /// <summary>Fired whenever TotalItemsGathered increments. Argument is the new total.</summary>
+    public event Action<int> OnItemsGatheredChanged;
+
+    /// <summary>Fired whenever TotalMoneyGained increases. Argument is the new total.</summary>
+    public event Action<int> OnMoneyGainedChanged;
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
@@ -100,6 +112,25 @@ public class CharacterStatistics : MonoBehaviour
     {
         TotalKills++;
         OnKillsChanged?.Invoke(TotalKills);
+    }
+
+    /// <summary>
+    /// Record one or more items being picked up.
+    /// Call from your item pickup / loot system.
+    /// </summary>
+    public void RecordItemGathered(int count = 1)
+    {
+        TotalItemsGathered += count;
+        OnItemsGatheredChanged?.Invoke(TotalItemsGathered);
+    }
+
+    /// <summary>
+    /// Record currency gained from any source (loot, quest reward, selling, etc.).
+    /// </summary>
+    public void RecordMoneyGained(int amount)
+    {
+        TotalMoneyGained += amount;
+        OnMoneyGainedChanged?.Invoke(TotalMoneyGained);
     }
 
     // ── Private event handlers ────────────────────────────────────────────────
