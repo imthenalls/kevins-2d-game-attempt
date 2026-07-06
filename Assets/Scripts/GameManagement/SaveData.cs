@@ -9,7 +9,7 @@ using System.Collections.Generic;
 /// Contains:
 ///   - Current scene name and player world position
 ///   - Player current and max HP / MP
-///   - WorldStateDB facts (serialized as a FactEntry list)
+///   - WorldStateManager facts (serialized as a FactEntry list)
 ///   - Active quest state (node positions + objective counts)
 ///   - Occupied inventory slots (referenced by itemId, resolved via ItemDatabase on load)
 ///   - NPC / enemy state: world position, HP / MP (enemies only), and inventory slots
@@ -36,7 +36,7 @@ public class SaveData
     public int playerMaxHp;
     public int playerMaxMp;
 
-    // ── World facts (WorldStateDB) ────────────────────────────────────────────
+    // ── World facts (WorldStateManager) ────────────────────────────────────────────
     public List<FactEntry> worldFacts = new();
 
     // ── Active quests ─────────────────────────────────────────────────────────

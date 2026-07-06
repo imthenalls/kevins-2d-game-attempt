@@ -13,12 +13,14 @@ using System.Collections.Generic;
 ///
 /// Condition types (QuestConditionData.type):
 ///   ObjectiveComplete — objectiveId must be satisfied.
-///   Fact              — WorldStateDB[key] == value.
+///   Fact              — WorldStateManager[key] == value.
 ///   QuestInNode       — another quest is at a specific node.
 ///   HasItem           — player inventory contains itemId × count.
 ///
 /// Action types (QuestActionData.type):
-///   SetFact   — write a key/value pair to WorldStateDB.
+///   SetFact   — write a key/value pair to WorldStateManager.
+///   ClearFlag — remove a flag key from WorldStateManager (HasFlag returns false).
+///   ToggleFlag— flip a boolean flag in WorldStateManager.
 ///   GiveItem  — add itemId × count to the player inventory.
 ///   RemoveItem— remove itemId × count from the player inventory.
 ///   StartQuest— activate another quest by questId.

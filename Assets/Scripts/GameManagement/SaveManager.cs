@@ -11,13 +11,13 @@ using UnityEngine.SceneManagement;
 /// What it saves:
 ///   - Active scene name and player position
 ///   - Player HP / MP
-///   - All WorldStateDB facts
+///   - All WorldStateManager facts
 ///   - Active quest instances (node positions + objective counts)
 ///   - Occupied inventory slots (by itemId)
 ///
 /// Unity setup:
 ///   1. Add to a persistent bootstrap GameObject in your first scene
-///      (alongside WorldStateDB, QuestManager, SceneLoader, ItemDatabase).
+///      (alongside WorldStateManager, QuestManager, SceneLoader, ItemDatabase).
 ///   2. Call SaveManager.Instance.Save() from a pause menu or autosave trigger.
 ///   3. Call SaveManager.Instance.Load() from a main menu "Continue" button.
 ///   4. Use SaveManager.Instance.HasSave() to decide whether to show the button.
@@ -77,9 +77,9 @@ public class SaveManager : MonoBehaviour
         }
 
         // World facts
-        if (WorldStateDB.Instance != null)
+        if (WorldStateManager.Instance != null)
         {
-            foreach (var kv in WorldStateDB.Instance.GetSnapshot())
+            foreach (var kv in WorldStateManager.Instance.GetSnapshot())
                 data.worldFacts.Add(SerializeFact(kv.Key, kv.Value));
         }
 
@@ -161,12 +161,12 @@ public class SaveManager : MonoBehaviour
 
         // Restore world facts before the scene loads so quest conditions are
         // already correct when newly-placed triggers evaluate on Awake/Start.
-        if (WorldStateDB.Instance != null)
+        if (WorldStateManager.Instance != null)
         {
             var snapshot = new Dictionary<string, object>();
             foreach (var fe in data.worldFacts)
                 snapshot[fe.key] = DeserializeFact(fe);
-            WorldStateDB.Instance.LoadSnapshot(snapshot);
+            WorldStateManager.Instance.LoadSnapshot(snapshot);
         }
 
         // Restore quest instances (no onEnterActions re-fired)

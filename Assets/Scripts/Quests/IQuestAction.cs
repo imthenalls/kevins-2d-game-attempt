@@ -4,6 +4,8 @@ using UnityEngine;
 /// A side effect that executes once when a quest node is entered.
 /// Built-in implementations (created by QuestLoader from the "type" field in JSON):
 ///   SetFactAction    — { "type": "SetFact",    "key": "...", "value": "..." }
+///   ClearFlagAction  — { "type": "ClearFlag",  "key": "..." }
+///   ToggleFlagAction — { "type": "ToggleFlag", "key": "..." }
 ///   GiveItemAction   — { "type": "GiveItem",   "itemId": "...", "count": 1 }
 ///   RemoveItemAction — { "type": "RemoveItem", "itemId": "...", "count": 1 }
 ///   StartQuestAction — { "type": "StartQuest", "questId": "..." }
@@ -20,7 +22,7 @@ public interface IQuestAction
 // ---------------------------------------------------------------------------
 // SetFact
 // JSON: { "type": "SetFact", "key": "banditKingDead", "value": "True" }
-// Writes a string value into WorldStateDB. Other quests/conditions can read it.
+// Writes a string value into WorldStateManager. Other quests/conditions can read it.
 // ---------------------------------------------------------------------------
 public class SetFactAction : IQuestAction
 {
@@ -35,12 +37,12 @@ public class SetFactAction : IQuestAction
 
     public void Execute()
     {
-        if (WorldStateDB.Instance == null)
+        if (WorldStateManager.Instance == null)
         {
-            Debug.LogWarning("[SetFactAction] WorldStateDB not found in scene.");
+            Debug.LogWarning("[SetFactAction] WorldStateManager not found in scene.");
             return;
         }
-        WorldStateDB.Instance.SetFact(_key, _value);
+        WorldStateManager.Instance.SetFact(_key, _value);
     }
 }
 
@@ -139,5 +141,47 @@ public class StartQuestAction : IQuestAction
             return;
         }
         QuestManager.Instance.StartQuest(_questId);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ClearFlag
+// JSON: { "type": "ClearFlag", "key": "Dungeon.TorchLit" }
+// Removes a world state flag so HasFlag returns false.
+// ---------------------------------------------------------------------------
+public class ClearFlagAction : IQuestAction
+{
+    private readonly string _key;
+    public ClearFlagAction(string key) => _key = key;
+
+    public void Execute()
+    {
+        if (WorldStateManager.Instance == null)
+        {
+            Debug.LogWarning("[ClearFlagAction] WorldStateManager not found in scene.");
+            return;
+        }
+        WorldStateManager.Instance.ClearFlag(_key);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ToggleFlag
+// JSON: { "type": "ToggleFlag", "key": "Village.MarketOpen" }
+// Sets the flag if absent, clears it if present.
+// ---------------------------------------------------------------------------
+public class ToggleFlagAction : IQuestAction
+{
+    private readonly string _key;
+    public ToggleFlagAction(string key) => _key = key;
+
+    public void Execute()
+    {
+        if (WorldStateManager.Instance == null)
+        {
+            Debug.LogWarning("[ToggleFlagAction] WorldStateManager not found in scene.");
+            return;
+        }
+        WorldStateManager.Instance.ToggleFlag(_key);
     }
 }

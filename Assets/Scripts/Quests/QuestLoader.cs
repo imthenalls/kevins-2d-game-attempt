@@ -107,6 +107,8 @@ public static class QuestLoader
         return data.type switch
         {
             "SetFact"    => new SetFactAction(data.key, data.value),
+            "ClearFlag"  => new ClearFlagAction(data.key),
+            "ToggleFlag" => new ToggleFlagAction(data.key),
             "GiveItem"   => new GiveItemAction(data.itemId, data.count),
             "RemoveItem" => new RemoveItemAction(data.itemId, data.count),
             "StartQuest" => new StartQuestAction(data.questId),

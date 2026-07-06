@@ -12,7 +12,7 @@ using UnityEngine;
 ///   - Expose query methods used by QuestInNode conditions
 ///
 /// Scene setup: add to one persistent GameObject in your bootstrap/first scene.
-/// Requires WorldStateDB on the same or another DontDestroyOnLoad object.
+/// Requires WorldStateManager on the same or another DontDestroyOnLoad object.
 /// </summary>
 [DisallowMultipleComponent]
 public class QuestManager : MonoBehaviour

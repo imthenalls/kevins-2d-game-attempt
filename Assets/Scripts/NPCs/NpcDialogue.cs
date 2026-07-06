@@ -152,4 +152,16 @@ using UnityEngine;
             nodeLookup[node.id] = node;
         }
     }
+
+    /// <summary>
+    /// Replace the active dialogue graph at runtime.
+    /// Called by WorldStateDialogueSelector to swap NPC dialogue based on world state flags.
+    /// Passing null clears the active dialogue.
+    /// </summary>
+    public void SelectDialogue(DialogueGraphAsset asset)
+    {
+        dialogueAsset = asset;
+        dialogueId    = asset != null ? asset.DialogueId : string.Empty;
+        ResolveDialogueData();
+    }
 }

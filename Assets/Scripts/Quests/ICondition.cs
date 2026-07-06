@@ -37,7 +37,7 @@ public class ObjectiveCompleteCondition : ICondition
 // ---------------------------------------------------------------------------
 // Fact
 // JSON: { "type": "Fact", "key": "sheriffTrusted", "value": "True" }
-// True when WorldStateDB[key].ToString() == value (case-insensitive).
+// True when WorldStateManager[key].ToString() == value (case-insensitive).
 // ---------------------------------------------------------------------------
 public class FactCondition : ICondition
 {
@@ -52,8 +52,8 @@ public class FactCondition : ICondition
 
     public bool Evaluate(QuestInstance ctx)
     {
-        if (WorldStateDB.Instance == null) return false;
-        object fact = WorldStateDB.Instance.GetFact(_key);
+        if (WorldStateManager.Instance == null) return false;
+        object fact = WorldStateManager.Instance.GetFact(_key);
         if (fact == null) return false;
         return string.Equals(fact.ToString(), _value, System.StringComparison.OrdinalIgnoreCase);
     }
