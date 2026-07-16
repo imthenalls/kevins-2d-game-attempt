@@ -140,7 +140,16 @@ public class SaveManager : MonoBehaviour
 
             data.npcStates.Add(entry);
         }
-
+        // Hotbar
+        if (HotbarUI.Model != null)
+        {
+            for (int i = 0; i < HotbarModel.SlotCount; i++)
+            {
+                var item = HotbarUI.Model.GetSlot(i);
+                if (item != null)
+                    data.hotbarSlots.Add(new HotbarEntry { slotIndex = i, itemId = item.itemId });
+            }
+        }
         File.WriteAllText(SavePath, JsonUtility.ToJson(data, prettyPrint: true));
         Debug.Log($"[SaveManager] Saved → {SavePath}");
     }
@@ -272,6 +281,20 @@ public class SaveManager : MonoBehaviour
                     }
                     npc.Inventory.ForceRefresh();
                 }
+            }
+        }
+
+        // Hotbar
+        if (HotbarUI.Model != null && data.hotbarSlots != null)
+        {
+            for (int i = 0; i < HotbarModel.SlotCount; i++)
+                HotbarUI.ClearSlot(i);
+
+            foreach (var entry in data.hotbarSlots)
+            {
+                var item = ItemDatabase.Instance?.Get(entry.itemId);
+                if (item != null)
+                    HotbarUI.AssignSlot(entry.slotIndex, item);
             }
         }
 

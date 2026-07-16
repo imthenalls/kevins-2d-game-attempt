@@ -22,8 +22,7 @@
 
 ## Backlog
 
-- [ ] **Stack splitting** — Shift+click to split a stack in the inventory
-- [ ] **Item rarity tiers** — Common / Uncommon / Rare / Unique with slot border color
+- [x] **Stack splitting** — `InventorySplitDialog`; Shift+click or context menu opens a slider to choose exact split amount
 - [x] **Equipment slots** — `EquipmentManager`, `EquipmentModel`, `EquipSlotType`; weapon/armor/accessory per entity; stat bonuses applied to EntityStats
-- [ ] **Hotbar** — 4-6 quick-use slots for consumables, usable without opening inventory
-- [ ] **Loot / container panel** — Mirrored grid UI when opening chests or looting enemies, with Take All button
+- [x] **Hotbar** — `HotbarModel`, `HotbarUI`, `HotbarSlotUI`; 6 slots, keys 1–6 to use; drag from inventory to assign; right-click to clear; healHp/healMp on ItemData; saves with the game
+- [x] **Loot / container panel** — `LootContainerUI`, `LootSlotUI`, `LootContainer`, `EnemyLootPresenter`; chest and enemy loot with Take All button

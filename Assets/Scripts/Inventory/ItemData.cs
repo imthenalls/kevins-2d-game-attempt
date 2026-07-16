@@ -42,6 +42,12 @@ public class ItemData : ScriptableObject
     [Header("Economy")]
     [Min(0)] public int sellValue;
 
+    [Header("Use Effects (Consumable only)")]
+    [Tooltip("HP restored when this item is used from the hotbar or inventory.")]
+    [Min(0)] public int healHp;
+    [Tooltip("MP restored when this item is used from the hotbar or inventory.")]
+    [Min(0)] public int healMp;
+
     [Header("Equipment (only used when type = Equipment)")]
     public EquipSlotType equipSlot;
     [Min(0)] public int bonusMaxHp;

@@ -62,6 +62,12 @@ public class InventoryUI : MonoBehaviour
     private InventorySlotUI[] slotUIs;
     private int dragFromIndex = -1;
 
+    /// <summary>
+    /// The inventory slot index currently being dragged, or -1 when no drag is active.
+    /// Read by HotbarSlotUI.OnDrop to identify which item is being assigned.
+    /// </summary>
+    public int DragFromIndex => dragFromIndex;
+
     private Canvas parentCanvas;
     private RectTransform canvasRect;
 
@@ -161,10 +167,11 @@ public class InventoryUI : MonoBehaviour
         {
             var slotGo = Instantiate(slotPrefab, gridContainer);
             slotGo.Setup(i, model.GetSlot(i));
-            slotGo.DragStarted  += OnSlotDragStarted;
-            slotGo.DragEnded    += OnSlotDragEnded;
-            slotGo.Dropped      += OnSlotDropped;
-            slotGo.RightClicked += OnSlotRightClicked;
+            slotGo.DragStarted   += OnSlotDragStarted;
+            slotGo.DragEnded     += OnSlotDragEnded;
+            slotGo.Dropped       += OnSlotDropped;
+            slotGo.RightClicked  += OnSlotRightClicked;
+            slotGo.ShiftClicked  += OnSlotShiftClicked;
             slotUIs[i] = slotGo;
         }
     }
@@ -225,6 +232,12 @@ public class InventoryUI : MonoBehaviour
         InventoryContextMenu.Show(model, slotIndex, screenPos);
     }
 
+    private void OnSlotShiftClicked(int slotIndex, Vector2 screenPos)
+    {
+        InventoryContextMenu.Hide();
+        InventorySplitDialog.Show(model, slotIndex, screenPos);
+    }
+
     // -------------------------------------------------------------------------
     // Refresh
     // -------------------------------------------------------------------------
@@ -255,6 +268,7 @@ public class InventoryUI : MonoBehaviour
             if (dragGhostImage != null) dragGhostImage.gameObject.SetActive(false);
             InventoryContextMenu.Hide();
             InventoryTooltip.Hide();
+            InventorySplitDialog.Hide();
         }
 
         SetPlayerMovementLocked(visible);

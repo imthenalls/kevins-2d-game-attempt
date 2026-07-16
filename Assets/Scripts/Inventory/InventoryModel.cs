@@ -144,6 +144,27 @@ using UnityEngine;
     }
 
     /// <summary>
+    /// Splits a specific amount from a stack into the first available empty slot.
+    /// Returns false if there is no empty slot, the stack cannot be split, or amount is invalid.
+    /// </summary>
+    public bool SplitStack(int slotIndex, int amount)
+    {
+        var s = slots[slotIndex];
+        if (s.IsEmpty || !s.item.IsStackable || s.quantity < 2) return false;
+        if (amount < 1 || amount >= s.quantity) return false;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (i == slotIndex || !slots[i].IsEmpty) continue;
+            slots[i].Set(s.item, amount);
+            s.quantity -= amount;
+            OnChanged?.Invoke();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Splits half of a stack into the first available empty slot.
     /// Returns false if there is no empty slot or the stack cannot be split.
     /// </summary>
@@ -153,15 +174,7 @@ using UnityEngine;
         if (s.IsEmpty || !s.item.IsStackable || s.quantity < 2) return false;
 
         int half = s.quantity / 2;
-        for (int i = 0; i < slots.Length; i++)
-        {
-            if (i == slotIndex || !slots[i].IsEmpty) continue;
-            slots[i].Set(s.item, half);
-            s.quantity -= half;
-            OnChanged?.Invoke();
-            return true;
-        }
-        return false;
+        return SplitStack(slotIndex, half);
     }
 
     /// <summary>

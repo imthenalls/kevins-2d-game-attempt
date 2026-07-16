@@ -52,6 +52,10 @@ public class SaveData
     // ── NPC / Enemy state ─────────────────────────────────────────────────────
     // One entry per NPC in the current scene. Keyed by NpcController.NpcId.
     public List<NpcSaveEntry> npcStates = new();
+
+    // ── Hotbar ────────────────────────────────────────────────────────────────
+    // Assigned item per slot index (only non-empty slots stored).
+    public List<HotbarEntry> hotbarSlots = new();
 }
 
 // ---------------------------------------------------------------------------
@@ -92,4 +96,11 @@ public class NpcSaveEntry
 
     // Inventory (populated only when the NPC has an InventoryModel)
     public List<InventorySlotEntry> inventorySlots = new();
+}
+
+[Serializable]
+public class HotbarEntry
+{
+    public int    slotIndex;
+    public string itemId;
 }

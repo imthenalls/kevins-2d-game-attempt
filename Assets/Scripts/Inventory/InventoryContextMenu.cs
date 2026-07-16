@@ -20,11 +20,13 @@ using UnityEngine.UI;
     [SerializeField] private Button useButton;
     [SerializeField] private Button dropButton;
     [SerializeField] private Button splitButton;
+    [SerializeField] private Button assignHotbarButton;
     [SerializeField] private Button inspectButton;
     [SerializeField] private Button closeButton;
 
     private InventoryModel model;
     private int targetSlotIndex;
+    private Vector2 lastScreenPosition;
     private Canvas parentCanvas;
     private RectTransform canvasRect;
 
@@ -38,11 +40,12 @@ using UnityEngine.UI;
         if (panel != null)
             panel.gameObject.SetActive(false);
 
-        if (useButton     != null) useButton.onClick.AddListener(OnUse);
-        if (dropButton    != null) dropButton.onClick.AddListener(OnDrop);
-        if (splitButton   != null) splitButton.onClick.AddListener(OnSplit);
-        if (inspectButton != null) inspectButton.onClick.AddListener(OnInspect);
-        if (closeButton   != null) closeButton.onClick.AddListener(Hide);
+        if (useButton          != null) useButton.onClick.AddListener(OnUse);
+        if (dropButton         != null) dropButton.onClick.AddListener(OnDrop);
+        if (splitButton        != null) splitButton.onClick.AddListener(OnSplit);
+        if (assignHotbarButton != null) assignHotbarButton.onClick.AddListener(OnAssignHotbar);
+        if (inspectButton      != null) inspectButton.onClick.AddListener(OnInspect);
+        if (closeButton        != null) closeButton.onClick.AddListener(Hide);
     }
 
     public static void Show(InventoryModel inventoryModel, int slotIndex, Vector2 screenPosition)
@@ -51,6 +54,7 @@ using UnityEngine.UI;
 
         instance.model            = inventoryModel;
         instance.targetSlotIndex  = slotIndex;
+        instance.lastScreenPosition = screenPosition;
 
         var slot = inventoryModel.GetSlot(slotIndex);
         if (slot.IsEmpty) return;
@@ -61,6 +65,9 @@ using UnityEngine.UI;
 
         if (instance.splitButton != null)
             instance.splitButton.gameObject.SetActive(slot.item.IsStackable && slot.quantity > 1);
+
+        if (instance.assignHotbarButton != null)
+            instance.assignHotbarButton.gameObject.SetActive(HotbarUI.Model != null);
 
         bool canDrop = (slot.item.flags & (ItemFlags.QuestItem | ItemFlags.KeyItem)) == 0;
         if (instance.dropButton != null)
@@ -89,7 +96,21 @@ using UnityEngine.UI;
 
     private void OnUse()
     {
-        // TODO: forward to an item-use system when one exists
+        if (model == null) return;
+        var slot = model.GetSlot(targetSlotIndex);
+        if (slot.IsEmpty) return;
+
+        var item = slot.item;
+        model.RemoveItem(item, 1);
+
+        var player = UnityEngine.Object.FindFirstObjectByType<PlayerController2D>();
+        if (player?.Stats != null)
+        {
+            if (item.healHp > 0) player.Stats.Heal(item.healHp);
+            if (item.healMp > 0) player.Stats.RestoreMp(item.healMp);
+        }
+
+        QuestEventBus.Raise("ItemUsed", item.itemId, 1);
         Hide();
     }
 
@@ -104,13 +125,29 @@ using UnityEngine.UI;
 
     private void OnSplit()
     {
-        model?.SplitStack(targetSlotIndex);
+        if (model == null) return;
+        var slot = model.GetSlot(targetSlotIndex);
+        if (slot.IsEmpty) return;
+
         Hide();
+        InventorySplitDialog.Show(model, targetSlotIndex, lastScreenPosition);
     }
 
     private void OnInspect()
     {
         // TODO: open an item detail panel when one exists
+        Hide();
+    }
+
+    private void OnAssignHotbar()
+    {
+        if (model == null) return;
+        var slot = model.GetSlot(targetSlotIndex);
+        if (slot.IsEmpty) return;
+
+        int assigned = HotbarUI.AssignFirstEmpty(slot.item);
+        if (assigned < 0)
+            Debug.Log("[InventoryContextMenu] Hotbar is full.");
         Hide();
     }
 }

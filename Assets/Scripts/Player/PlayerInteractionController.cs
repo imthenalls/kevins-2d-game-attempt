@@ -320,7 +320,9 @@ using UnityEngine.InputSystem;
         activeInteractable?.EndInteraction(gameObject);
         activeInteractable = null;
         dialogueUI?.HideDialogue();
-        SetPlayerMovementLocked(false);
+        // Don't unlock movement if EndInteraction opened the loot panel — it manages its own lock.
+        if (!LootContainerUI.IsOpen)
+            SetPlayerMovementLocked(false);
     }
 
     private void SetPlayerMovementLocked(bool locked)
