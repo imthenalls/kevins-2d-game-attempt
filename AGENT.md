@@ -8,8 +8,8 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 |---|---|
 | [Documents/PLAYER.md](Documents/PLAYER.md) | Player components, movement, interaction, stats UI |
 | [Documents/STATS.md](Documents/STATS.md) | EntityStats HP/MP system, events, and methods |
-| [Documents/ENTITY.md](Documents/ENTITY.md) | Entity folder: IEntityController, EntityStats, Combatant, CombatAttacker |
-| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, CombatAttacker, scene setup |
+| [Documents/ENTITY.md](Documents/ENTITY.md) | Entity folder: IEntityController, EntityStats, CombatReceiver, CombatAttacker |
+| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, CombatReceiver, CombatAttacker, scene setup |
 | [Documents/NPC.md](Documents/NPC.md) | NPC controller, behaviors, dialogue, enemy setup |
 | [Documents/INVENTORY.md](Documents/INVENTORY.md) | Inventory model, UI, item data, canvas setup |
 | [Documents/PORTAL.md](Documents/PORTAL.md) | Portal trigger, manager, spawn points, JSON schema |
@@ -18,7 +18,6 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/DEVNOTES.md](Documents/DEVNOTES.md) | Known issues and fixes |
 | [Documents/TODO.md](Documents/TODO.md) | Planned features and backlog |
 | [Documents/SAVE_SYSTEM.md](Documents/SAVE_SYSTEM.md) | Save/load system, setup steps, extending save data |
-| [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, Combatant, CombatAttacker, scene setup |
 | [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
 | [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock |
 | [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
@@ -95,7 +94,7 @@ This project is a **2D top-down** game.
   - Gravity Scale: 0
   - Freeze Rotation Z: enabled
 - Add a collider (`BoxCollider2D` or `CapsuleCollider2D`)
-- Add [Game Scripts/PlayerController2D.cs](Game%20Scripts/PlayerController2D.cs)
+- Add `Assets/Scripts/Player/PlayerController2D.cs`.
 
 ### Input
 - Movement: `WASD` or Arrow Keys
@@ -125,7 +124,7 @@ See [Documents/PLAYER.md](Documents/PLAYER.md) for full player system documentat
 
 ### Overview
 - `EntityStats.cs` — shared by the player and enemy NPCs. Tracks HP and MP with events.
-- `PlayerStatsUI.cs` — listens to `EntityStats` events and drives two `Image` fills in a Canvas.
+- `EntityStatsUI.cs` — listens to `EntityStats` events and drives two `Image` fills in a Canvas.
 
 ### Player
 - `PlayerController2D` has `[RequireComponent(typeof(EntityStats))]`, so the component is always present.
@@ -154,7 +153,7 @@ See [Documents/PLAYER.md](Documents/PLAYER.md) for full player system documentat
 ### UI Setup
 1. Create a Canvas (Screen Space – Overlay).
 2. For each bar: add a background `Image` and a child "Fill" `Image` with `Image Type = Filled`, `Fill Method = Horizontal`.
-3. Assign the Fill Images (not the backgrounds) to `hpFill` / `mpFill` on `PlayerStatsUI`.
-4. Assign `PlayerStats` or leave null — it will auto-find via `FindFirstObjectByType<EntityStats>()`.
+3. Assign the Fill Images (not the backgrounds) to `hpFill` / `mpFill` on `EntityStatsUI`.
+4. Assign `Entity Stats` or leave it null — the component will auto-find one via `FindFirstObjectByType<EntityStats>()`.
 
 See [Documents/STATS.md](Documents/STATS.md) for full stats system documentation.

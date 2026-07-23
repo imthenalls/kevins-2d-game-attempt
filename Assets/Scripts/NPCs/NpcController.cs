@@ -22,6 +22,8 @@ using UnityEngine;
 ///   6. Add NpcDialogue, NpcBehaviorManager, NpcIdleBehavior / NpcWanderBehavior as needed.
 ///   The cyan/gray wire sphere in Scene view shows the current interaction range.
 /// </summary>
+[DisallowMultipleComponent]
+public class NpcController : MonoBehaviour, IEntityController
 {
     [Header("Identity")]
     [SerializeField] private string npcId = "npc";

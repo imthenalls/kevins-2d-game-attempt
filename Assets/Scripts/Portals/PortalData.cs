@@ -20,6 +20,8 @@ using UnityEngine;
 /// Unity setup: none — purely data containers.
 ///   Edit StreamingAssets/portals.json to define portals; PortalManager loads it on Awake.
 /// </summary>
+[Serializable]
+public class PortalDatabaseJson
 {
     public int version = 1;
     public List<PortalDefinition> portals = new List<PortalDefinition>();

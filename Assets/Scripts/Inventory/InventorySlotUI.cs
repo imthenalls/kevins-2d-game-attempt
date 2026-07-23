@@ -19,7 +19,9 @@ using UnityEngine.InputSystem;
 ///   3. Assign this prefab to the Slot Prefab field on InventoryUI.
 ///   InventoryUI instantiates and configures slot UIs at runtime — do not place manually.
 ///   The parent Canvas must have a GraphicRaycaster for drag-and-drop to work.
-/// </summary> : MonoBehaviour,
+/// </summary>
+[DisallowMultipleComponent]
+public class InventorySlotUI : MonoBehaviour,
     IBeginDragHandler, IDragHandler, IEndDragHandler,
     IDropHandler,
     IPointerClickHandler,

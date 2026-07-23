@@ -22,7 +22,9 @@ using UnityEngine.InputSystem;
 ///   Interact (E / gamepad South)  — advance to the next node / confirm selected choice.
 ///   Up / Down (W–S / D-pad)       — navigate multi-choice option lists.
 ///   Cancel (Escape / gamepad East) — exit the dialogue early.
-/// </summary> : MonoBehaviour
+/// </summary>
+[DisallowMultipleComponent]
+public class PlayerInteractionController : MonoBehaviour
 {
     [Header("Interaction")]
     [SerializeField, Min(0.5f)] private float interactionSearchRadius = 2f;

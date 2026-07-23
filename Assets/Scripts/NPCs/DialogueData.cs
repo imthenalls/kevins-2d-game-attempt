@@ -20,6 +20,8 @@ using System.Collections.Generic;
 ///
 /// Unity setup: none — these are pure data containers, not components.
 /// </summary>
+[Serializable]
+public class DialogueDatabaseJson
 {
     public int version = 1;
     public List<DialogueGraphDefinition> dialogues = new List<DialogueGraphDefinition>();

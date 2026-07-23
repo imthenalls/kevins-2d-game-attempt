@@ -14,6 +14,7 @@ using UnityEngine;
 /// Subscribe to OnChanged to react to any modification (UI refresh, autosave, etc.).
 /// Raise ForceRefresh() after externally writing slot data (e.g. after a save load).
 /// </summary>
+public class InventoryModel
 {
     public readonly int Rows;
     public readonly int Columns;

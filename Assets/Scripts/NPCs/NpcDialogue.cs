@@ -19,6 +19,9 @@ using UnityEngine;
 ///   The NPC enters NpcBehaviorState.Talking while a conversation is active, pausing
 ///   any NpcBehaviorManager-driven movement.
 /// </summary>
+[DisallowMultipleComponent]
+[RequireComponent(typeof(NpcController))]
+public class NpcDialogue : MonoBehaviour
 {
     [SerializeField] private string dialogueId;
     [SerializeField] private DialogueGraphAsset dialogueAsset;

@@ -11,6 +11,7 @@ using UnityEngine;
 ///   3. Use the same string in the portal's destination.spawnId in portals.json.
 ///   One SpawnPoint per id is enough; multiple portals can reference the same point.
 /// </summary>
+public class PortalSpawnPoint : MonoBehaviour
 {
     [SerializeField] private string spawnId;
 

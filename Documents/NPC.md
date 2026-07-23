@@ -46,17 +46,17 @@ Enemy       — automatically adds and configures EntityStats on Awake
 
 ### Enemy stats
 
-When `Npc Type = Enemy`, `NpcController.Awake()` automatically adds and configures both `EntityStats` and `Combatant`. Access via:
+When `Npc Type = Enemy`, `NpcController.Awake()` automatically adds and configures both `EntityStats` and `CombatReceiver`. Access via:
 
 ```csharp
 EntityStats stats     = npcController.Stats;     // null for non-enemy types
-Combatant   combatant = npcController.Combatant; // null for non-enemy types
+CombatReceiver receiver = npcController.CombatReceiver; // null for non-enemy types
 
 stats?.TakeDamage(10);
-combatant?.ReceiveHit(new DamageInfo(10, gameObject));
+receiver?.ReceiveHit(new DamageInfo(10, gameObject));
 ```
 
-Do not add `EntityStats` or `Combatant` manually to enemy prefabs — `NpcController` owns them.
+Do not add `EntityStats` or `CombatReceiver` manually to enemy prefabs — `NpcController` owns them.
 
 ### Behavior state
 
@@ -177,7 +177,7 @@ Graphs are serialized as `DialogueGraphDefinition` (see `DialogueData.cs`):
 
 ### DialogueUIController
 
-**File:** `Assets/Scripts/DialogueUIController.cs`
+**File:** `Assets/Scripts/NPCs/DialogueUIController.cs`
 
 Static-access singleton (`DialogueUIController.GetOrCreate()`). Called by `PlayerInteractionController` to show/hide dialogue panels. Does not need to be manually assigned — it is auto-found or created.
 

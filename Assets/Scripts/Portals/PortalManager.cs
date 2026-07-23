@@ -21,6 +21,7 @@ using UnityEngine.SceneManagement;
 /// Runtime API:
 ///   PortalManager.Instance.TryUsePortal("village_gate", travelerTransform);
 /// </summary>
+public class PortalManager : MonoBehaviour
 {
     public static PortalManager Instance { get; private set; }
 

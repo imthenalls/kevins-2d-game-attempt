@@ -12,7 +12,7 @@ The `Entity/` folder holds the foundational scripts shared by every living thing
 |---|---|
 | `Assets/Scripts/Entity/IEntityController.cs` | Shared interface — implemented by both `PlayerController2D` and `NpcController` |
 | `Assets/Scripts/Entity/EntityStats.cs` | HP and MP tracking with events |
-| `Assets/Scripts/Entity/Combatant.cs` | Marks an entity as hittable; wraps `EntityStats` for combat |
+| `Assets/Scripts/Entity/CombatReceiver.cs` | Marks an entity as hittable; wraps `EntityStats` for combat |
 | `Assets/Scripts/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
 | `Assets/Scripts/Entity/CombatAttacker.cs` | Melee attack — shared by player and NPCs |
 
@@ -29,7 +29,7 @@ public interface IEntityController
 {
     string     DisplayName     { get; }
     EntityStats Stats          { get; }
-    Combatant   Combatant      { get; }
+    CombatReceiver CombatReceiver { get; }
     bool        MovementEnabled { get; }
     void        SetMovementEnabled(bool enabled);
 }
@@ -50,11 +50,11 @@ private void Awake()
 
 ### Null safety
 
-`Stats` and `Combatant` may be null on non-combat entities (e.g. generic NPCs with `NpcType != Enemy`). Always null-check before use:
+`Stats` and `CombatReceiver` may be null on non-combat entities (e.g. generic NPCs with `NpcType != Enemy`). Always null-check before use:
 
 ```csharp
 _controller.Stats?.TakeDamage(10);
-_controller.Combatant?.ReceiveHit(new DamageInfo(10, gameObject));
+_controller.CombatReceiver?.ReceiveHit(new DamageInfo(10, gameObject));
 ```
 
 ---
@@ -67,7 +67,7 @@ See [STATS.md](STATS.md) for full API documentation and UI setup.
 
 ---
 
-## Combatant, DamageInfo, CombatAttacker
+## CombatReceiver, DamageInfo, CombatAttacker
 
 See [COMBAT.md](COMBAT.md) for full documentation, inspector fields, and scene setup.
 
@@ -81,13 +81,13 @@ IEntityController
   └── NpcController       (NPC moves via AI behaviors)
 
 EntityStats  — HP/MP — used by player and Enemy NPCs
-  └── Combatant           — hit-taking layer, hooks OnDeath for quest events
-        └── CombatAttacker — finds and hits nearby Combatants
+  └── CombatReceiver      — hit-taking layer, hooks OnDeath for quest events
+        └── CombatAttacker — finds and hits nearby CombatReceivers
 ```
 
 An entity becomes a full combat participant by having all three components:
-`EntityStats` + `Combatant` + `CombatAttacker`.
+`EntityStats` + `CombatReceiver` + `CombatAttacker`.
 
-For **enemies**, `NpcController` (with `NpcType = Enemy`) auto-adds `EntityStats` and `Combatant`. Add `CombatAttacker` manually with **Use Player Input** disabled.
+For **enemies**, `NpcController` (with `NpcType = Enemy`) auto-adds `EntityStats` and `CombatReceiver`. Add `CombatAttacker` manually with **Use Player Input** disabled.
 
-For the **player**, all three are added manually in the Inspector. `PlayerController2D` requires `EntityStats`; add `Combatant` and `CombatAttacker` alongside it.
+For the **player**, `EntityStats` is added through `PlayerController2D`'s requirement; add `CombatReceiver` and `CombatAttacker` manually when the player participates in combat.

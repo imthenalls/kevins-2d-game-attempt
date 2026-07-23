@@ -21,6 +21,8 @@ using UnityEngine.UI;
 ///
 /// Only one instance should exist in the scene — uses a static singleton pattern.
 /// </summary>
+[DisallowMultipleComponent]
+public class DialogueUIController : MonoBehaviour
 {
     private static DialogueUIController instance;
 

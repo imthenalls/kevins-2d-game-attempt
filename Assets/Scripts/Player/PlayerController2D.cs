@@ -20,7 +20,10 @@ using UnityEngine.InputSystem;
 ///
 /// Movement is locked at runtime by SetMovementEnabled(false) — called automatically
 /// by dialogue, inventory, and cutscene systems.
-/// </summary> : MonoBehaviour, IEntityController
+/// </summary>
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(EntityStats))]
+public class PlayerController2D : MonoBehaviour, IEntityController
 {
     [Header("Top-Down Movement")]
     [SerializeField] private float moveSpeed = 6f;

@@ -17,7 +17,7 @@ Player (GameObject)
 
 ## PlayerController2D
 
-**File:** `Assets/Scripts/PlayerController2D.cs`
+**File:** `Assets/Scripts/Player/PlayerController2D.cs`
 
 Handles top-down movement via `Rigidbody2D.linearVelocity`. Supports both the new Input System and legacy `Input` API via compile-time guards.
 
@@ -52,7 +52,7 @@ Movement is clamped to magnitude 1 so diagonal speed is not faster than straight
 
 ## PlayerInteractionController
 
-**File:** `Assets/Scripts/PlayerInteractionController.cs`
+**File:** `Assets/Scripts/Player/PlayerInteractionController.cs`
 
 Runs an `OverlapCircleNonAlloc` search each frame the player presses E. Finds the nearest `NpcDialogue` within range, then drives the dialogue loop until the conversation ends or the player walks away.
 
@@ -92,9 +92,9 @@ See [STATS.md](STATS.md) for full documentation. On the player, configure `Max H
 
 ---
 
-## PlayerStatsUI
+## EntityStatsUI
 
-**File:** `Assets/Scripts/PlayerStatsUI.cs`
+**File:** `Assets/Scripts/Entity/EntityStatsUI.cs`
 
 Attach to a UI GameObject in your Canvas. Subscribes to `EntityStats.OnHpChanged` / `OnMpChanged` and updates two `Image` fills.
 
@@ -103,7 +103,7 @@ Attach to a UI GameObject in your Canvas. Subscribes to `EntityStats.OnHpChanged
 1. Create a Canvas (Screen Space – Overlay).
 2. For each bar: background `Image` + child "Fill" `Image` set to `Image Type = Filled`, `Fill Method = Horizontal`.
 3. Assign the Fill Images to `hpFill` / `mpFill` in the Inspector.
-4. Leave `playerStats` empty — it calls `FindFirstObjectByType<EntityStats>()` on `Start`.
+4. Assign `entityStats`, or leave it empty to call `FindFirstObjectByType<EntityStats>()` on `Start`.
 
 ---
 

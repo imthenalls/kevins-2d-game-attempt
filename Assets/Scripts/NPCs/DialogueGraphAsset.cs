@@ -14,6 +14,8 @@ using UnityEngine;
 ///   5. Drag this asset into the Dialogue Asset field on an NpcDialogue component.
 ///   NpcDialogue registers it with DialogueDatabase automatically on Awake.
 /// </summary>
+[CreateAssetMenu(fileName = "DialogueGraph", menuName = "Game/Dialogue Graph")]
+public class DialogueGraphAsset : ScriptableObject
 {
     [SerializeField] private DialogueGraphDefinition graph = new DialogueGraphDefinition();
 

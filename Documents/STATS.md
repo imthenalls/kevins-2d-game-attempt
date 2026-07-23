@@ -67,9 +67,9 @@ bool stats.IsAlive // Hp > 0
 
 ---
 
-## PlayerStatsUI
+## EntityStatsUI
 
-**File:** `Assets/Scripts/PlayerStatsUI.cs`
+**File:** `Assets/Scripts/Entity/EntityStatsUI.cs`
 
 Subscribes to `EntityStats` events and drives two `Image` fill amounts (0–1).
 
@@ -77,7 +77,7 @@ Subscribes to `EntityStats` events and drives two `Image` fill amounts (0–1).
 
 | Field | Description |
 |---|---|
-| Player Stats | `EntityStats` reference. Auto-found via `FindFirstObjectByType` if null. |
+| Entity Stats | `EntityStats` reference. Auto-found via `FindFirstObjectByType` if null. |
 | Hp Fill | The Fill `Image` for the HP bar |
 | Mp Fill | The Fill `Image` for the MP bar |
 
@@ -91,7 +91,7 @@ Canvas
   └── MPBar
         ├── Background (Image)
         └── Fill (Image)   ← Image Type = Filled, Fill Method = Horizontal
-  └── PlayerStatsUI        ← assign the two Fill images here
+  └── EntityStatsUI        ← assign the two Fill images here
 ```
 
 ---
@@ -102,7 +102,7 @@ Canvas
 |---|---|---|
 | Player | `EntityStats` | Auto via `[RequireComponent]` on `PlayerController2D` |
 | Enemy NPC | `EntityStats` | Auto via `NpcController.Awake()` when `Npc Type = Enemy` |
-| UI | `PlayerStatsUI` | Manual — add to Canvas GameObject |
+| UI | `EntityStatsUI` | Manual — add to Canvas GameObject |
 
 ---
 

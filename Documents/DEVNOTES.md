@@ -30,7 +30,7 @@ Input System package is **not** active:
 Apply this pattern to every input helper method that has a legacy fallback.
 
 **Files affected**  
-`Assets/Scripts/PlayerInteractionController.cs` — all four input helpers:
+`Assets/Scripts/Player/PlayerInteractionController.cs` — all four input helpers:
 - `WasInteractPressedThisFrame`
 - `WasCancelPressedThisFrame`
 - `WasChoiceUpPressedThisFrame`

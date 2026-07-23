@@ -9,6 +9,8 @@ using System;
 ///   IsEmpty is true when item is null or quantity is zero.
 ///   Call Set(item, qty) to fill a slot and Clear() to empty it.
 /// </summary>
+[Serializable]
+public class InventorySlot
 {
     public ItemData item;
     public int quantity;

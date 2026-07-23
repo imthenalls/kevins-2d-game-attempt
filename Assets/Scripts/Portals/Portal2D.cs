@@ -14,6 +14,8 @@ using UnityEngine;
 ///   5. Toggle Reset Velocity and set Exit Velocity if you want to control exit momentum.
 ///   Note: for cross-scene teleportation use PortalTrigger2D + PortalManager instead.
 /// </summary>
+[RequireComponent(typeof(Collider2D))]
+public class Portal2D : MonoBehaviour
 {
     [Header("Destination")]
     [SerializeField] private Transform destination;

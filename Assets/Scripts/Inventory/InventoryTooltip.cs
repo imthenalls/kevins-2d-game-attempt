@@ -17,7 +17,9 @@ using UnityEngine.InputSystem;
 ///   3. Adjust Cursor Offset to position the tooltip relative to the mouse pointer.
 ///   InventorySlotUI calls the static Show(item) / Hide() methods automatically.
 ///   Only one instance should exist in the scene — uses a static singleton pattern.
-/// </summary> : MonoBehaviour
+/// </summary>
+[DisallowMultipleComponent]
+public class InventoryTooltip : MonoBehaviour
 {
     private static InventoryTooltip instance;
 

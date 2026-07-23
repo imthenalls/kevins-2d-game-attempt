@@ -12,7 +12,9 @@ using UnityEngine.UI;
 ///      (useButton, dropButton, splitButton, inspectButton, closeButton).
 ///   3. The panel starts hidden; InventorySlotUI calls Show() automatically on right-click.
 ///   Only one instance should exist in the scene — uses a static singleton pattern.
-/// </summary> : MonoBehaviour
+/// </summary>
+[DisallowMultipleComponent]
+public class InventoryContextMenu : MonoBehaviour
 {
     private static InventoryContextMenu instance;
 

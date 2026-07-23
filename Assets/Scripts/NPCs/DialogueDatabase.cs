@@ -15,6 +15,7 @@ using UnityEngine;
 ///   • Asset dialogues: assign a DialogueGraphAsset to NpcDialogue; registration is automatic.
 ///   Both sources can coexist. JSON is loaded lazily; assets register eagerly on scene load.
 /// </summary>
+public static class DialogueDatabase
 {
     private const string DialogueDatabaseFileName = "dialogues.json";
 

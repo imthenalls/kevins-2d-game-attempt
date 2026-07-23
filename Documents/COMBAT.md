@@ -13,7 +13,7 @@ Attack types, elements, and status effects are not implemented yet. `DamageInfo`
 | File | Description |
 |---|---|
 | `Assets/Scripts/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
-| `Assets/Scripts/Entity/Combatant.cs` | Combat component for any entity; wraps EntityStats |
+| `Assets/Scripts/Entity/CombatReceiver.cs` | Hit-receiving component for any entity; wraps `EntityStats` |
 | `Assets/Scripts/Entity/CombatAttacker.cs` | Melee attack — shared by player and NPCs |
 
 ---
@@ -22,7 +22,7 @@ Attack types, elements, and status effects are not implemented yet. `DamageInfo`
 
 **File:** `Assets/Scripts/Entity/DamageInfo.cs`
 
-Plain struct — no MonoBehaviour. Passed into `Combatant.ReceiveHit()`.
+Plain struct — no MonoBehaviour. Passed into `CombatReceiver.ReceiveHit()`.
 
 | Field | Type | Description |
 |---|---|---|
@@ -31,14 +31,14 @@ Plain struct — no MonoBehaviour. Passed into `Combatant.ReceiveHit()`.
 
 ```csharp
 // Create and send a hit
-combatant.ReceiveHit(new DamageInfo(25, gameObject));
+receiver.ReceiveHit(new DamageInfo(25, gameObject));
 ```
 
 ---
 
-## Combatant
+## CombatReceiver
 
-**File:** `Assets/Scripts/Entity/Combatant.cs`
+**File:** `Assets/Scripts/Entity/CombatReceiver.cs`
 
 Add to any entity (player or enemy) that should participate in combat.
 `RequireComponent` automatically adds `EntityStats` if it isn't already present.
@@ -48,33 +48,35 @@ Add to any entity (player or enemy) that should participate in combat.
 | Field | Default | Description |
 |---|---|---|
 | Combat Enabled | true | When false, `ReceiveHit` is a no-op — the entity cannot take damage |
+| Invincible | false | When true, the entity remains combat-enabled but incoming hits deal no damage |
 
 ### Runtime toggle
 
 ```csharp
-combatant.CombatEnabled = false; // invincible (cutscene, spawn grace period, etc.)
-combatant.CombatEnabled = true;  // re-enable
+receiver.CombatEnabled = false; // ignore incoming hits
+receiver.CombatEnabled = true;  // re-enable incoming hits
+receiver.Invincible = true;     // remain in combat but take no damage
 ```
 
 ### Events
 
 ```csharp
 event Action<DamageInfo, EntityStats> OnHit    // fires on every landed hit
-event Action<Combatant>               OnDeath  // fires once when HP reaches 0
+event Action<CombatReceiver>           OnDeath  // fires once when HP reaches 0
 ```
 
 ### API
 
 ```csharp
-combatant.ReceiveHit(new DamageInfo(25, attackerGameObject));
+receiver.ReceiveHit(new DamageInfo(25, attackerGameObject));
 
-bool alive = combatant.Stats.IsAlive;
-int  hp    = combatant.Stats.Hp;
+bool alive = receiver.Stats.IsAlive;
+int  hp    = receiver.Stats.Hp;
 ```
 
 ### Enemy death and quests
 
-When an entity that has both `Combatant` and `NpcController` (with `NpcType.Enemy`) dies, this component automatically raises:
+When an entity that has both `CombatReceiver` and `NpcController` (with `NpcType.Enemy`) dies, this component automatically raises:
 
 ```csharp
 QuestEventBus.Raise("EnemyKilled", npcController.NpcId);
@@ -112,7 +114,7 @@ The only difference between the two is the **Use Player Input** toggle.
 
 1. When **Use Player Input** is on, `Update` reads input and calls `TryAttack()`.
 2. `OverlapCircleNonAlloc` scans `attackRange` for colliders on `targetLayers`.
-3. The nearest living `Combatant` is found (always skips self).
+3. The nearest living `CombatReceiver` is found (always skips self).
 4. `nearest.ReceiveHit(new DamageInfo(attackDamage, gameObject))` is called.
 5. A cooldown timer blocks further attacks until it expires.
 
@@ -129,7 +131,7 @@ A red wire circle gizmo shows the attack range in Scene view when the GameObject
 ```
 Player (GameObject)
   ├── EntityStats      — HP/MP (already present)
-  ├── Combatant        — add if the player can also take hits from enemies
+  ├── CombatReceiver   — add if the player can also take hits from enemies
   └── CombatAttacker   — Use Player Input: ON  |  Target Layers: Enemy
 ```
 
@@ -137,12 +139,12 @@ Player (GameObject)
 
 ```
 Enemy NPC (GameObject)
-  ├── NpcController    — set NpcType = Enemy (auto-adds EntityStats and Combatant)
+  ├── NpcController    — set NpcType = Enemy (auto-adds EntityStats and CombatReceiver)
   ├── CombatAttacker   — Use Player Input: OFF  |  Target Layers: Player
   └── Collider2D       — must be on the Enemy layer for the player's CombatAttacker to detect it
 ```
 
-`NpcController.Awake` adds both `EntityStats` and `Combatant` automatically when `NpcType = Enemy`. Do not add them manually — access them via `npcController.Stats` and `npcController.Combatant`.
+`NpcController.Awake` adds both `EntityStats` and `CombatReceiver` automatically when `NpcType = Enemy`. Do not add them manually — access them via `npcController.Stats` and `npcController.CombatReceiver`.
 
 ### Layer setup
 
@@ -158,9 +160,9 @@ Enemy NPC (GameObject)
 
 | Goal | What to change |
 |---|---|
-| **Attack types / elements** | Add an `AttackType` enum field to `DamageInfo`; read it in `Combatant.ReceiveHit` for resistance/weakness logic |
-| **Defence / armor** | Add a `defense` field to `Combatant`; subtract it from `info.Amount` before calling `TakeDamage` |
-| **Hit all targets in range** | In `CombatAttacker.TryAttack`, loop all found combatants instead of picking nearest |
+| **Attack types / elements** | Add an `AttackType` enum field to `DamageInfo`; read it in `CombatReceiver.ReceiveHit` for resistance/weakness logic |
+| **Defence / armor** | Add a `defense` field to `CombatReceiver`; subtract it from `info.Amount` before calling `TakeDamage` |
+| **Hit all targets in range** | In `CombatAttacker.TryAttack`, loop all found receivers instead of picking nearest |
 | **Ranged attacks / projectiles** | Create `Projectile.cs`; carry a `DamageInfo`; call `ReceiveHit` on `OnTriggerEnter2D` |
 | **Enemy attacks player** | Add an attack behavior script (similar to `NpcWanderBehavior`) that calls `combatAttacker.TryAttack()` on a timer |
-| **On-hit VFX / SFX** | Subscribe to `Combatant.OnHit` and spawn a particle or play a clip |
+| **On-hit VFX / SFX** | Subscribe to `CombatReceiver.OnHit` and spawn a particle or play a clip |

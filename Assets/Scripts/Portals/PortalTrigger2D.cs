@@ -21,6 +21,8 @@ using UnityEngine;
 ///   4. Set Required Tag (default "Player") and Travel Cooldown.
 ///   5. Toggle Reset Velocity and set Exit Velocity to control exit momentum.
 /// </summary>
+[RequireComponent(typeof(Collider2D))]
+public class PortalTrigger2D : MonoBehaviour
 {
     public enum ExitSide
     {
