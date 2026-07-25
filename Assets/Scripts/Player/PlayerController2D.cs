@@ -13,10 +13,13 @@ using UnityEngine.InputSystem;
 ///   2. Add a Rigidbody2D:
 ///        • Gravity Scale = 0  (or enable Force No Gravity to apply it via script).
 ///        • Freeze Z Rotation  (or enable Lock Rotation to apply it via script).
-///   3. EntityStats is required (enforced by RequireComponent) — configure HP/MP there.
-///   4. Optionally add CombatReceiver to the same GameObject so the player can take damage.
-///   5. Optionally add CombatAttacker if the player should be able to attack.
-///   6. Set Move Speed in the Inspector (default 6 units/s).
+///   3. EntityStats is required (enforced by RequireComponent). Its legacy Starting MP and
+///      Max MP initialize the canonical mana account when the player has no Wallet yet.
+///   4. Wallet is found or added automatically on Awake. If manually added, configure
+///      Starting Mana and Mana Capacity in the Wallet Inspector.
+///   5. Optionally add CombatReceiver to the same GameObject so the player can take damage.
+///   6. Optionally add CombatAttacker if the player should be able to attack.
+///   7. Set Move Speed in the Inspector (default 6 units/s).
 ///
 /// Movement is locked at runtime by SetMovementEnabled(false) — called automatically
 /// by dialogue, inventory, and cutscene systems.
@@ -36,6 +39,7 @@ public class PlayerController2D : MonoBehaviour, IEntityController
 
     public string     DisplayName     => gameObject.name;
     public EntityStats Stats          { get; private set; }
+    public Wallet      ManaWallet     { get; private set; }
     public CombatReceiver CombatReceiver { get; private set; }
     public bool        MovementEnabled => movementEnabled;
 
@@ -51,6 +55,10 @@ public class PlayerController2D : MonoBehaviour, IEntityController
         rb       = GetComponent<Rigidbody2D>();
         Stats    = GetComponent<EntityStats>();
         CombatReceiver = GetComponent<CombatReceiver>(); // may be null if CombatReceiver is not added
+
+        bool hadWallet = TryGetComponent(out Wallet wallet);
+        ManaWallet = hadWallet ? wallet : gameObject.AddComponent<Wallet>();
+        Stats.BindManaWallet(ManaWallet, initializeFromStats: !hadWallet);
 
         if (forceNoGravity)
         {

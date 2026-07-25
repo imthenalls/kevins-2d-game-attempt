@@ -92,7 +92,7 @@ StreamingAssets/
 | type | Fields | Description |
 |---|---|---|
 | `ObjectiveComplete` | `objectiveId` | All required count met for that objective on the current node |
-| `Fact` | `key`, `value` | `WorldStateDB` entry equals value (bool, int, string, float) |
+| `Fact` | `key`, `value` | `WorldStateManager` entry equals value (bool, int, string, float) |
 | `QuestInNode` | `questId`, `nodeId` | Another active quest instance is currently at a specific node |
 | `HasItem` | `itemId`, `count` | Player inventory contains at least count of item |
 
@@ -102,12 +102,14 @@ Conditions in a single transition are **all AND**. To express OR, use multiple t
 
 | type | Fields | Description |
 |---|---|---|
-| `SetFact` | `key`, `value` | Write a value into `WorldStateDB` |
+| `SetFact` | `key`, `value` | Write a value into `WorldStateManager` |
 | `GiveItem` | `itemId`, `count` | Add item(s) to player inventory |
 | `RemoveItem` | `itemId`, `count` | Remove item(s) from player inventory |
 | `StartQuest` | `questId` | Activate another quest graph |
 
 `onEnterActions` run once when a node is entered.
+
+> **Current implementation note:** `QuestTransitionData.automatic` is deserialized but is not currently checked by `QuestInstance.TryAdvance()`. At runtime, every transition fires as soon as its conditions pass, including transitions authored with `"automatic": false`. Manual/player-selected transitions need a separate API before this field can represent dialogue choices or confirmed branches.
 
 ---
 
@@ -149,7 +151,7 @@ interface IQuestAction { void Execute(); }
 ### Runtime classes
 
 ```
-WorldStateDB : MonoBehaviour (singleton)
+WorldStateManager : MonoBehaviour (singleton)
   └── Dictionary<string, object> facts
       — the single global source of truth for all game state
       — facts are written by SetFactAction and read by FactCondition and QuestStateCondition
@@ -228,7 +230,7 @@ No game system imports quest types. They only fire events or call `StartQuest`. 
 
 Only two things need to be serialized per save file:
 
-1. **`WorldStateDB.facts`** — the full dictionary
+1. **`WorldStateManager` facts** — the full dictionary
 2. **Per `QuestInstance`**: `questId`, `activeNodeIds`, `objectiveCounts`
 
 The `QuestGraph` JSON files are read-only authored data and are never written at runtime. Reloading a save reconstructs `QuestInstance` objects from those two pieces and re-reads graphs from disk.
@@ -248,10 +250,18 @@ Add to `Packages/manifest.json`:
 
 ## Implementation Order
 
-1. `WorldStateDB`
+1. `WorldStateManager`
 2. `QuestEventBus`
 3. `ICondition` / `IQuestAction` interfaces + concrete implementations + discriminator factory
 4. Plain C# data classes: `QuestGraph`, `QuestNode`, `QuestObjective`, `QuestTransition`
 5. `QuestLoader` (JSON → data classes)
 6. `QuestInstance`
 7. `QuestManager`
+
+---
+
+## Progression Integration
+
+The quest graph is the orchestration layer for nested progression. Quest nodes should write stable world-state facts; world components and future market, recipe, and transformation systems should react to those facts without direct quest-to-scene coupling.
+
+See [QUEST_PROGRESSION_INTEGRATION.md](QUEST_PROGRESSION_INTEGRATION.md) for the mapping from familiar activities to NPC, quest, resource, location, transformation, and system unlocks.

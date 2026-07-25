@@ -8,7 +8,9 @@ using System.Collections.Generic;
 ///
 /// Contains:
 ///   - Current scene name and player world position
-///   - Player current and max HP / MP
+///   - Player HP
+///   - Canonical player mana balance, capacity, and transaction history
+///   - Legacy player MP fields retained for one-time migration of older saves
 ///   - WorldStateManager facts (serialized as a FactEntry list)
 ///   - Active quest state (node positions + objective counts)
 ///   - Occupied inventory slots (referenced by itemId, resolved via ItemDatabase on load)
@@ -23,6 +25,10 @@ using System.Collections.Generic;
 [Serializable]
 public class SaveData
 {
+    // Version 2 unifies the former wallet balance and EntityStats MP into Wallet mana.
+    // Missing fields deserialize as 0, so pre-unification saves are version 0.
+    public int saveVersion;
+
     // ── Scene ────────────────────────────────────────────────────────────────
     public string currentScene = "";
 
@@ -35,6 +41,8 @@ public class SaveData
     public int playerMp;
     public int playerMaxHp;
     public int playerMaxMp;
+
+    public WalletSaveData wallet = new();
 
     // ── World facts (WorldStateManager) ────────────────────────────────────────────
     public List<FactEntry> worldFacts = new();

@@ -10,7 +10,8 @@ using UnityEngine.SceneManagement;
 ///
 /// What it saves:
 ///   - Active scene name and player position
-///   - Player HP / MP
+///   - Player HP
+///   - Canonical player mana balance, capacity, and transaction history
 ///   - All WorldStateManager facts
 ///   - Active quest instances (node positions + objective counts)
 ///   - Occupied inventory slots (by itemId)
@@ -27,6 +28,7 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
+    private const int CurrentSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
 
@@ -58,6 +60,7 @@ public class SaveManager : MonoBehaviour
     {
         if (!SaveEnabled) return;
         var data = new SaveData();
+        data.saveVersion = CurrentSaveVersion;
         data.currentScene = SceneManager.GetActiveScene().name;
 
         // Player position + stats
@@ -74,6 +77,9 @@ public class SaveManager : MonoBehaviour
                 data.playerMaxHp = stats.MaxHp;
                 data.playerMaxMp = stats.MaxMp;
             }
+
+            if (player.TryGetComponent<Wallet>(out var wallet))
+                data.wallet = wallet.GetSaveData();
         }
 
         // World facts
@@ -206,8 +212,10 @@ public class SaveManager : MonoBehaviour
             {
                 stats.Configure(data.playerMaxHp, data.playerMaxMp);
                 stats.SetHp(data.playerHp);
-                stats.SetMp(data.playerMp);
             }
+
+            if (player.TryGetComponent<Wallet>(out var wallet))
+                wallet.LoadSaveData(BuildWalletSaveDataForLoad(data));
         }
 
         // Inventory
@@ -323,5 +331,54 @@ public class SaveManager : MonoBehaviour
             "float" => float.Parse(fe.value, System.Globalization.CultureInfo.InvariantCulture),
             _       => fe.value,
         };
+    }
+
+    /// <summary>
+    /// Convert a pre-unification save into one canonical mana account. Old saves owned both
+    /// wallet currency and MP, so migration preserves their combined value and expands capacity
+    /// when necessary rather than silently deleting either resource.
+    /// </summary>
+    private static WalletSaveData BuildWalletSaveDataForLoad(SaveData data)
+    {
+        if (data.saveVersion >= CurrentSaveVersion && data.wallet != null)
+            return data.wallet;
+
+        var migrated = new WalletSaveData();
+        int legacyWalletBalance = Mathf.Max(0, data.wallet?.balance ?? 0);
+        int legacyMp = Mathf.Max(0, data.playerMp);
+        long combinedLong = (long)legacyWalletBalance + legacyMp;
+        int combinedBalance = combinedLong > int.MaxValue
+            ? int.MaxValue
+            : (int)combinedLong;
+
+        migrated.balance = combinedBalance;
+        migrated.capacity = Mathf.Max(
+            Mathf.Max(0, data.playerMaxMp),
+            combinedBalance);
+
+        if (data.wallet?.transactions != null)
+        {
+            foreach (var transaction in data.wallet.transactions)
+            {
+                if (transaction != null)
+                    migrated.transactions.Add(transaction.Clone());
+            }
+        }
+
+        if (legacyMp > 0)
+        {
+            migrated.transactions.Add(new WalletTransaction
+            {
+                transactionId = Guid.NewGuid().ToString("N"),
+                utcTimestamp = DateTime.UtcNow.ToString("O"),
+                type = WalletTransactionType.Migration,
+                amount = legacyMp,
+                balanceAfter = combinedBalance,
+                reason = "Merged legacy EntityStats MP into canonical mana",
+                referenceId = "save.v1.player_mp",
+            });
+        }
+
+        return migrated;
     }
 }

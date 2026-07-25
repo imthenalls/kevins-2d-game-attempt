@@ -4,6 +4,12 @@ This index covers every C# script under `Assets/Scripts/`. “Key runtime API”
 
 For Inspector wiring and scene setup, use the linked system documents in `AGENT.md`.
 
+## Economy
+
+| Script | Responsibility | Key runtime API |
+|---|---|---|
+| `Assets/Scripts/Economy/Wallet.cs` | Owns canonical mana balance, capacity, and a bounded saveable transaction ledger. | `Balance`, `Capacity`, `RemainingCapacity`, `CanAfford()`, `CanReceive()`, `Add()`, `TrySpend()`, `TryConsumeMana()`, `RestoreMana()`, `TrySubtract()`, capacity/balance controls, save-data methods, and change events |
+
 ## Entity
 
 | Script | Responsibility | Key runtime API |
@@ -12,7 +18,7 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 | `Assets/Scripts/Entity/CombatAttacker.cs` | Finds a nearby `CombatReceiver` and sends melee damage. | `TryAttack()`, `OnAttackLanded`, `OnKillLanded` |
 | `Assets/Scripts/Entity/CombatReceiver.cs` | Accepts hits, applies damage to `EntityStats`, and reports hits/death. | `ReceiveHit()`, `CombatEnabled`, `Invincible`, `DamageMultiplier`, `Stats`, `OnHit`, `OnDeath` |
 | `Assets/Scripts/Entity/DamageInfo.cs` | Value object describing one hit. | `DamageInfo(amount, source)`, `Amount`, `Source` |
-| `Assets/Scripts/Entity/EntityStats.cs` | Owns HP, MP, equipment bonuses, and stat-change events. | `Configure()`, `TakeDamage()`, `Heal()`, `SetHp()`, `SpendMp()`, `RestoreMp()`, `SetMp()`, `IncreaseMaxHp()`, `IncreaseMaxMp()`, `ApplyStatBonus()`, `RemoveStatBonus()` |
+| `Assets/Scripts/Entity/EntityStats.cs` | Owns HP and equipment bonuses; exposes local MP or delegates MP to a bound canonical Wallet. | `Configure()`, `BindManaWallet()`, `TakeDamage()`, `Heal()`, `SetHp()`, `SpendMp()`, `RestoreMp()`, `SetMp()`, `IncreaseMaxHp()`, `IncreaseMaxMp()`, `ApplyStatBonus()`, `RemoveStatBonus()` |
 | `Assets/Scripts/Entity/EntityStatsUI.cs` | Displays an `EntityStats` component through HP and MP image fills. | Event-driven component; no public methods |
 | `Assets/Scripts/Entity/IEntityController.cs` | Shared player/NPC controller contract. | `DisplayName`, `Stats`, `CombatReceiver`, `MovementEnabled`, `SetMovementEnabled()` |
 

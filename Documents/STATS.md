@@ -2,7 +2,7 @@
 
 ## Overview
 
-`EntityStats` is a single component used by both the player and enemy NPCs to track HP and MP. It fires C# events on every change so any number of listeners (UI, AI, quest system) can react without polling.
+`EntityStats` tracks HP and exposes a compatible MP API for players and NPCs. When a Wallet exists on the same entity, MP delegates to that canonical mana account. Entities without a Wallet retain a local MP pool. It fires C# events on every change so UI and gameplay systems do not need to poll.
 
 ---
 
@@ -16,8 +16,8 @@
 |---|---|---|
 | Max Hp | 100 | Maximum hit points |
 | Starting Hp | 100 | HP on `Awake` (clamped to `maxHp`) |
-| Max Mp | 50 | Maximum mana points |
-| Starting Mp | 50 | MP on `Awake` (clamped to `maxMp`) |
+| Max Mp | 50 | Legacy/local maximum. Initializes an auto-added player Wallet, or remains the maximum for an entity without a Wallet |
+| Starting Mp | 50 | Legacy/local starting value. Initializes an auto-added player Wallet, or remains local for an entity without a Wallet |
 
 Inspector values are used when the component is placed manually. For runtime-spawned entities (enemies via `NpcController.Awake`), call `Configure()` instead — it bypasses the inspector values.
 
@@ -47,12 +47,27 @@ event Action           OnDeath       // fires once when HP reaches 0
 | `SetMp(int value)` | — | Direct set, clamped to `[0, maxMp]`. |
 | `IncreaseMaxMp(int, bool restoreDelta)` | — | Raises `maxMp`; optionally restores the added amount (default: true). |
 
+For a Wallet-bound entity:
+
+- `Mp` reads `Wallet.Balance`.
+- `MaxMp` reads `Wallet.Capacity`.
+- `SpendMp` records a `Spell` transaction.
+- `RestoreMp` records a `Restore` transaction and clamps to capacity.
+- `SetMp` records an `Adjustment`.
+- maximum-MP and equipment changes modify Wallet capacity.
+
 ### Runtime configuration
 
 ```csharp
 // After AddComponent — sets all four values at once and skips Awake init
 stats.Configure(hp: 30, mp: 0);  // mp defaults to 0 (enemy, no mana)
 stats.Configure(hp: 100, mp: 50); // player
+```
+
+`PlayerController2D` automatically binds a Wallet. Other entities can add one in the Inspector or call:
+
+```csharp
+stats.BindManaWallet(wallet, initializeFromStats: true);
 ```
 
 ### Read-only properties

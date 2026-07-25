@@ -24,13 +24,16 @@ flowchart TB
             direction TB
             PC[PlayerController2D]
             PI[PlayerInteractionController]
-            ES_P[EntityStats]
+            ES_P["EntityStats\nHP + mana facade"]
+            MW_P["Wallet\ncanonical mana + capacity"]
             CR_P[CombatReceiver]
             CA_P["CombatAttacker\nusePlayerInput = ON"]
             UI_P[EntityStatsUI]
             RB_P["Rigidbody2D / Gravity=0"]
             COL_P["Collider2D / Layer: Player"]
             PC -->|RequireComponent| ES_P
+            PC -->|Awake finds/adds| MW_P
+            ES_P -->|delegates MP API| MW_P
             CR_P -->|RequireComponent| ES_P
             ES_P --> UI_P
         end
@@ -76,7 +79,7 @@ flowchart TB
             direction TB
             QM[QuestManager]
             QEB["QuestEventBus\nstatic bus"]
-            WS[WorldStateDB]
+            WS[WorldStateManager]
             SM[SaveManager]
             SL[SceneLoader]
             QM --> QEB

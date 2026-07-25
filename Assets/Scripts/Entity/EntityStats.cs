@@ -2,9 +2,22 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Tracks HP and MP for any entity (player or enemy).
-/// Call Configure() after AddComponent for runtime-spawned entities.
-/// Subscribe to OnHpChanged / OnMpChanged for UI or gameplay reactions.
+/// Tracks HP and exposes the shared mana API for any entity. When a Wallet is present,
+/// MP reads and writes delegate to that canonical mana account; entities without a Wallet
+/// retain a local MP pool for backward-compatible enemies and other non-economic actors.
+///
+/// Unity setup:
+///   1. Add to an entity root GameObject. PlayerController2D requires it automatically.
+///   2. Configure Max HP / Starting HP.
+///   3. Configure legacy Max MP / Starting MP. PlayerController2D uses these values to
+///      initialize an automatically added Wallet when no Wallet is already configured.
+///   4. To give another entity shared economic/spell mana, add Wallet to the same GameObject.
+///      EntityStats binds it automatically during Awake.
+///
+/// Runtime API:
+///   SpendMp, RestoreMp, SetMp, IncreaseMaxMp, and OnMpChanged remain compatible.
+///   BindManaWallet connects a Wallet added later at runtime.
+///   Call Configure immediately after AddComponent for runtime-spawned entities.
 /// </summary>
 public class EntityStats : MonoBehaviour
 {
@@ -19,6 +32,8 @@ public class EntityStats : MonoBehaviour
     // current values
     private int _hp;
     private int _mp;
+    private Wallet _manaWallet;
+    private bool _awakeInitialized;
 
     // equipment bonuses (tracked separately from base stats)
     private int _bonusAttack;
@@ -26,9 +41,10 @@ public class EntityStats : MonoBehaviour
 
     // read-only accessors
     public int Hp => _hp;
-    public int Mp => _mp;
+    public int Mp => _manaWallet != null ? _manaWallet.Balance : _mp;
     public int MaxHp => maxHp;
-    public int MaxMp => maxMp;
+    public int MaxMp => _manaWallet != null ? _manaWallet.Capacity : maxMp;
+    public Wallet ManaWallet => _manaWallet;
     public bool IsAlive => _hp > 0;
 
     /// <summary>Total attack bonus from equipped items.</summary>
@@ -55,6 +71,16 @@ public class EntityStats : MonoBehaviour
             _hp = Mathf.Clamp(startingHp, 0, maxHp);
             _mp = Mathf.Clamp(startingMp, 0, maxMp);
         }
+
+        _awakeInitialized = true;
+
+        if (TryGetComponent<Wallet>(out var wallet))
+            BindManaWallet(wallet);
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromManaWallet();
     }
 
     /// <summary>
@@ -70,6 +96,37 @@ public class EntityStats : MonoBehaviour
         _hp = hp;
         _mp = mp;
         _configured = true;
+
+        if (_manaWallet != null)
+            _manaWallet.InitializeMana(mp, mp, clearHistory: false);
+    }
+
+    /// <summary>
+    /// Bind this entity's MP API to a canonical Wallet. When initializeFromStats is true,
+    /// the Wallet receives the current legacy MP and maximum without a transaction.
+    /// </summary>
+    public void BindManaWallet(Wallet wallet, bool initializeFromStats = false)
+    {
+        if (wallet == null) return;
+
+        if (_manaWallet == wallet)
+        {
+            if (initializeFromStats)
+                InitializeWalletFromLegacyStats(wallet);
+            return;
+        }
+
+        UnsubscribeFromManaWallet();
+        _manaWallet = wallet;
+
+        if (initializeFromStats)
+            InitializeWalletFromLegacyStats(wallet);
+
+        _mp = wallet.Balance;
+        maxMp = wallet.Capacity;
+        wallet.OnBalanceChanged += HandleManaBalanceChanged;
+        wallet.OnCapacityChanged += HandleManaCapacityChanged;
+        OnMpChanged?.Invoke(wallet.Balance, wallet.Capacity);
     }
 
     // ── HP ──────────────────────────────────────────────────────────────────
@@ -113,6 +170,12 @@ public class EntityStats : MonoBehaviour
     /// </summary>
     public bool SpendMp(int cost)
     {
+        if (_manaWallet != null)
+            return _manaWallet.TryConsumeMana(
+                cost,
+                "Spell or ability mana cost",
+                "entity_stats.spend_mp");
+
         if (cost <= 0 || _mp < cost) return false;
 
         _mp -= cost;
@@ -123,6 +186,15 @@ public class EntityStats : MonoBehaviour
     /// <summary>Increase MP by <paramref name="amount"/>. Clamps to maxMp.</summary>
     public void RestoreMp(int amount)
     {
+        if (_manaWallet != null)
+        {
+            _manaWallet.RestoreMana(
+                amount,
+                "Mana restored",
+                "entity_stats.restore_mp");
+            return;
+        }
+
         if (amount <= 0) return;
 
         _mp = Mathf.Min(_mp + amount, maxMp);
@@ -132,6 +204,15 @@ public class EntityStats : MonoBehaviour
     /// <summary>Set MP directly.</summary>
     public void SetMp(int value)
     {
+        if (_manaWallet != null)
+        {
+            _manaWallet.SetBalance(
+                value,
+                "Mana set through EntityStats",
+                "entity_stats.set_mp");
+            return;
+        }
+
         _mp = Mathf.Clamp(value, 0, maxMp);
         OnMpChanged?.Invoke(_mp, maxMp);
     }
@@ -155,6 +236,13 @@ public class EntityStats : MonoBehaviour
     public void IncreaseMaxMp(int amount, bool restoreDelta = true)
     {
         if (amount <= 0) return;
+
+        if (_manaWallet != null)
+        {
+            _manaWallet.IncreaseCapacity(amount, restoreDelta);
+            return;
+        }
+
         maxMp += amount;
         if (restoreDelta) RestoreMp(amount);
         else OnMpChanged?.Invoke(_mp, maxMp);
@@ -198,8 +286,44 @@ public class EntityStats : MonoBehaviour
     private void DecreaseMaxMp(int amount)
     {
         if (amount <= 0) return;
+
+        if (_manaWallet != null)
+        {
+            _manaWallet.DecreaseCapacity(amount);
+            return;
+        }
+
         maxMp = Mathf.Max(0, maxMp - amount);
         _mp   = Mathf.Min(_mp, maxMp);
         OnMpChanged?.Invoke(_mp, maxMp);
+    }
+
+    private void InitializeWalletFromLegacyStats(Wallet wallet)
+    {
+        int initialMp = _awakeInitialized || _configured
+            ? _mp
+            : Mathf.Clamp(startingMp, 0, maxMp);
+        wallet.InitializeMana(initialMp, maxMp);
+    }
+
+    private void HandleManaBalanceChanged(int balance)
+    {
+        _mp = balance;
+        OnMpChanged?.Invoke(balance, _manaWallet != null ? _manaWallet.Capacity : maxMp);
+    }
+
+    private void HandleManaCapacityChanged(int capacity)
+    {
+        maxMp = capacity;
+        if (_manaWallet != null)
+            _mp = _manaWallet.Balance;
+        OnMpChanged?.Invoke(_mp, capacity);
+    }
+
+    private void UnsubscribeFromManaWallet()
+    {
+        if (_manaWallet == null) return;
+        _manaWallet.OnBalanceChanged -= HandleManaBalanceChanged;
+        _manaWallet.OnCapacityChanged -= HandleManaCapacityChanged;
     }
 }

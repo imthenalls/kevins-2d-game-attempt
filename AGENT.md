@@ -22,6 +22,12 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock |
 | [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
 | [Documents/CHARACTER_STATISTICS.md](Documents/CHARACTER_STATISTICS.md) | CharacterStatistics component: attack/kill/damage/item/money tracking, per-stat events, CombatAttacker integration |
+| [Documents/WALLET.md](Documents/WALLET.md) | Spendable currency balance, add/spend/subtract API, transaction history, and save integration |
+| [Documents/MARKET_ECONOMY.md](Documents/MARKET_ECONOMY.md) | Shared player/NPC trading architecture, atomic trades, market ledger, simulation, and persistence |
+| [Documents/MANA_ECONOMY.md](Documents/MANA_ECONOMY.md) | Mana as shared currency/spell fuel, scarcity rules, faucets, sinks, capacity, and unification plan |
+| [Documents/ECONOMIC_PROGRESSION.md](Documents/ECONOMIC_PROGRESSION.md) | Early/mid/late economic phases, rewards, smooth nested unlocks, and mana progression |
+| [Documents/QUEST_PROGRESSION_INTEGRATION.md](Documents/QUEST_PROGRESSION_INTEGRATION.md) | How quest graphs and world-state facts drive nested NPC, location, transformation, and market unlocks |
+| [Documents/ECONOMY_BALANCING_RULES.md](Documents/ECONOMY_BALANCING_RULES.md) | Soft economic resets, early difficulty, bounded RNG, economy workbook fields, and reward rules |
 | [Documents/WORLD_OBJECTS.md](Documents/WORLD_OBJECTS.md) | ItemPickup, WorldObject, IInteractable interface, InventoryHelper utility |
 | [Documents/WORLD_STATE.md](Documents/WORLD_STATE.md) | World State System: WorldStateDB, WorldStateKey, all WorldState components, quest integration |
 
@@ -120,15 +126,16 @@ This project is a **2D top-down** game.
 
 See [Documents/PLAYER.md](Documents/PLAYER.md) for full player system documentation.
 
-## HP/MP System
+## HP and Mana System
 
 ### Overview
-- `EntityStats.cs` — shared by the player and enemy NPCs. Tracks HP and MP with events.
+- `EntityStats.cs` — shared by the player and enemy NPCs. Tracks HP and exposes the compatible MP/mana API with events.
+- `Wallet.cs` — owns the player's canonical mana balance and capacity for both trade and spellcasting.
 - `EntityStatsUI.cs` — listens to `EntityStats` events and drives two `Image` fills in a Canvas.
 
 ### Player
 - `PlayerController2D` has `[RequireComponent(typeof(EntityStats))]`, so the component is always present.
-- Configure `Max Hp`, `Starting Hp`, `Max Mp`, `Starting Mp` in the Inspector.
+- Configure HP on `EntityStats`. If no Wallet is manually present, its `Max Mp` and `Starting Mp` values initialize the Wallet that `PlayerController2D` adds at runtime.
 
 ### Enemy NPCs
 - Set `Npc Type = Enemy` on any `NpcController`. `Awake()` automatically calls `AddComponent<EntityStats>()` and `Configure(enemyMaxHp)`.
@@ -140,8 +147,8 @@ See [Documents/PLAYER.md](Documents/PLAYER.md) for full player system documentat
 |---|---|
 | `TakeDamage(int)` | Reduces HP; fires `OnDeath` when HP reaches 0 |
 | `Heal(int)` | Restores HP up to `maxHp` |
-| `SpendMp(int)` | Returns `true` and deducts cost; `false` if insufficient MP |
-| `RestoreMp(int)` | Restores MP up to `maxMp` |
+| `SpendMp(int)` | Delegates to the bound Wallet and records a spell debit; returns false if insufficient |
+| `RestoreMp(int)` | Restores canonical mana up to Wallet capacity |
 | `Configure(int hp, int mp)` | Sets stats at runtime after `AddComponent` |
 | `IncreaseMaxHp/Mp(int)` | Scales max stat (e.g. on level-up) |
 

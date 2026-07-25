@@ -15,7 +15,8 @@ The save system serializes all meaningful game state to a single JSON file on di
 |---|---|
 | Current scene name | `SceneManager` |
 | Player position (X, Y) | `PlayerController2D.transform` |
-| Player HP / MP (current + max) | `EntityStats` |
+| Player HP | `EntityStats` |
+| Canonical player mana balance, capacity, and transaction history | `Wallet` |
 | World facts | `WorldStateDB` |
 | Active quest states (node + objective counts) | `QuestManager` |
 | Inventory slots (index, item, quantity) | `InventoryUI.Model` |
@@ -89,30 +90,35 @@ void Update()
 4. Calls `SceneLoader.Instance.LoadScene(data.currentScene)` — this triggers the normal fade transition.
 5. Once the scene finishes loading, the callback fires and restores:
    - Player position (`transform.position`)
-   - Player HP/MP via `EntityStats.Configure()` → `SetHp()` / `SetMp()`
+   - Player HP via `EntityStats.Configure()` → `SetHp()`
+   - Canonical mana balance, capacity, and retained transaction history via `Wallet.LoadSaveData()`
    - Inventory slots (clears all first, then sets saved slots, then calls `ForceRefresh()` to update the UI)
 
 ---
 
-## Adding New Data to the Save
+## Wallet Save Integration
 
-1. Add a serializable field to `SaveData.cs`:
+Wallet saving is implemented. `SaveData.wallet` contains the current balance, capacity, and retained transaction records. `SaveManager.Save()` reads it from the Wallet on the Player, and `RestoreSceneState()` restores it after the saved scene loads.
 
-```csharp
-public int playerGold;
-```
+### Pre-unification save migration
 
-2. Write to it in `SaveManager.Save()`:
+Save version 2 unifies player currency and MP. When loading an older save, `SaveManager`:
 
-```csharp
-data.playerGold = PlayerWallet.Instance.Gold;
-```
+1. Reads the former Wallet balance.
+2. Reads the former `playerMp`.
+3. Adds them together so neither owned resource is discarded.
+4. Expands capacity when required to hold the combined amount.
+5. Adds a `Migration` transaction for the imported MP.
 
-3. Read it back in `SaveManager.RestoreSceneState()` (for scene-dependent data) or directly in `Load()` (for persistent singletons):
+Legacy `playerMp` and `playerMaxMp` fields remain in `SaveData` for this migration and for diagnosing older files. New saves write the canonical Wallet values into both the Wallet snapshot and those compatibility fields.
 
-```csharp
-PlayerWallet.Instance.SetGold(data.playerGold);
-```
+See [WALLET.md](WALLET.md) for the balance API, transaction fields, and Unity setup.
+
+## Adding Other Data to the Save
+
+1. Add a serializable field or DTO to `SaveData.cs`.
+2. Capture it in `SaveManager.Save()`.
+3. Restore persistent-manager data in `Load()` or scene-owned data in `RestoreSceneState()`.
 
 > **Rule of thumb:** if the data belongs to a `DontDestroyOnLoad` singleton, restore it in `Load()`. If it belongs to a scene object (player, chest, NPC), restore it in `RestoreSceneState()`.
 

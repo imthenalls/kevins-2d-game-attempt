@@ -31,7 +31,7 @@
 | `TotalKills` | `int` | Auto — `CombatAttacker.OnKillLanded`; or `RecordKill()` |
 | `CriticalHits` | `int` | Manual — `RecordCriticalHit()` |
 | `TotalItemsGathered` | `int` | Auto via `InventoryHelper.GiveItem`; or `RecordItemGathered(count)` |
-| `TotalMoneyGained` | `int` | Manual — `RecordMoneyGained(amount)` |
+| `TotalMoneyGained` | `int` | Auto via `Wallet.Add`; or manual via `RecordMoneyGained(amount)` |
 
 ---
 

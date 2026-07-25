@@ -10,7 +10,8 @@ Player (GameObject)
   ├── BoxCollider2D / CapsuleCollider2D
   ├── PlayerController2D      — movement
   ├── PlayerInteractionController — NPC interaction & dialogue
-  └── EntityStats             — HP and MP (auto-required by PlayerController2D)
+  ├── EntityStats             — HP plus backward-compatible mana API
+  └── Wallet                  — canonical mana balance, capacity, and transaction history
 ```
 
 ---
@@ -46,7 +47,7 @@ Movement is clamped to magnitude 1 so diagonal speed is not faster than straight
 
 ### RequireComponent
 
-`[RequireComponent(typeof(Rigidbody2D))]` and `[RequireComponent(typeof(EntityStats))]` — both components are always present alongside `PlayerController2D`.
+`[RequireComponent(typeof(Rigidbody2D))]` and `[RequireComponent(typeof(EntityStats))]` ensure both components are present. `PlayerController2D.Awake()` also finds or adds a Wallet and binds `EntityStats` to it.
 
 ---
 
@@ -114,4 +115,5 @@ Attach to a UI GameObject in your Canvas. Subscribes to `EntityStats.OnHpChanged
 3. Add `BoxCollider2D` or `CapsuleCollider2D`.
 4. Add `PlayerController2D` — Unity will auto-add `EntityStats`.
 5. Add `PlayerInteractionController`.
-6. Tag the GameObject `Player` (required for portal detection).
+6. Optionally add `Wallet` manually to configure Starting Mana, Mana Capacity, and history size in the Inspector. If omitted, `PlayerController2D` adds it at runtime and initializes it from `EntityStats` MP fields.
+7. Tag the GameObject `Player` (required for portal detection).
