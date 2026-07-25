@@ -23,10 +23,15 @@ using UnityEngine.InputSystem;
 ///
 /// Movement is locked at runtime by SetMovementEnabled(false) — called automatically
 /// by dialogue, inventory, and cutscene systems.
+///
+/// Runtime API:
+///   SetMovementEnabled controls movement.
+///   Stats and ManaWallet expose player state.
+///   ITradeParticipant uses the stable id "player", ManaWallet, and InventoryUI.Model.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(EntityStats))]
-public class PlayerController2D : MonoBehaviour, IEntityController
+public class PlayerController2D : MonoBehaviour, IEntityController, ITradeParticipant
 {
     [Header("Top-Down Movement")]
     [SerializeField] private float moveSpeed = 6f;
@@ -42,6 +47,9 @@ public class PlayerController2D : MonoBehaviour, IEntityController
     public Wallet      ManaWallet     { get; private set; }
     public CombatReceiver CombatReceiver { get; private set; }
     public bool        MovementEnabled => movementEnabled;
+    public string TradeParticipantId => "player";
+    public Wallet TradeWallet => ManaWallet;
+    public InventoryModel TradeInventory => InventoryUI.Model;
 
     /// <summary>Movement speed in units/s. Can be read or overridden at runtime (e.g. by SceneRulesManager).</summary>
     public float MoveSpeed

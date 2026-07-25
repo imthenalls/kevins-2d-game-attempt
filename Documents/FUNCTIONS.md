@@ -8,7 +8,9 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 
 | Script | Responsibility | Key runtime API |
 |---|---|---|
-| `Assets/Scripts/Economy/Wallet.cs` | Owns canonical mana balance, capacity, and a bounded saveable transaction ledger. | `Balance`, `Capacity`, `RemainingCapacity`, `CanAfford()`, `CanReceive()`, `Add()`, `TrySpend()`, `TryConsumeMana()`, `RestoreMana()`, `TrySubtract()`, capacity/balance controls, save-data methods, and change events |
+| `Assets/Scripts/Economy/ITradeParticipant.cs` | Contract exposing a stable trader ID, Wallet, and InventoryModel. | `TradeParticipantId`, `TradeWallet`, `TradeInventory` |
+| `Assets/Scripts/Economy/TradeService.cs` | Validates and atomically commits player/NPC and NPC/NPC item-for-mana trades; owns the saved market ledger. | `TryExecute()`, `CompletedTrades`, `OnTradeCompleted`, `GetSaveData()`, `LoadSaveData()` |
+| `Assets/Scripts/Economy/Wallet.cs` | Owns canonical mana balance, capacity, and a bounded saveable transaction ledger. | `Balance`, `Capacity`, `RemainingCapacity`, `CanAfford()`, `CanReceive()`, `Add()`, `TrySpend()`, `TryTransferTo()`, `TryConsumeMana()`, `RestoreMana()`, `TrySubtract()`, capacity/balance controls, save-data methods, and change events |
 
 ## Entity
 
@@ -46,7 +48,7 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 | `Assets/Scripts/Inventory/HotbarUI.cs` | Owns the shared hotbar and processes quick-use input. | `Model`, `AssignSlot()`, `ClearSlot()`, `AssignFirstEmpty()` |
 | `Assets/Scripts/Inventory/InventoryContextMenu.cs` | Shows item actions for an occupied inventory slot. | `Show()`, `Hide()` |
 | `Assets/Scripts/Inventory/InventoryHelper.cs` | Gives items while also updating statistics and quest events. | `GiveItem()` |
-| `Assets/Scripts/Inventory/InventoryModel.cs` | Grid-based inventory data and stack operations. | `GetSlot()`, `AddItem()`, `RemoveItem()`, `HasItem()`, `CountItem()`, `MoveSlot()`, `SplitStack()`, `Sort()`, `ForceRefresh()`, `OnChanged` |
+| `Assets/Scripts/Inventory/InventoryModel.cs` | Grid-based inventory data, capacity preflight, and stack operations. | `GetSlot()`, `AddItem()`, `CanAddItem()`, `RemoveItem()`, `HasItem()`, `CountItem()`, `MoveSlot()`, `SplitStack()`, `Sort()`, `ForceRefresh()`, `OnChanged` |
 | `Assets/Scripts/Inventory/InventorySlot.cs` | Stores one item reference and quantity. | `IsEmpty`, `Set()`, `Clear()` |
 | `Assets/Scripts/Inventory/InventorySlotUI.cs` | Displays one inventory slot and handles drag, drop, hover, and clicks. | `Setup()`, `Refresh()`, pointer/drag/drop handlers |
 | `Assets/Scripts/Inventory/InventorySplitDialog.cs` | Lets the player select an exact stack-split quantity. | `Show()`, `Hide()`, `IsOpen` |
@@ -62,7 +64,7 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 
 | Script | Responsibility | Key runtime API |
 |---|---|---|
-| `Assets/Scripts/NPCs/DialogueData.cs` | Serializable dialogue graph, node, and choice DTOs. | Public serialized fields |
+| `Assets/Scripts/NPCs/DialogueData.cs` | Serializable dialogue graph, node, and choice DTOs, including optional manual quest transition fields. | Public serialized fields |
 | `Assets/Scripts/NPCs/DialogueDatabase.cs` | Loads and indexes JSON/asset dialogue graphs. | `RegisterAsset()`, `TryGetDialogue()` |
 | `Assets/Scripts/NPCs/DialogueGraphAsset.cs` | ScriptableObject wrapper for a dialogue graph. | `Graph`, `DialogueId` |
 | `Assets/Scripts/NPCs/DialogueUIController.cs` | Displays the speaker, line, and choice list. | `GetOrCreate()`, `ShowDialogue()`, `HideDialogue()`, `IsShowingDialogue` |
@@ -78,7 +80,7 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 | Script | Responsibility | Key runtime API |
 |---|---|---|
 | `Assets/Scripts/Player/PlayerController2D.cs` | Reads movement input and drives the player's `Rigidbody2D`. | `DisplayName`, `Stats`, `CombatReceiver`, `MovementEnabled`, `MoveSpeed`, `SetMovementEnabled()` |
-| `Assets/Scripts/Player/PlayerInteractionController.cs` | Finds nearby NPC/world interactables and drives conversations/interactions. | Input- and lifecycle-driven component |
+| `Assets/Scripts/Player/PlayerInteractionController.cs` | Finds nearby NPC/world interactables, drives conversations, and applies dialogue-selected manual quest transitions. | Input- and lifecycle-driven component |
 
 ## Portals
 
@@ -98,9 +100,9 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 | `Assets/Scripts/Quests/IQuestAction.cs` | Defines and implements quest-node side effects. | `Execute()` and action constructors |
 | `Assets/Scripts/Quests/QuestData.cs` | Serializable quest graph DTOs. | Public serialized fields |
 | `Assets/Scripts/Quests/QuestEventBus.cs` | Broadcasts decoupled quest progress events. | `OnEvent`, `Raise()` |
-| `Assets/Scripts/Quests/QuestInstance.cs` | Tracks the active nodes and objective counts of one quest. | State properties, `OnEvent()`, `TryAdvance()` |
+| `Assets/Scripts/Quests/QuestInstance.cs` | Tracks active quest nodes/objectives and separates automatic traversal from validated manual choices. | State properties, `OnEvent()`, `TryAdvance()`, `TryChooseTransition()` overloads |
 | `Assets/Scripts/Quests/QuestLoader.cs` | Loads quest JSON and builds condition/action instances. | `LoadAll()`, `Load()`, `BuildCondition()`, `BuildAction()` |
-| `Assets/Scripts/Quests/QuestManager.cs` | Owns active quests and quest save data. | `Instance`, `StartQuest()`, query methods, `LoadSaveData()`, `GetSaveData()` |
+| `Assets/Scripts/Quests/QuestManager.cs` | Owns active quests, manual transition routing, and quest save data. | `Instance`, `StartQuest()`, `TryChooseTransition()` overloads, query methods, `LoadSaveData()`, `GetSaveData()` |
 | `Assets/Scripts/Quests/WorldStateManager.cs` | Persistent singleton key/value store used by quests and world reactions. | Fact, flag, typed-value, snapshot APIs; `OnFlagChanged` |
 
 ## World Objects

@@ -20,7 +20,7 @@ Familiar activity
 
 | Progression step | Existing mechanism |
 |---|---|
-| Notice familiar activity | A quest objective listens for a `QuestEventBus` event such as `ItemCollected`, `NpcTalkedTo`, or a future `TradeCompleted` event |
+| Notice familiar activity | A quest objective listens for a `QuestEventBus` event such as `ItemCollected`, `NpcTalkedTo`, or `TradeCompleted` |
 | Introduce an NPC | `SetFact` enables or spawns the NPC through `WorldStateActivator` or `WorldStateSpawner` |
 | Change what an NPC says | `SetFact` selects new dialogue through `WorldStateDialogueSelector` |
 | Begin a connected quest | `StartQuest` activates another quest graph |
@@ -88,28 +88,21 @@ The `Unlock.*` facts describe capabilities in the world. `Quest.*` facts preserv
 
 Do not make a single broad fact such as `MidGameUnlocked` responsible for everything. Individual facts keep branches independent and make save data easier to understand.
 
-## Important Current Runtime Gap
+## Manual Player Decisions
 
-`QuestTransitionData` contains an `automatic` field, but `QuestInstance.TryAdvance()` currently does not inspect it. Every transition advances immediately when its conditions pass, including transitions authored with `"automatic": false`.
+`QuestInstance.TryAdvance()` now processes only `automatic: true` edges. Manual edges are selected through validated `TryChooseTransition()` APIs on `QuestInstance` and `QuestManager`.
 
-Before authoring dialogue choices or player-confirmed branches, either:
-
-1. implement a manual transition API such as `TryChooseTransition(targetNodeId)`, while `TryAdvance()` processes only automatic transitions; or
-2. remove the field and deliberately model every transition as automatic.
-
-The first option fits this project better because introductions, bargains, refusals, and specialization choices should wait for an explicit player decision.
+Dialogue choices can provide `questId`, optional `questSourceNodeId`, and `questTargetNodeId`. This supports introductions, bargains, refusals, and specialization choices that wait for an explicit player decision.
 
 ## Minimal Extensions Needed
 
 Build these only as their connected gameplay systems arrive:
 
-1. **Trade quest events** — raise `TradeCompleted` after a successful atomic trade, with stable item, trader, or market IDs.
-2. **Manual quest choices** — honor the `automatic` field and expose a validated choice-transition method for dialogue.
-3. **Quest completion state** — expose a durable completed/failed status or set explicit `Quest.<Id>.Completed` facts at terminal nodes.
-4. **Mana conditions and actions** — after Wallet and MP are unified, add checks and transfers that use the canonical mana account.
-5. **Reputation changes** — add an integer increment/decrement action rather than overwriting reputation with `SetFact`.
-6. **Shared item lookup** — resolve quest items through `ItemDatabase`; current `HasItem`, `GiveItem`, and `RemoveItem` use `Resources.Load`.
-7. **Content validation** — validate node IDs, target nodes, objective IDs, action types, condition types, quest IDs, item IDs, and duplicate IDs before play.
+1. **Quest completion state** — expose a durable completed/failed status or set explicit `Quest.<Id>.Completed` facts at terminal nodes.
+2. **Mana conditions and actions** — add checks and transfers that use the canonical mana account.
+3. **Reputation changes** — add an integer increment/decrement action rather than overwriting reputation with `SetFact`.
+4. **Shared item lookup** — resolve quest items through `ItemDatabase`; current `HasItem`, `GiveItem`, and `RemoveItem` use `Resources.Load`.
+5. **Content validation** — validate node IDs, target nodes, objective IDs, action types, condition types, quest IDs, item IDs, and duplicate IDs before play.
 
 Facts are already sufficient for NPC, resource, location, and future transformation/system unlocks. Separate action types such as `UnlockLocation` are unnecessary unless they need behavior beyond writing a fact.
 

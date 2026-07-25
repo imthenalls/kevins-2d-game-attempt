@@ -11,6 +11,7 @@ using System;
 ///   QuestEventBus.Raise("ItemCollected", item.itemName);
 ///   QuestEventBus.Raise("NpcTalkedTo", npc.NpcId);
 ///   QuestEventBus.Raise("LocationReached", areaId);
+///   QuestEventBus.Raise("TradeCompleted", item.itemId, quantity);
 /// </summary>
 public static class QuestEventBus
 {

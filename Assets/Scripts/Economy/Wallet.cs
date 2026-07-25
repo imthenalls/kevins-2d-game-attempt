@@ -24,6 +24,7 @@ using UnityEngine.Serialization;
 ///   wallet.CanAfford(amount);
 ///   wallet.Add(amount, reason, referenceId);
 ///   wallet.TrySpend(amount, reason, referenceId);
+///   wallet.TryTransferTo(recipient, amount, reason, referenceId);
 ///   wallet.TryConsumeMana(amount, reason, referenceId);
 ///   wallet.RestoreMana(amount, reason, referenceId);
 ///   wallet.TrySubtract(amount, reason, referenceId);
@@ -119,6 +120,41 @@ public class Wallet : MonoBehaviour
     public bool TrySpend(int amount, string reason = "", string referenceId = "")
     {
         return TryDebit(amount, WalletTransactionType.Spend, reason, referenceId);
+    }
+
+    /// <summary>
+    /// Atomically transfer mana to another Wallet. Both balances are changed before events fire,
+    /// and both ledger entries share the supplied reference ID.
+    /// </summary>
+    public bool TryTransferTo(
+        Wallet recipient,
+        int amount,
+        string reason = "Trade",
+        string referenceId = "")
+    {
+        if (recipient == null || recipient == this || amount <= 0)
+            return false;
+        if (!CanAfford(amount) || !recipient.CanReceive(amount))
+            return false;
+
+        Balance -= amount;
+        recipient.Balance += amount;
+
+        RecordTransaction(
+            WalletTransactionType.TradeDebit,
+            -amount,
+            reason,
+            referenceId);
+        recipient.RecordTransaction(
+            WalletTransactionType.TradeCredit,
+            amount,
+            reason,
+            referenceId);
+
+        recipient.characterStatistics?.RecordMoneyGained(amount);
+        OnBalanceChanged?.Invoke(Balance);
+        recipient.OnBalanceChanged?.Invoke(recipient.Balance);
+        return true;
     }
 
     /// <summary>
@@ -346,6 +382,8 @@ public enum WalletTransactionType
     CapacityAdjustment,
     Adjustment,
     Migration,
+    TradeDebit,
+    TradeCredit,
 }
 
 /// <summary>

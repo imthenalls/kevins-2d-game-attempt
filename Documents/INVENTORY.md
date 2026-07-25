@@ -37,6 +37,7 @@ var model = new InventoryModel(rows: 5, columns: 6);
 | Method | Returns | Description |
 |---|---|---|
 | `AddItem(ItemData, int)` | `int` leftover | Fills partial stacks first, then empty slots. Returns unplaced amount. |
+| `CanAddItem(ItemData, int)` | `bool` | Non-mutating check that the complete amount fits; used by atomic trades. |
 | `RemoveItem(ItemData, int)` | `bool` success | Fails if not enough held. |
 | `HasItem(ItemData, int)` | `bool` | Checks total count across all slots. |
 | `CountItem(ItemData)` | `int` | Total quantity across all slots. |
@@ -188,3 +189,5 @@ Raise a quest event after a pickup:
 ```csharp
 QuestEventBus.Raise("ItemCollected", itemData.name);
 ```
+
+Item-for-mana exchanges must use `TradeService`, not separate `RemoveItem`/`AddItem` calls. See [TRADE_SYSTEM.md](TRADE_SYSTEM.md).

@@ -16,7 +16,7 @@
       "transitions": [
         {
           "targetNodeId": "investigation",
-          "automatic": false,
+          "automatic": true,
           "conditions": [
             { "type": "ObjectiveComplete", "objectiveId": "obj_talk_sheriff" }
           ]

@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 ///   - Active scene name and player position
 ///   - Player HP
 ///   - Canonical player mana balance, capacity, and transaction history
+///   - NPC Wallets and the completed market transaction ledger
 ///   - All WorldStateManager facts
 ///   - Active quest instances (node positions + objective counts)
 ///   - Occupied inventory slots (by itemId)
@@ -144,6 +145,9 @@ public class SaveManager : MonoBehaviour
                 }
             }
 
+            if (npc.ManaWallet != null)
+                entry.wallet = npc.ManaWallet.GetSaveData();
+
             data.npcStates.Add(entry);
         }
         // Hotbar
@@ -156,6 +160,7 @@ public class SaveManager : MonoBehaviour
                     data.hotbarSlots.Add(new HotbarEntry { slotIndex = i, itemId = item.itemId });
             }
         }
+        data.marketTransactions = TradeService.GetSaveData();
         File.WriteAllText(SavePath, JsonUtility.ToJson(data, prettyPrint: true));
         Debug.Log($"[SaveManager] Saved → {SavePath}");
     }
@@ -173,6 +178,7 @@ public class SaveManager : MonoBehaviour
         }
 
         var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
+        TradeService.LoadSaveData(data.marketTransactions);
 
         // Restore world facts before the scene loads so quest conditions are
         // already correct when newly-placed triggers evaluate on Awake/Start.
@@ -269,7 +275,7 @@ public class SaveManager : MonoBehaviour
                     npc.Stats.SetMp(entry.mp);
                 }
 
-                if (entry.inventorySlots != null && entry.inventorySlots.Count > 0 && npc.Inventory != null)
+                if (entry.inventorySlots != null && npc.Inventory != null)
                 {
                     for (int i = 0; i < npc.Inventory.SlotCount; i++)
                         npc.Inventory.GetSlot(i).Clear();
@@ -289,6 +295,9 @@ public class SaveManager : MonoBehaviour
                     }
                     npc.Inventory.ForceRefresh();
                 }
+
+                if (entry.wallet != null && npc.ManaWallet != null)
+                    npc.ManaWallet.LoadSaveData(entry.wallet);
             }
         }
 

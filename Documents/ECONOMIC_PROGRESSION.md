@@ -269,7 +269,7 @@ Every new system should identify which phase it serves. A feature that serves no
 
 The existing quest graph and world-state systems should deliver these phase transitions. Quests observe familiar activity, set stable unlock facts, introduce connected quests, and let world components reveal the corresponding NPCs, resources, locations, transformations, and systems.
 
-See [QUEST_PROGRESSION_INTEGRATION.md](QUEST_PROGRESSION_INTEGRATION.md) for the concrete mapping, authoring guardrails, known runtime gap, and recommended first content slice.
+See [QUEST_PROGRESSION_INTEGRATION.md](QUEST_PROGRESSION_INTEGRATION.md) for the concrete mapping, authoring guardrails, manual decision flow, and recommended first content slice.
 
 ## Balancing and Soft Resets
 

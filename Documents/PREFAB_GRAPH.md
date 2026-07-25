@@ -45,8 +45,12 @@ flowchart TB
             NC2["NpcController\nNpcType=Friendly"]
             ND[NpcDialogue]
             DUI[DialogueUIController]
+            INV_N["InventoryModel\nwhen Has Inventory"]
+            MW_N["Wallet\nauto-added with inventory\nmana/capacity from NPC"]
             COL_N["Collider2D / Layer: NPC"]
             NC2 --> ND
+            NC2 -->|creates| INV_N
+            NC2 -->|Awake finds/adds| MW_N
             ND --> DUI
         end
         subgraph PORTAL["Portal Prefab"]

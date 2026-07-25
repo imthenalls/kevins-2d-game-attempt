@@ -15,17 +15,12 @@ Unchecked items are planned work. Completed work is retained below as a concise 
 - [ ] **Economy balancing workbook** — track item inputs, time, mana cost, expected/minimum yield, prices, profit, throughput, unlock timing, capacity, access, and buyer class.
 - [ ] **Bounded economy RNG** — define yield/demand ranges, guaranteed minimums, curated pools, and bad-luck protection; never gate essential progression behind unbounded randomness.
 - [ ] **Narrative reward budget** — measure active hourly earnings and test ordinary mana gifts near the provisional 10–20% range while preventing repeatable faucets.
-- [ ] **Manual quest transitions** — make `QuestInstance.TryAdvance()` honor `QuestTransitionData.automatic` and add a validated player/dialogue choice transition API.
-- [ ] **Trade quest events** — raise `TradeCompleted` only after an atomic trade succeeds, using stable item, trader, and market IDs for quest objectives.
 - [ ] **Quest progression status** — persist explicit completed/failed quest state or consistently write terminal `Quest.<Id>.Completed` facts.
 - [ ] **Quest economy extensions** — after Wallet/MP unification, add canonical mana conditions/actions and integer reputation adjustments.
 - [ ] **Quest item resolution** — update `HasItem`, `GiveItem`, and `RemoveItem` to resolve stable IDs through `ItemDatabase` instead of direct `Resources.Load`.
 - [ ] **Quest content validation** — validate quest/node/objective/action/condition/item IDs and transition targets before entering play mode.
 - [ ] **Currency HUD** — display `Wallet.Balance` and update it through `Wallet.OnBalanceChanged`.
-- [ ] **Shared atomic trade service** — support player-to-NPC and NPC-to-NPC buying/selling through one validated transaction path with no partial state changes.
-- [ ] **Trade participants** — add stable trader IDs and a shared participant contract exposing a Wallet and InventoryModel.
-- [ ] **Market ledger** — save buyer, seller, item, quantity, price, market, and shared trade ID; correlate both wallet entries to the trade.
-- [ ] **NPC wallet persistence** — include every economic NPC's wallet and retained history in save data.
+- [ ] **Trade quest context events** — add explicitly named participant/market-specific events if future quests need more context than `TradeCompleted(itemId, quantity)`.
 - [ ] **NPC market simulation** — schedule producer, consumer, stock-target, offer-matching, and trading decisions on bounded market ticks.
 - [ ] **Dynamic market pricing** — adjust prices from supply, demand, stock targets, and local modifiers with safeguards against runaway inflation/deflation.
 - [ ] **Currency rewards** — add quest and loot integrations that call `Wallet.Add` with stable reason/reference IDs.
@@ -59,6 +54,9 @@ Unchecked items are planned work. Completed work is retained below as a concise 
 - [x] **Character statistics** — attacks, damage, kills, critical hits, gathered items, and money
 - [x] **Wallet foundation** — non-negative balance, affordability checks, add/spend/subtract operations, events, bounded transaction history, and save/load integration
 - [x] **Unified mana account** — `Wallet` now owns player mana balance/capacity, `EntityStats` delegates its MP API, equipment changes capacity, and older saves merge wallet currency with MP.
+- [x] **Atomic trade foundation** — shared player/NPC participants, inventory preflight/rollback, correlated Wallet transfer, saved NPC wallets, and a bounded saved market ledger.
+- [x] **Trade quest events** — successful committed trades raise one `TradeCompleted(itemId, quantity)` event; failed trades raise none.
+- [x] **Manual quest transitions** — automatic traversal ignores manual edges, validated choice APIs select them, and dialogue choices can supply quest/source/target IDs.
 
 ### Presentation and behavior
 

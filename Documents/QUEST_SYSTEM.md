@@ -47,7 +47,7 @@ StreamingAssets/
       "transitions": [
         {
           "targetNodeId": "investigation",
-          "automatic": false,
+          "automatic": true,
           "conditions": [
             { "type": "ObjectiveComplete", "objectiveId": "obj_talk" }
           ]
@@ -109,7 +109,33 @@ Conditions in a single transition are **all AND**. To express OR, use multiple t
 
 `onEnterActions` run once when a node is entered.
 
-> **Current implementation note:** `QuestTransitionData.automatic` is deserialized but is not currently checked by `QuestInstance.TryAdvance()`. At runtime, every transition fires as soon as its conditions pass, including transitions authored with `"automatic": false`. Manual/player-selected transitions need a separate API before this field can represent dialogue choices or confirmed branches.
+`automatic: true` transitions are evaluated by `QuestInstance.TryAdvance()`. `automatic: false` transitions never fire from the update loop or a quest event; they must be selected through `QuestManager.TryChooseTransition()`.
+
+### Manual transitions from dialogue
+
+A dialogue choice can select an eligible manual quest edge:
+
+```json
+{
+  "text": "I will help the refiner.",
+  "nextNodeId": "accepted",
+  "endConversation": false,
+  "questId": "refiners_request",
+  "questSourceNodeId": "offer",
+  "questTargetNodeId": "accepted"
+}
+```
+
+`questSourceNodeId` is optional when only one active node has an eligible manual edge to the target. Specify it for parallel quest branches or whenever target IDs may be ambiguous.
+
+The choice advances only when:
+
+- the quest is active;
+- the source node is active, when supplied;
+- the matching transition has `automatic: false`;
+- every condition on that transition currently passes.
+
+If validation fails, the dialogue remains on the current choice instead of pretending the branch succeeded.
 
 ---
 
@@ -220,7 +246,9 @@ QuestManager : MonoBehaviour (singleton)
 | Inventory pickup | `QuestEventBus.Raise("ItemCollected", item.id)` |
 | NPC Dialogue | `QuestEventBus.Raise("NpcTalkedTo", npc.id)` |
 | Portals / area entry | `QuestEventBus.Raise("LocationReached", areaId)` |
+| Atomic trade | `QuestEventBus.Raise("TradeCompleted", itemId, quantity)` after commit |
 | Dialogue system | `QuestManager.StartQuest("questId")` to activate a quest from a conversation |
+| Dialogue choice | `QuestManager.TryChooseTransition(...)` for an eligible manual edge |
 
 No game system imports quest types. They only fire events or call `StartQuest`. The graph reacts.
 

@@ -174,6 +174,9 @@ public class PlayerInteractionController : MonoBehaviour
                 return;
             }
 
+            if (!TryApplyManualQuestTransition(selectedChoice))
+                return;
+
             if (selectedChoice.endConversation || string.IsNullOrWhiteSpace(selectedChoice.nextNodeId))
             {
                 EndDialogue();
@@ -248,6 +251,38 @@ public class PlayerInteractionController : MonoBehaviour
     private bool HasMultipleChoices()
     {
         return activeNode != null && activeNode.choices != null && activeNode.choices.Count > 1;
+    }
+
+    private static bool TryApplyManualQuestTransition(DialogueChoiceDefinition choice)
+    {
+        if (choice == null || string.IsNullOrWhiteSpace(choice.questTargetNodeId))
+            return true;
+
+        if (QuestManager.Instance == null || string.IsNullOrWhiteSpace(choice.questId))
+        {
+            Debug.LogWarning(
+                "[PlayerInteractionController] Dialogue choice has a quest target but no " +
+                "available QuestManager/questId.");
+            return false;
+        }
+
+        bool advanced = string.IsNullOrWhiteSpace(choice.questSourceNodeId)
+            ? QuestManager.Instance.TryChooseTransition(
+                choice.questId,
+                choice.questTargetNodeId)
+            : QuestManager.Instance.TryChooseTransition(
+                choice.questId,
+                choice.questSourceNodeId,
+                choice.questTargetNodeId);
+
+        if (!advanced)
+        {
+            Debug.LogWarning(
+                $"[PlayerInteractionController] Manual quest transition failed: " +
+                $"{choice.questId} {choice.questSourceNodeId} -> {choice.questTargetNodeId}");
+        }
+
+        return advanced;
     }
 
     private void EndDialogue()

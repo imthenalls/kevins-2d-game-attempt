@@ -17,6 +17,8 @@ The save system serializes all meaningful game state to a single JSON file on di
 | Player position (X, Y) | `PlayerController2D.transform` |
 | Player HP | `EntityStats` |
 | Canonical player mana balance, capacity, and transaction history | `Wallet` |
+| Inventory-enabled NPC mana balance, capacity, and history | NPC `Wallet` |
+| Completed market transaction ledger | `TradeService` |
 | World facts | `WorldStateDB` |
 | Active quest states (node + objective counts) | `QuestManager` |
 | Inventory slots (index, item, quantity) | `InventoryUI.Model` |
@@ -111,6 +113,12 @@ Save version 2 unifies player currency and MP. When loading an older save, `Save
 5. Adds a `Migration` transaction for the imported MP.
 
 Legacy `playerMp` and `playerMaxMp` fields remain in `SaveData` for this migration and for diagnosing older files. New saves write the canonical Wallet values into both the Wallet snapshot and those compatibility fields.
+
+## Trade Save Integration
+
+`NpcSaveEntry.wallet` stores the Wallet for inventory-enabled NPC participants. Empty saved NPC inventories are cleared correctly on load, so selling the final item remains persistent.
+
+`SaveData.marketTransactions` stores the newest bounded market entries from `TradeService`. Loading restores the ledger without replaying Wallet changes, item movement, trade events, or quest events.
 
 See [WALLET.md](WALLET.md) for the balance API, transaction fields, and Unity setup.
 

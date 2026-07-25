@@ -28,6 +28,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/ECONOMIC_PROGRESSION.md](Documents/ECONOMIC_PROGRESSION.md) | Early/mid/late economic phases, rewards, smooth nested unlocks, and mana progression |
 | [Documents/QUEST_PROGRESSION_INTEGRATION.md](Documents/QUEST_PROGRESSION_INTEGRATION.md) | How quest graphs and world-state facts drive nested NPC, location, transformation, and market unlocks |
 | [Documents/ECONOMY_BALANCING_RULES.md](Documents/ECONOMY_BALANCING_RULES.md) | Soft economic resets, early difficulty, bounded RNG, economy workbook fields, and reward rules |
+| [Documents/TRADE_SYSTEM.md](Documents/TRADE_SYSTEM.md) | Atomic player/NPC item-for-mana trades, participants, validation, ledger, persistence, and quest events |
 | [Documents/WORLD_OBJECTS.md](Documents/WORLD_OBJECTS.md) | ItemPickup, WorldObject, IInteractable interface, InventoryHelper utility |
 | [Documents/WORLD_STATE.md](Documents/WORLD_STATE.md) | World State System: WorldStateDB, WorldStateKey, all WorldState components, quest integration |
 

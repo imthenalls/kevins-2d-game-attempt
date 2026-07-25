@@ -49,6 +49,8 @@ Movement is clamped to magnitude 1 so diagonal speed is not faster than straight
 
 `[RequireComponent(typeof(Rigidbody2D))]` and `[RequireComponent(typeof(EntityStats))]` ensure both components are present. `PlayerController2D.Awake()` also finds or adds a Wallet and binds `EntityStats` to it.
 
+`PlayerController2D` implements `ITradeParticipant` with stable ID `player`, its canonical Wallet, and `InventoryUI.Model`. See [TRADE_SYSTEM.md](TRADE_SYSTEM.md).
+
 ---
 
 ## PlayerInteractionController

@@ -15,6 +15,7 @@ using System.Collections.Generic;
 ///   - Active quest state (node positions + objective counts)
 ///   - Occupied inventory slots (referenced by itemId, resolved via ItemDatabase on load)
 ///   - NPC / enemy state: world position, HP / MP (enemies only), and inventory slots
+///   - NPC Wallet snapshots and the completed market-trade ledger
 ///
 /// Unity setup: none — this is a plain C# class, not a MonoBehaviour.
 ///   Created and consumed entirely by SaveManager.Save() and SaveManager.Load().
@@ -43,6 +44,9 @@ public class SaveData
     public int playerMaxMp;
 
     public WalletSaveData wallet = new();
+
+    // Completed item-for-mana market exchanges retained by TradeService.
+    public List<MarketTransaction> marketTransactions = new();
 
     // ── World facts (WorldStateManager) ────────────────────────────────────────────
     public List<FactEntry> worldFacts = new();
@@ -101,6 +105,7 @@ public class NpcSaveEntry
     public int  mp;
     public int  maxHp;
     public int  maxMp;
+    public WalletSaveData wallet;
 
     // Inventory (populated only when the NPC has an InventoryModel)
     public List<InventorySlotEntry> inventorySlots = new();

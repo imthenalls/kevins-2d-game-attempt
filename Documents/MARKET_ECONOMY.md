@@ -189,37 +189,51 @@ More advanced behavior such as professions, relationships, scarcity memory, spec
 
 ## Save Requirements
 
-The current save integration persists only the player's Wallet.
+The current save integration persists:
 
-Before NPC market simulation is enabled, extend saving to include:
+- player Wallet;
+- inventory-enabled NPC Wallets and inventories;
+- the bounded market ledger;
+- stable player/NPC participant IDs.
 
-- Each trader's wallet balance and wallet history
-- Each trader's inventory
-- Market ledger
-- Current local prices or the state required to reproduce them
-- Production/consumption timers
-- Stable participant and market IDs
+Before scheduled NPC market simulation is enabled, add:
 
-NPC wallet data belongs in `NpcSaveEntry` or a dedicated trader save record keyed by stable participant ID.
+- current local prices or the state required to reproduce them;
+- production/consumption timers;
+- any settlement or organization participant state.
 
 ## Implementation Phases
 
+### Current implementation
+
+The transaction foundation is complete:
+
+- `ITradeParticipant` is implemented by `PlayerController2D` and `NpcController`.
+- `TradeService.TryExecute` performs preflight validation and an all-or-nothing commit.
+- `InventoryModel.CanAddItem` prevents partial item placement.
+- Wallet-to-Wallet transfers correlate `TradeDebit` and `TradeCredit` entries.
+- The bounded `MarketTransaction` ledger is saved.
+- Inventory-enabled NPC Wallets are saved.
+- A successful commit raises one `TradeCompleted` quest event.
+
+See [TRADE_SYSTEM.md](TRADE_SYSTEM.md) for the runtime API and setup.
+
 ### Phase 1: Trading foundation
 
-- Add `InventoryModel.CanAddItem`
-- Add `ITradeParticipant`
-- Add `Trader`
-- Add `TradeRequest` and `TradeResult`
-- Add atomic `TradeService`
-- Add linked buyer/seller wallet records
-- Add `MarketTransaction` and `MarketLedger`
+- [x] Add `InventoryModel.CanAddItem`
+- [x] Add `ITradeParticipant`
+- [ ] Add configurable trader policies/offers
+- [x] Add `TradeRequest` and `TradeResult`
+- [x] Add atomic `TradeService`
+- [x] Add linked buyer/seller wallet records
+- [x] Add `MarketTransaction` and bounded ledger
 
 ### Phase 2: Persistence
 
-- Save and restore NPC wallets
-- Save and restore the market ledger
-- Save stable market/trader state
-- Add save-version migration support
+- [x] Save and restore inventory-enabled NPC wallets
+- [x] Save and restore the market ledger
+- [ ] Save local-price and simulation state
+- [ ] Add migration rules when future market simulation fields change
 
 ### Phase 3: Player vendor UI
 

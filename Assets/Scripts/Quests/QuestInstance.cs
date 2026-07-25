@@ -90,6 +90,77 @@ public class QuestInstance
     /// <summary>Read-only view of objective counts (for save/load).</summary>
     public IReadOnlyDictionary<string, int> ObjectiveCounts => _objectiveCounts;
 
+    /// <summary>
+    /// Select one eligible manual transition by target across the active nodes.
+    /// Returns false if none is eligible or more than one active source is ambiguous.
+    /// </summary>
+    public bool TryChooseTransition(string targetNodeId)
+    {
+        string matchedSourceNodeId = null;
+        var snapshot = new List<string>(_activeNodeIds);
+
+        foreach (var sourceNodeId in snapshot)
+        {
+            if (!_nodeMap.TryGetValue(sourceNodeId, out var node)) continue;
+
+            foreach (var transition in node.transitions)
+            {
+                if (transition.automatic ||
+                    transition.targetNodeId != targetNodeId ||
+                    !AllConditionsMet(transition))
+                {
+                    continue;
+                }
+
+                if (matchedSourceNodeId != null && matchedSourceNodeId != sourceNodeId)
+                {
+                    Debug.LogWarning(
+                        $"[QuestInstance:{Graph.questId}] Manual target '{targetNodeId}' " +
+                        "is eligible from multiple active nodes. Specify the source node.");
+                    return false;
+                }
+
+                matchedSourceNodeId = sourceNodeId;
+                break;
+            }
+        }
+
+        return matchedSourceNodeId != null &&
+               TryChooseTransition(matchedSourceNodeId, targetNodeId);
+    }
+
+    /// <summary>
+    /// Select an eligible non-automatic transition from a specific active node.
+    /// Conditions are re-evaluated at selection time. Successful selection enters the target
+    /// once, then resolves any automatic transitions reachable from the new node.
+    /// </summary>
+    public bool TryChooseTransition(string sourceNodeId, string targetNodeId)
+    {
+        if (!_activeNodeIds.Contains(sourceNodeId) ||
+            !_nodeMap.TryGetValue(sourceNodeId, out var node) ||
+            !_nodeMap.ContainsKey(targetNodeId))
+        {
+            return false;
+        }
+
+        foreach (var transition in node.transitions)
+        {
+            if (transition.automatic ||
+                transition.targetNodeId != targetNodeId ||
+                !AllConditionsMet(transition))
+            {
+                continue;
+            }
+
+            _activeNodeIds.Remove(sourceNodeId);
+            EnterNode(targetNodeId);
+            TryAdvance();
+            return true;
+        }
+
+        return false;
+    }
+
     // -------------------------------------------------------------------------
     // Event handling
     // -------------------------------------------------------------------------
@@ -147,6 +218,7 @@ public class QuestInstance
 
                 foreach (var transition in node.transitions)
                 {
+                    if (!transition.automatic) continue;
                     if (!AllConditionsMet(transition)) continue;
 
                     _activeNodeIds.Remove(nodeId);

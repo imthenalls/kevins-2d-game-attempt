@@ -31,7 +31,7 @@
 
 No reference needs to be assigned to `SaveManager`. It finds the player's Wallet while saving and after loading the saved scene.
 
-The current save implementation persists the player's Wallet only. NPC wallet persistence is required before the simulated NPC market is enabled; see [MARKET_ECONOMY.md](MARKET_ECONOMY.md).
+SaveManager persists the player's Wallet and Wallets owned by inventory-enabled NPC trade participants. See [TRADE_SYSTEM.md](TRADE_SYSTEM.md) and [MARKET_ECONOMY.md](MARKET_ECONOMY.md).
 
 ## Balance API
 
@@ -84,6 +84,8 @@ if (!purchased)
 ```
 
 Use `TrySpend` for purchases. It records a `Spend` transaction.
+
+Normal item trading should use `TradeService`, which calls `TryTransferTo` and creates correlated `TradeDebit` / `TradeCredit` entries on both participants. Do not debit and credit the two Wallets separately.
 
 ### Consume mana for a spell
 
@@ -160,7 +162,7 @@ Each `WalletTransaction` stores:
 |---|---|
 | `transactionId` | Generated unique ID |
 | `utcTimestamp` | ISO-8601 UTC timestamp |
-| `type` | `Credit`, `Spend`, `Subtract`, `Spell`, `Restore`, `CapacityAdjustment`, `Adjustment`, or `Migration` |
+| `type` | `Credit`, `Spend`, `Subtract`, `Spell`, `Restore`, `CapacityAdjustment`, `Adjustment`, `Migration`, `TradeDebit`, or `TradeCredit` |
 | `amount` | Signed amount: positive for credits, negative for debits |
 | `balanceAfter` | Wallet balance after the transaction |
 | `reason` | Human-readable/source description supplied by the caller |
@@ -194,11 +196,6 @@ The wallet is the storage and accounting foundation. The market must treat playe
 
 - Currency HUD bound to `OnBalanceChanged`
 - Transaction-history/debug viewer
-- Shared atomic trade service for player-to-NPC and NPC-to-NPC exchanges
-- NPC wallets and wallet persistence
-- Market transaction ledger linking both participants' wallet records
-- Atomic purchase flow: validate stock, capacity, and funds before transferring items and money
-- Atomic selling flow using the same trade path with buyer/seller roles reversed
 - Quest action for currency rewards
 - Currency loot/reward integration
 - Vendor/shop UI

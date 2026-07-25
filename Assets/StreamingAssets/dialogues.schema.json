@@ -25,7 +25,10 @@
       "properties": {
         "text": { "type": "string" },
         "nextNodeId": { "type": "string" },
-        "endConversation": { "type": "boolean" }
+        "endConversation": { "type": "boolean" },
+        "questId": { "type": "string" },
+        "questSourceNodeId": { "type": "string" },
+        "questTargetNodeId": { "type": "string" }
       }
     },
     "node": {

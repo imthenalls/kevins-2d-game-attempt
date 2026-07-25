@@ -17,6 +17,8 @@ using System.Collections.Generic;
 ///         endConversation     — set true to close the dialogue on this node.
 ///         choices             — list of player response options (branching dialogue).
 ///           DialogueChoiceDefinition — one selectable response with its own nextNodeId.
+///             Optional questId / questSourceNodeId / questTargetNodeId select a manual
+///             quest transition when the response is confirmed.
 ///
 /// Unity setup: none — these are pure data containers, not components.
 /// </summary>
@@ -52,4 +54,7 @@ public class DialogueChoiceDefinition
     public string text;
     public string nextNodeId;
     public bool endConversation;
+    public string questId;
+    public string questSourceNodeId;
+    public string questTargetNodeId;
 }

@@ -9,6 +9,7 @@ using UnityEngine;
 ///   - Subscribe to QuestEventBus and forward events to active instances
 ///   - Tick automatic transitions every Update
 ///   - Expose StartQuest() for dialogue/triggers to call
+///   - Expose TryChooseTransition() for dialogue/player-selected manual branches
 ///   - Expose query methods used by QuestInNode conditions
 ///
 /// Scene setup: add to one persistent GameObject in your bootstrap/first scene.
@@ -94,6 +95,31 @@ public class QuestManager : MonoBehaviour
         foreach (var q in _activeQuests)
             if (q.Graph.questId == questId)
                 return q.IsInNode(nodeId);
+        return false;
+    }
+
+    /// <summary>
+    /// Choose an eligible manual transition by target node. Use the source-node overload when
+    /// a quest can have parallel active nodes with the same target.
+    /// </summary>
+    public bool TryChooseTransition(string questId, string targetNodeId)
+    {
+        foreach (var quest in _activeQuests)
+        {
+            if (quest.Graph.questId == questId)
+                return quest.TryChooseTransition(targetNodeId);
+        }
+        return false;
+    }
+
+    /// <summary>Choose an eligible manual transition from a specific active source node.</summary>
+    public bool TryChooseTransition(string questId, string sourceNodeId, string targetNodeId)
+    {
+        foreach (var quest in _activeQuests)
+        {
+            if (quest.Graph.questId == questId)
+                return quest.TryChooseTransition(sourceNodeId, targetNodeId);
+        }
         return false;
     }
 

@@ -4,8 +4,9 @@ using UnityEngine;
 /// Core identity and state component for every NPC in the game.
 /// Tracks the NPC's unique id, display name, type, interaction range, and behavior state.
 /// For Enemy NPCs it automatically adds EntityStats and CombatReceiver components.
-/// For loot/vendor NPCs it creates an InventoryModel when Has Inventory is enabled.
-/// Implements IEntityController so the same code paths work for player and NPCs.
+/// For loot/vendor NPCs it creates an InventoryModel and finds/adds a Wallet when Has Inventory
+/// is enabled. Implements IEntityController and ITradeParticipant so the same gameplay and
+/// atomic trade paths work for players and NPCs.
 ///
 /// Unity setup:
 ///   1. Add to an NPC GameObject.
@@ -19,11 +20,18 @@ using UnityEngine;
 ///        Enemy       — auto-adds EntityStats + CombatReceiver; set Enemy Max Hp.
 ///   5. Optionally assign an Interaction Point child Transform to offset the
 ///      interaction origin (defaults to the GameObject's own position).
-///   6. Add NpcDialogue, NpcBehaviorManager, NpcIdleBehavior / NpcWanderBehavior as needed.
+///   6. For trading, enable Has Inventory and configure Trader Starting Mana / Capacity.
+///      Optionally add/configure Wallet manually; otherwise one is initialized from those fields.
+///   7. Add NpcDialogue, NpcBehaviorManager, NpcIdleBehavior / NpcWanderBehavior as needed.
 ///   The cyan/gray wire sphere in Scene view shows the current interaction range.
+///
+/// Runtime API:
+///   NpcId/TradeParticipantId identify the NPC.
+///   Inventory/TradeInventory and ManaWallet/TradeWallet expose trade-owned state.
+///   TradeService accepts this component as a buyer or seller.
 /// </summary>
 [DisallowMultipleComponent]
-public class NpcController : MonoBehaviour, IEntityController
+public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
 {
     [Header("Identity")]
     [SerializeField] private string npcId = "npc";
@@ -39,6 +47,10 @@ public class NpcController : MonoBehaviour, IEntityController
     [SerializeField] private bool hasInventory = false;
     [SerializeField, Min(1)] private int inventoryRows    = 3;
     [SerializeField, Min(1)] private int inventoryColumns = 4;
+    [Tooltip("Used only when Has Inventory is enabled and no Wallet is already attached.")]
+    [SerializeField, Min(0)] private int traderStartingMana = 50;
+    [Tooltip("Used only when Has Inventory is enabled and no Wallet is already attached.")]
+    [SerializeField, Min(0)] private int traderManaCapacity = 500;
 
     [Header("Interaction")]
     [SerializeField] private NpcBehaviorState behaviorState = NpcBehaviorState.Idle;
@@ -62,6 +74,10 @@ public class NpcController : MonoBehaviour, IEntityController
     public EntityStats   Stats     { get; private set; }
     public CombatReceiver CombatReceiver { get; private set; }
     public InventoryModel Inventory { get; private set; }
+    public Wallet ManaWallet { get; private set; }
+    public string TradeParticipantId => npcId;
+    public Wallet TradeWallet => ManaWallet;
+    public InventoryModel TradeInventory => Inventory;
 
     /// <summary>False while behavior state is Disabled (movement lock).</summary>
     public bool MovementEnabled => behaviorState != NpcBehaviorState.Disabled;
@@ -79,7 +95,25 @@ public class NpcController : MonoBehaviour, IEntityController
         }
 
         if (hasInventory)
+        {
             Inventory = new InventoryModel(inventoryRows, inventoryColumns);
+            bool hadWallet = gameObject.TryGetComponent(out Wallet wallet);
+            ManaWallet = hadWallet ? wallet : gameObject.AddComponent<Wallet>();
+            if (!hadWallet)
+            {
+                ManaWallet.InitializeMana(
+                    Mathf.Clamp(traderStartingMana, 0, traderManaCapacity),
+                    traderManaCapacity);
+            }
+        }
+    }
+
+    private void OnValidate()
+    {
+        inventoryRows = Mathf.Max(1, inventoryRows);
+        inventoryColumns = Mathf.Max(1, inventoryColumns);
+        traderManaCapacity = Mathf.Max(0, traderManaCapacity);
+        traderStartingMana = Mathf.Clamp(traderStartingMana, 0, traderManaCapacity);
     }
 
     public bool CanInteract(Vector3 worldPosition)

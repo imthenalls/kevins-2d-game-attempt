@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// Pure-data inventory container — no MonoBehaviour, no Unity dependencies.
 /// Holds a flat array of InventorySlot entries and exposes high-level operations:
-/// AddItem, RemoveItem, MoveSlot, SplitStack, Sort, HasItem, CountItem.
+/// AddItem, RemoveItem, CanAddItem, MoveSlot, SplitStack, Sort, HasItem, CountItem.
 ///
 /// Not a component — create with: new InventoryModel(rows, columns)
 ///   - InventoryUI owns and displays the player's model.
@@ -47,7 +47,53 @@ public class InventoryModel
     public int AddItem(ItemData item, int amount = 1)
     {
         if (item == null || amount <= 0) return amount;
+        int leftover = AddItemWithoutNotification(item, amount);
+        OnChanged?.Invoke();
+        return leftover;
+    }
 
+    /// <summary>
+    /// True when the complete amount can be added without changing any slots.
+    /// Used by atomic trades and other transfers that must not accept partial placement.
+    /// </summary>
+    public bool CanAddItem(ItemData item, int amount = 1)
+    {
+        if (item == null || amount <= 0) return false;
+        if ((item.flags & ItemFlags.Unique) != 0 &&
+            (amount > 1 || CountItem(item) > 0))
+        {
+            return false;
+        }
+
+        long available = 0;
+        if (item.IsStackable)
+        {
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var slot = slots[i];
+                if (slot.IsEmpty)
+                    available += item.maxStackSize;
+                else if (slot.item == item && slot.quantity < item.maxStackSize)
+                    available += item.maxStackSize - slot.quantity;
+
+                if (available >= amount) return true;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i].IsEmpty)
+                    available++;
+                if (available >= amount) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private int AddItemWithoutNotification(ItemData item, int amount)
+    {
         // Fill partial stacks first
         if (item.IsStackable)
         {
@@ -77,7 +123,6 @@ public class InventoryModel
             }
         }
 
-        OnChanged?.Invoke();
         return amount;
     }
 
@@ -86,8 +131,14 @@ public class InventoryModel
     /// </summary>
     public bool RemoveItem(ItemData item, int amount = 1)
     {
-        if (item == null || amount <= 0 || CountItem(item) < amount) return false;
+        if (!RemoveItemWithoutNotification(item, amount)) return false;
+        OnChanged?.Invoke();
+        return true;
+    }
 
+    private bool RemoveItemWithoutNotification(ItemData item, int amount)
+    {
+        if (item == null || amount <= 0 || CountItem(item) < amount) return false;
         int remaining = amount;
         for (int i = 0; i < slots.Length && remaining > 0; i++)
         {
@@ -101,7 +152,6 @@ public class InventoryModel
             }
         }
 
-        OnChanged?.Invoke();
         return true;
     }
 
@@ -113,6 +163,65 @@ public class InventoryModel
         foreach (var s in slots)
             if (!s.IsEmpty && s.item == item) total += s.quantity;
         return total;
+    }
+
+    /// <summary>
+    /// Commit an exact item transfer without notifying observers until both inventories have
+    /// changed. Internal so TradeService remains the authority for item-for-mana exchanges.
+    /// </summary>
+    internal bool TryTransferItemTo(
+        InventoryModel destination,
+        ItemData item,
+        int amount,
+        out InventorySnapshot sourceBefore,
+        out InventorySnapshot destinationBefore)
+    {
+        sourceBefore = null;
+        destinationBefore = null;
+
+        if (destination == null || destination == this || item == null || amount <= 0)
+            return false;
+        if (CountItem(item) < amount || !destination.CanAddItem(item, amount))
+            return false;
+
+        sourceBefore = CaptureSnapshot();
+        destinationBefore = destination.CaptureSnapshot();
+
+        if (!RemoveItemWithoutNotification(item, amount))
+            return false;
+
+        int leftover = destination.AddItemWithoutNotification(item, amount);
+        if (leftover == 0)
+            return true;
+
+        RestoreSnapshot(sourceBefore);
+        destination.RestoreSnapshot(destinationBefore);
+        return false;
+    }
+
+    internal void NotifyChanged() => OnChanged?.Invoke();
+
+    internal void RestoreSnapshot(InventorySnapshot snapshot)
+    {
+        if (snapshot == null || snapshot.items.Length != slots.Length) return;
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (snapshot.items[i] == null || snapshot.quantities[i] <= 0)
+                slots[i].Clear();
+            else
+                slots[i].Set(snapshot.items[i], snapshot.quantities[i]);
+        }
+    }
+
+    private InventorySnapshot CaptureSnapshot()
+    {
+        var snapshot = new InventorySnapshot(slots.Length);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            snapshot.items[i] = slots[i].item;
+            snapshot.quantities[i] = slots[i].quantity;
+        }
+        return snapshot;
     }
 
     /// <summary>
@@ -200,5 +309,17 @@ public class InventoryModel
         }
 
         OnChanged?.Invoke();
+    }
+
+    internal sealed class InventorySnapshot
+    {
+        internal readonly ItemData[] items;
+        internal readonly int[] quantities;
+
+        internal InventorySnapshot(int slotCount)
+        {
+            items = new ItemData[slotCount];
+            quantities = new int[slotCount];
+        }
     }
 }

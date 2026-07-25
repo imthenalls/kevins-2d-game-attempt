@@ -12,7 +12,9 @@ NPC (GameObject)
   ├── NpcBehaviorManager      — picks and drives behaviors (optional)
   ├── NpcIdleBehavior         — stand still for N seconds (optional)
   ├── NpcWanderBehavior       — walk to random nearby points (optional)
-  └── NpcDialogue             — links to a DialogueGraphAsset (optional)
+  ├── NpcDialogue             — links to a DialogueGraphAsset (optional)
+  ├── InventoryModel          — created when Has Inventory is enabled
+  └── Wallet                  — found/added with inventory for trading
 ```
 
 ---
@@ -27,7 +29,7 @@ The root identity component. Every NPC must have one.
 
 | Field | Description |
 |---|---|
-| Npc Id | Unique string identifier (used by quest events: `QuestEventBus.Raise("NpcTalkedTo", npcId)`) |
+| Npc Id | Unique string identifier used by quests, saves, and trading |
 | Display Name | Shown in dialogue UI; falls back to `gameObject.name` if blank |
 | Npc Type | `Generic`, `QuestGiver`, `Vendor`, `Trainer`, or `Enemy` |
 | Enemy Max Hp | HP given to enemies on Awake (only used when `Npc Type = Enemy`) |
@@ -57,6 +59,12 @@ receiver?.ReceiveHit(new DamageInfo(10, gameObject));
 ```
 
 Do not add `EntityStats` or `CombatReceiver` manually to enemy prefabs — `NpcController` owns them.
+
+### Trading
+
+`NpcController` implements `ITradeParticipant`. When **Has Inventory** is enabled, it creates an `InventoryModel` and finds or adds a Wallet during `Awake`.
+
+When Wallet is auto-added, **Trader Starting Mana** and **Trader Mana Capacity** on `NpcController` initialize it. Defaults are 50/500, leaving capacity to receive sales. A manually attached Wallet takes precedence. All player/NPC and NPC/NPC exchanges go through `TradeService`; see [TRADE_SYSTEM.md](TRADE_SYSTEM.md).
 
 ### Behavior state
 
@@ -169,6 +177,21 @@ Graphs are serialized as `DialogueGraphDefinition` (see `DialogueData.cs`):
 - **Linear nodes**: set `nextNodeId`, leave `choices` empty.
 - **Choice nodes**: fill `choices`; each choice has its own `nextNodeId` or `endConversation: true`.
 - `speakerName` overrides the NPC's display name for a specific node (useful for player responses).
+
+A choice may also select a manual quest transition:
+
+```json
+{
+  "text": "Accept the work.",
+  "nextNodeId": "accepted",
+  "endConversation": false,
+  "questId": "refiners_request",
+  "questSourceNodeId": "offer",
+  "questTargetNodeId": "accepted"
+}
+```
+
+The quest edge must use `"automatic": false`, be reachable from the active source node, and have passing conditions. `questSourceNodeId` may be omitted when the target is unambiguous.
 
 ### Sources (priority order)
 
