@@ -105,7 +105,7 @@ public class InventoryContextMenu : MonoBehaviour
         var item = slot.item;
         model.RemoveItem(item, 1);
 
-        var player = UnityEngine.Object.FindFirstObjectByType<PlayerController2D>();
+        var player = UnityEngine.Object.FindAnyObjectByType<PlayerController2D>();
         if (player?.Stats != null)
         {
             if (item.healHp > 0) player.Stats.Heal(item.healHp);

@@ -103,7 +103,7 @@ Attach to a UI GameObject in your Canvas. Subscribes to `EntityStats.OnHpChanged
 1. Create a Canvas (Screen Space – Overlay).
 2. For each bar: background `Image` + child "Fill" `Image` set to `Image Type = Filled`, `Fill Method = Horizontal`.
 3. Assign the Fill Images to `hpFill` / `mpFill` in the Inspector.
-4. Assign `entityStats`, or leave it empty to call `FindFirstObjectByType<EntityStats>()` on `Start`.
+4. Assign `entityStats`, or leave it empty to call `FindAnyObjectByType<EntityStats>()` on `Start`.
 
 ---
 

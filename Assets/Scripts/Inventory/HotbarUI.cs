@@ -67,7 +67,7 @@ public class HotbarUI : MonoBehaviour
 
     private void Start()
     {
-        player = FindFirstObjectByType<PlayerController2D>();
+        player = FindAnyObjectByType<PlayerController2D>();
 
         // Keep quantity labels in sync whenever the player's inventory changes
         if (InventoryUI.Model != null)
@@ -130,7 +130,7 @@ public class HotbarUI : MonoBehaviour
 
     private void ApplyUseEffect(ItemData item)
     {
-        if (player == null) player = FindFirstObjectByType<PlayerController2D>();
+        if (player == null) player = FindAnyObjectByType<PlayerController2D>();
         if (player?.Stats == null) return;
 
         if (item.healHp > 0) player.Stats.Heal(item.healHp);

@@ -77,7 +77,7 @@ Subscribes to `EntityStats` events and drives two `Image` fill amounts (0–1).
 
 | Field | Description |
 |---|---|
-| Entity Stats | `EntityStats` reference. Auto-found via `FindFirstObjectByType` if null. |
+| Entity Stats | `EntityStats` reference. Auto-found via `FindAnyObjectByType` if null. |
 | Hp Fill | The Fill `Image` for the HP bar |
 | Mp Fill | The Fill `Image` for the MP bar |
 

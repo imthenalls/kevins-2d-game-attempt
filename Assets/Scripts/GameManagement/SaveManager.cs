@@ -61,7 +61,7 @@ public class SaveManager : MonoBehaviour
         data.currentScene = SceneManager.GetActiveScene().name;
 
         // Player position + stats
-        var player = FindFirstObjectByType<PlayerController2D>();
+        var player = FindAnyObjectByType<PlayerController2D>();
         if (player != null)
         {
             data.playerX = player.transform.position.x;
@@ -197,7 +197,7 @@ public class SaveManager : MonoBehaviour
     private void RestoreSceneState(SaveData data)
     {
         // Player position + stats
-        var player = FindFirstObjectByType<PlayerController2D>();
+        var player = FindAnyObjectByType<PlayerController2D>();
         if (player != null)
         {
             player.transform.position = new Vector3(data.playerX, data.playerY, 0f);

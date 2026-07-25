@@ -42,7 +42,7 @@ public class DialogueUIController : MonoBehaviour
             return instance;
         }
 
-        instance = FindFirstObjectByType<DialogueUIController>();
+        instance = FindAnyObjectByType<DialogueUIController>();
         if (instance != null)
         {
             instance.EnsureRuntimeReferences();

@@ -11,7 +11,7 @@ using UnityEngine.UI;
 ///      with Image Type = Filled, Fill Method = Horizontal.
 ///   3. Assign the Fill Images (not the backgrounds) to hpFill / mpFill.
 ///   4. Assign the EntityStats component to entityStats, or leave it null
-///      and this script will find it on Start via FindFirstObjectByType.
+///      and this script will find it on Start via FindAnyObjectByType.
 /// </summary>
 public class EntityStatsUI : MonoBehaviour
 {
@@ -27,7 +27,7 @@ public class EntityStatsUI : MonoBehaviour
     private void Start()
     {
         if (entityStats == null)
-            entityStats = FindFirstObjectByType<EntityStats>();
+            entityStats = FindAnyObjectByType<EntityStats>();
 
         if (entityStats == null)
         {

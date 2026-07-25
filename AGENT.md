@@ -154,6 +154,6 @@ See [Documents/PLAYER.md](Documents/PLAYER.md) for full player system documentat
 1. Create a Canvas (Screen Space – Overlay).
 2. For each bar: add a background `Image` and a child "Fill" `Image` with `Image Type = Filled`, `Fill Method = Horizontal`.
 3. Assign the Fill Images (not the backgrounds) to `hpFill` / `mpFill` on `EntityStatsUI`.
-4. Assign `Entity Stats` or leave it null — the component will auto-find one via `FindFirstObjectByType<EntityStats>()`.
+4. Assign `Entity Stats` or leave it null — the component will auto-find one via `FindAnyObjectByType<EntityStats>()`.
 
 See [Documents/STATS.md](Documents/STATS.md) for full stats system documentation.

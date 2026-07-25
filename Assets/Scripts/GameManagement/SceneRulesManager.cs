@@ -283,7 +283,7 @@ public class SceneRulesManager : MonoBehaviour
 
     private void GatherReferences()
     {
-        _player         = FindFirstObjectByType<PlayerController2D>();
+        _player         = FindAnyObjectByType<PlayerController2D>();
         _playerReceiver = _player != null ? _player.CombatReceiver                 : null;
         _playerAttacker = _player != null ? _player.GetComponent<CombatAttacker>() : null;
 

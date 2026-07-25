@@ -100,7 +100,7 @@ public class InventoryUI : MonoBehaviour
             canvasRect = parentCanvas.GetComponent<RectTransform>();
 
         if (playerController == null)
-            playerController = FindFirstObjectByType<PlayerController2D>();
+            playerController = FindAnyObjectByType<PlayerController2D>();
 
         model = new InventoryModel(rows, columns);
         model.OnChanged += RefreshAllSlots;

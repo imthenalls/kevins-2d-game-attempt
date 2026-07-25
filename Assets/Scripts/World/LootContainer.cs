@@ -115,7 +115,7 @@ public class LootContainer : MonoBehaviour, IInteractable
         _looted = true;
         _model.OnChanged -= OnModelChanged;
 
-        WorldStateManager.Instance?.SetFlag(LootedFlag, true);
+        WorldStateManager.Instance?.SetFlag(LootedFlag);
         LootContainerUI.Hide();
     }
 
