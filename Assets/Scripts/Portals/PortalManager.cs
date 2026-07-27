@@ -1,53 +1,27 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Singleton that loads portal definitions from JSON and handles cross-scene teleportation.
-/// PortalTrigger2D calls TryUsePortal() when a traveler enters; PortalManager resolves
-/// the destination (same-scene warp or SceneLoader scene transition) and places the
-/// traveler at the correct PortalSpawnPoint after the new scene finishes loading.
-///
-/// Unity setup:
-///   1. Add to a persistent bootstrap GameObject (alongside SceneLoader, SaveManager).
-///   2. Optional: assign a Portal Config Json TextAsset, or leave blank to load
-///      StreamingAssets/portals.json automatically (default filename).
-///   3. Set Default Traveler Tag (default "Player"), cooldown, and velocity settings.
-///   4. In every scene that portals lead to, place PortalSpawnPoint GameObjects with
-///      matching spawnId values so the manager knows where to place the traveler.
-///
-/// Runtime API:
-///   PortalManager.Instance.TryUsePortal("village_gate", travelerTransform);
+/// Executes same-scene and cross-scene portal travel. Portal routes are authored
+/// entirely on PortalTrigger2D components; this manager does not load portal JSON.
 /// </summary>
 public class PortalManager : MonoBehaviour
 {
     public static PortalManager Instance { get; private set; }
 
-    [Header("Config")]
-    [SerializeField] private TextAsset portalConfigJson;
-    [SerializeField] private string resourcesConfigPath = "Portals/portals";
-    [SerializeField] private string streamingAssetsFileName = "portals.json";
-
-    [Header("Teleport")]
+    [Header("Traveler")]
     [SerializeField] private string defaultTravelerTag = "Player";
     [SerializeField, Min(0f)] private float travelerCooldownSeconds = 0.2f;
-    [SerializeField] private bool applyDestinationRotation;
     [SerializeField] private bool resetVelocityOnTeleport = true;
     [SerializeField] private Vector2 exitVelocity = Vector2.zero;
 
-    private readonly Dictionary<string, PortalDefinition> portalById = new Dictionary<string, PortalDefinition>(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<int, float> travelerReadyTime = new Dictionary<int, float>();
+    private readonly Dictionary<EntityId, float> travelerReadyTime =
+        new Dictionary<EntityId, float>();
 
     private string pendingScene;
-    private string pendingSpawnId;
-    private bool pendingUsePortalExitOffset;
     private string pendingDestinationPortalId;
-    private string pendingExitSide;
-    private float pendingExitDistance;
-    private Vector3 pendingFallbackPosition;
-    private Vector3 pendingRotationEuler;
 
     private void Awake()
     {
@@ -59,9 +33,7 @@ public class PortalManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
         SceneManager.sceneLoaded += OnSceneLoaded;
-        LoadPortalConfig();
     }
 
     private void OnDestroy()
@@ -73,146 +45,137 @@ public class PortalManager : MonoBehaviour
         }
     }
 
-    public bool TryUsePortal(string portalId, Transform traveler)
+    public bool TryUsePortal(PortalTrigger2D sourcePortal, Transform traveler)
     {
-        if (traveler == null || string.IsNullOrWhiteSpace(portalId))
+        if (sourcePortal == null || traveler == null)
         {
             return false;
         }
 
-        int travelerId = traveler.GetInstanceID();
-        if (travelerReadyTime.TryGetValue(travelerId, out float readyTime) && Time.time < readyTime)
+        if (string.IsNullOrWhiteSpace(sourcePortal.DestinationPortalId))
+        {
+            Debug.LogWarning(
+                $"Portal '{sourcePortal.PortalId}' has no Destination Portal Id.",
+                sourcePortal);
+            return false;
+        }
+
+        return TryTeleportToPortal(
+            sourcePortal.DestinationPortalId,
+            traveler,
+            sourcePortal.DestinationScene);
+    }
+
+    /// <summary>
+    /// Uses a source portal by ID. Useful for quest or scripted activation.
+    /// </summary>
+    public bool TryUsePortal(string sourcePortalId, Transform traveler)
+    {
+        if (!TryFindPortal(sourcePortalId, out PortalTrigger2D sourcePortal))
+        {
+            Debug.LogWarning($"Source portal '{sourcePortalId}' was not found in the active scene.");
+            return false;
+        }
+
+        return TryUsePortal(sourcePortal, traveler);
+    }
+
+    /// <summary>
+    /// Sends a traveler directly to a destination portal. Leave destinationScene
+    /// blank when the portal is in the currently loaded scene.
+    /// </summary>
+    public bool TryTeleportToPortal(
+        string destinationPortalId,
+        Transform traveler,
+        string destinationScene = null)
+    {
+        if (traveler == null || string.IsNullOrWhiteSpace(destinationPortalId))
         {
             return false;
         }
 
-        if (!portalById.TryGetValue(portalId, out PortalDefinition portal))
+        EntityId travelerId = traveler.GetEntityId();
+        if (!IsTravelerReady(travelerId))
         {
-            Debug.LogWarning($"Portal ID '{portalId}' not found in portal config.");
             return false;
         }
 
-        MarkTravelerCooldown(travelerId);
-
-        string destinationScene = portal.destination.scene;
+        string activeScene = SceneManager.GetActiveScene().name;
         bool sameScene = string.IsNullOrWhiteSpace(destinationScene) ||
-                         string.Equals(destinationScene, SceneManager.GetActiveScene().name, StringComparison.OrdinalIgnoreCase);
+                         string.Equals(destinationScene, activeScene, StringComparison.OrdinalIgnoreCase);
 
         if (sameScene)
         {
-            TeleportTraveler(traveler, portal.destination);
-            return true;
+            if (!TryFindPortal(destinationPortalId, out PortalTrigger2D destinationPortal))
+            {
+                Debug.LogWarning(
+                    $"Destination portal '{destinationPortalId}' was not found in scene '{activeScene}'.");
+                return false;
+            }
+
+            return TeleportTraveler(traveler, destinationPortal);
         }
 
-        pendingScene = destinationScene;
-        pendingSpawnId = portal.destination.spawnId;
-        pendingUsePortalExitOffset = portal.destination.usePortalExitOffset;
-        pendingDestinationPortalId = portal.destination.destinationPortalId;
-        pendingExitSide = portal.destination.exitSide;
-        pendingExitDistance = portal.destination.exitDistance;
-        pendingFallbackPosition = portal.destination.position.ToVector3();
-        pendingRotationEuler = portal.destination.rotationEuler.ToVector3();
+        pendingScene = destinationScene.Trim();
+        pendingDestinationPortalId = destinationPortalId.Trim();
+        MarkTravelerCooldown(travelerId);
 
         if (SceneLoader.Instance != null)
-            SceneLoader.Instance.LoadScene(destinationScene);
+        {
+            SceneLoader.Instance.LoadScene(pendingScene);
+        }
         else
-            SceneManager.LoadScene(destinationScene);
+        {
+            SceneManager.LoadScene(pendingScene);
+        }
 
         return true;
     }
 
-    public bool TryGetPortal(string portalId, out PortalDefinition portal)
+    public bool TryFindPortal(string portalId, out PortalTrigger2D portal)
     {
-        return portalById.TryGetValue(portalId, out portal);
-    }
-
-    private void LoadPortalConfig()
-    {
-        string json = LoadConfigJsonText();
-        if (string.IsNullOrWhiteSpace(json))
+        portal = null;
+        if (string.IsNullOrWhiteSpace(portalId))
         {
-            Debug.LogWarning("Portal config not found. Assign a TextAsset or provide StreamingAssets/portals.json.");
-            return;
+            return false;
         }
 
-        PortalDatabaseJson database;
-        try
-        {
-            database = JsonUtility.FromJson<PortalDatabaseJson>(json);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Failed to parse portal config JSON: {ex.Message}");
-            return;
-        }
+        PortalTrigger2D[] portals =
+            FindObjectsByType<PortalTrigger2D>(FindObjectsInactive.Include);
 
-        if (database == null || database.portals == null)
+        for (int i = 0; i < portals.Length; i++)
         {
-            Debug.LogError("Portal config JSON parsed as null or missing portals array.");
-            return;
-        }
-
-        portalById.Clear();
-
-        for (int i = 0; i < database.portals.Count; i++)
-        {
-            PortalDefinition portal = database.portals[i];
-            if (portal == null || string.IsNullOrWhiteSpace(portal.id))
+            PortalTrigger2D candidate = portals[i];
+            if (candidate != null &&
+                candidate.gameObject.scene == SceneManager.GetActiveScene() &&
+                string.Equals(candidate.PortalId, portalId, StringComparison.OrdinalIgnoreCase))
             {
-                Debug.LogWarning($"Skipping portal entry at index {i} because id is missing.");
-                continue;
-            }
-
-            if (portalById.ContainsKey(portal.id))
-            {
-                Debug.LogWarning($"Duplicate portal id '{portal.id}' found. Keeping first entry.");
-                continue;
-            }
-
-            portalById.Add(portal.id, portal);
-        }
-    }
-
-    private string LoadConfigJsonText()
-    {
-        if (portalConfigJson != null)
-        {
-            return portalConfigJson.text;
-        }
-
-        if (!string.IsNullOrWhiteSpace(resourcesConfigPath))
-        {
-            TextAsset resource = Resources.Load<TextAsset>(resourcesConfigPath);
-            if (resource != null)
-            {
-                return resource.text;
+                portal = candidate;
+                return true;
             }
         }
 
-        if (string.IsNullOrWhiteSpace(streamingAssetsFileName))
-        {
-            return null;
-        }
-
-        string path = Path.Combine(Application.streamingAssetsPath, streamingAssetsFileName);
-        if (File.Exists(path))
-        {
-            return File.ReadAllText(path);
-        }
-
-        return null;
+        return false;
     }
 
-    private void TeleportTraveler(Transform traveler, PortalDestination destination)
+    private bool TeleportTraveler(Transform traveler, PortalTrigger2D destinationPortal)
     {
-        Vector3 targetPosition = ResolveDestinationPosition(destination);
+        if (traveler == null || destinationPortal == null)
+        {
+            return false;
+        }
+
+        if (destinationPortal.ExitPoint == null)
+        {
+            Debug.LogWarning(
+                $"Destination portal '{destinationPortal.PortalId}' has no Exit Point.",
+                destinationPortal);
+            return false;
+        }
+
+        Vector3 targetPosition = destinationPortal.ArrivalPosition;
+        targetPosition.z = traveler.position.z;
         traveler.position = targetPosition;
-
-        if (applyDestinationRotation)
-        {
-            Vector3 euler = destination.rotationEuler.ToVector3();
-            traveler.rotation = Quaternion.Euler(euler);
-        }
 
         if (resetVelocityOnTeleport)
         {
@@ -222,99 +185,49 @@ public class PortalManager : MonoBehaviour
                 body.linearVelocity = exitVelocity;
             }
         }
-    }
 
-    private Vector3 ResolveDestinationPosition(PortalDestination destination)
-    {
-        if (destination.usePortalExitOffset &&
-            !string.IsNullOrWhiteSpace(destination.destinationPortalId) &&
-            TryResolvePortalExitPosition(destination.destinationPortalId, destination.exitSide, destination.exitDistance, out Vector3 portalExitPosition))
-        {
-            return portalExitPosition;
-        }
-
-        if (destination.useSpawnPoint && !string.IsNullOrWhiteSpace(destination.spawnId))
-        {
-            PortalSpawnPoint[] points = FindObjectsByType<PortalSpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < points.Length; i++)
-            {
-                PortalSpawnPoint point = points[i];
-                if (point != null && string.Equals(point.SpawnId, destination.spawnId, StringComparison.OrdinalIgnoreCase))
-                {
-                    return point.transform.position;
-                }
-            }
-
-            Debug.LogWarning($"Spawn point '{destination.spawnId}' not found. Falling back to raw destination position.");
-        }
-
-        return destination.position.ToVector3();
+        MarkTravelerCooldown(traveler.GetEntityId());
+        destinationPortal.BlockForSeconds(
+            Mathf.Max(travelerCooldownSeconds, destinationPortal.TravelCooldown));
+        return true;
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (string.IsNullOrWhiteSpace(pendingScene))
+        if (string.IsNullOrWhiteSpace(pendingScene) ||
+            !string.Equals(scene.name, pendingScene, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        if (!string.Equals(scene.name, pendingScene, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        GameObject travelerObj = GameObject.FindGameObjectWithTag(defaultTravelerTag);
-        if (travelerObj == null)
-        {
-            Debug.LogWarning($"Scene '{scene.name}' loaded but no traveler with tag '{defaultTravelerTag}' was found.");
-            ClearPendingDestination();
-            return;
-        }
-
-        Transform traveler = travelerObj.transform;
-
-        Vector3 targetPosition = pendingFallbackPosition;
-        if (pendingUsePortalExitOffset &&
-            !string.IsNullOrWhiteSpace(pendingDestinationPortalId) &&
-            TryResolvePortalExitPosition(pendingDestinationPortalId, pendingExitSide, pendingExitDistance, out Vector3 portalExitPosition))
-        {
-            targetPosition = portalExitPosition;
-        }
-        else if (!string.IsNullOrWhiteSpace(pendingSpawnId))
-        {
-            PortalSpawnPoint[] points = FindObjectsByType<PortalSpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < points.Length; i++)
-            {
-                PortalSpawnPoint point = points[i];
-                if (point != null && string.Equals(point.SpawnId, pendingSpawnId, StringComparison.OrdinalIgnoreCase))
-                {
-                    targetPosition = point.transform.position;
-                    break;
-                }
-            }
-        }
-
-        traveler.position = targetPosition;
-
-        if (applyDestinationRotation)
-        {
-            traveler.rotation = Quaternion.Euler(pendingRotationEuler);
-        }
-
-        if (resetVelocityOnTeleport)
-        {
-            Rigidbody2D body = traveler.GetComponent<Rigidbody2D>();
-            if (body != null)
-            {
-                body.linearVelocity = exitVelocity;
-            }
-        }
-
-        MarkTravelerCooldown(traveler.GetInstanceID());
+        string destinationPortalId = pendingDestinationPortalId;
         ClearPendingDestination();
+
+        GameObject travelerObject = GameObject.FindGameObjectWithTag(defaultTravelerTag);
+        if (travelerObject == null)
+        {
+            Debug.LogWarning(
+                $"Scene '{scene.name}' loaded, but no traveler tagged '{defaultTravelerTag}' was found.");
+            return;
+        }
+
+        if (!TryFindPortal(destinationPortalId, out PortalTrigger2D destinationPortal))
+        {
+            Debug.LogWarning(
+                $"Destination portal '{destinationPortalId}' was not found in scene '{scene.name}'.");
+            return;
+        }
+
+        TeleportTraveler(travelerObject.transform, destinationPortal);
     }
 
-    private void MarkTravelerCooldown(int travelerId)
+    private bool IsTravelerReady(EntityId travelerId)
+    {
+        return !travelerReadyTime.TryGetValue(travelerId, out float readyTime) ||
+               Time.time >= readyTime;
+    }
+
+    private void MarkTravelerCooldown(EntityId travelerId)
     {
         travelerReadyTime[travelerId] = Time.time + travelerCooldownSeconds;
     }
@@ -322,59 +235,6 @@ public class PortalManager : MonoBehaviour
     private void ClearPendingDestination()
     {
         pendingScene = null;
-        pendingSpawnId = null;
-        pendingUsePortalExitOffset = false;
         pendingDestinationPortalId = null;
-        pendingExitSide = null;
-        pendingExitDistance = 0f;
-        pendingFallbackPosition = Vector3.zero;
-        pendingRotationEuler = Vector3.zero;
-    }
-
-    private bool TryResolvePortalExitPosition(string portalId, string exitSide, float exitDistance, out Vector3 targetPosition)
-    {
-        PortalTrigger2D[] portalTriggers = FindObjectsByType<PortalTrigger2D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (int i = 0; i < portalTriggers.Length; i++)
-        {
-            PortalTrigger2D trigger = portalTriggers[i];
-            if (trigger == null || !string.Equals(trigger.PortalId, portalId, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            Vector3 direction = ExitSideToVector(exitSide);
-            float distance = Mathf.Max(0.01f, exitDistance);
-            targetPosition = trigger.transform.position + (direction * distance);
-            return true;
-        }
-
-        targetPosition = Vector3.zero;
-        return false;
-    }
-
-    private static Vector3 ExitSideToVector(string exitSide)
-    {
-        if (string.IsNullOrWhiteSpace(exitSide))
-        {
-            return Vector3.right;
-        }
-
-        switch (exitSide.Trim().ToLowerInvariant())
-        {
-            case "up":
-            case "above":
-            case "top":
-                return Vector3.up;
-            case "down":
-            case "below":
-            case "bottom":
-                return Vector3.down;
-            case "left":
-                return Vector3.left;
-            case "right":
-                return Vector3.right;
-            default:
-                return Vector3.right;
-        }
     }
 }

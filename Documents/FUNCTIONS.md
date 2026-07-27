@@ -86,11 +86,9 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 
 | Script | Responsibility | Key runtime API |
 |---|---|---|
-| `Assets/Scripts/Portals/Portal2D.cs` | Performs a direct same-scene teleport to a configured transform. | `BlockForSeconds()` |
-| `Assets/Scripts/Portals/PortalData.cs` | Serializable portal configuration DTOs. | Public fields; `SerializableVector3.ToVector3()` |
-| `Assets/Scripts/Portals/PortalManager.cs` | Loads portal definitions and coordinates same/cross-scene travel. | `Instance`, `TryUsePortal()`, `TryGetPortal()` |
-| `Assets/Scripts/Portals/PortalSpawnPoint.cs` | Marks a named arrival location. | `SpawnId` |
-| `Assets/Scripts/Portals/PortalTrigger2D.cs` | Starts manager-based or locally wired portal travel. | `PortalId`, `BlockForSeconds()` |
+| `Assets/Scripts/Portals/PortalManager.cs` | Coordinates component-authored same/cross-scene travel. | `Instance`, `TryUsePortal()`, `TryTeleportToPortal()`, `TryFindPortal()` |
+| `Assets/Scripts/Portals/PortalTrigger2D.cs` | Stores portal identity, destination, exit point, and trigger behavior. | `PortalId`, `DestinationScene`, `DestinationPortalId`, `ExitPoint`, `BlockForSeconds()` |
+| `Assets/Scripts/Portals/Editor/PortalMapExporter.cs` | Exports generated JSON/Markdown portal maps and validation results. | `ExportPortalMap()` |
 
 ## Quests and Persistent State
 

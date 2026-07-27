@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "portals": [
+    {
+      "id": "portal_a",
+      "objectName": "PortalA",
+      "scene": "NewScene",
+      "destinationScene": "NewScene",
+      "destinationPortalId": "portal_b",
+      "hasExitPoint": true,
+      "exitPosition": {
+        "x": -7.22,
+        "y": 6.02,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "portal_a_2",
+      "objectName": "PortalA_2",
+      "scene": "NewScene",
+      "destinationScene": "NewScene",
+      "destinationPortalId": "portal_b_2",
+      "hasExitPoint": true,
+      "exitPosition": {
+        "x": -7.22,
+        "y": -14.47,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "portal_b",
+      "objectName": "PortalB",
+      "scene": "NewScene",
+      "destinationScene": "NewScene",
+      "destinationPortalId": "portal_a",
+      "hasExitPoint": true,
+      "exitPosition": {
+        "x": 21.34,
+        "y": -3.67394,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "portal_b_2",
+      "objectName": "PortalB_2",
+      "scene": "NewScene",
+      "destinationScene": "NewScene",
+      "destinationPortalId": "portal_a_2",
+      "hasExitPoint": true,
+      "exitPosition": {
+        "x": 23.74,
+        "y": -13.96,
+        "z": 0.0
+      }
+    }
+  ],
+  "validationErrors": []
+}

@@ -1,156 +1,117 @@
 # Portal System
 
-## Overview
+Portals are authored entirely in the Unity Inspector. There is no runtime portal
+JSON database and no separate local portal implementation.
 
-The portal system moves any tagged GameObject (default: `Player`) from one location to another — either within the same scene or across scenes. Two independent modes cover different authoring needs.
+## Runtime flow
 
-| Mode | When to use |
-|---|---|
-| **Local Mode** | Simple same-scene portals; wire two `PortalTrigger2D` directly in the Inspector. No JSON required. |
-| **Manager Mode** | Cross-scene portals, or same-scene portals you want to author outside Unity. All data lives in `StreamingAssets/portals.json`. |
-
----
+```text
+PortalTrigger2D detects a traveler
+  -> PortalManager reads the component's destination
+  -> destination scene loads when necessary
+  -> destination PortalTrigger2D is found by its stable ID
+  -> traveler is placed at the destination's Exit Point
+```
 
 ## PortalTrigger2D
 
 **File:** `Assets/Scripts/Portals/PortalTrigger2D.cs`
 
-Place on any GameObject that should act as a portal entrance. Requires a `Collider2D` set as a trigger.
+Add `PortalTrigger2D` to a scene object with a `Collider2D`. The collider is
+forced to be a trigger.
 
-### Inspector fields
-
-| Field | Description |
+| Inspector field | Purpose |
 |---|---|
-| Use Manager Config | Enable Manager Mode — reads from `PortalManager` using `Portal Id` |
-| Portal Id | ID to look up in `portals.json` (Manager Mode only) |
-| Destination Portal | The exit `PortalTrigger2D` (Local Mode only) |
-| Destination Spawn Point | Optional exact `Transform` to teleport to (Local Mode) |
-| Spawn Outside Destination | Calculate exit position offset from destination portal |
-| Exit Side | `Above`, `Below`, `Left`, `Right` — direction to offset from destination |
-| Exit Distance | World units of offset from destination portal (auto-calculated if `Auto Separation Distance` is on) |
-| Required Tag | Only triggers for GameObjects with this tag (default: `Player`) |
-| Travel Cooldown | Seconds before this portal can be used again (prevents bounce-back) |
-| Reset Velocity | Zero out the traveler's `Rigidbody2D` velocity on arrival |
-| Exit Velocity | Velocity to apply on arrival (used when `Reset Velocity` is on) |
+| Portal Id | Globally unique, stable identifier used by portals, dialogue, and quests |
+| Destination Scene | Destination scene name; leave blank for the current scene |
+| Destination Portal Id | ID of the receiving `PortalTrigger2D` |
+| Exit Point | Child transform containing the exact arrival position |
+| Required Tag | Traveler tag, normally `Player` |
+| Travel Cooldown | Prevents immediate reuse |
 
-### Local Mode wiring
-
-1. Place Portal A and Portal B in the scene.
-2. On Portal A: set `Destination Portal = Portal B`, choose `Exit Side`.
-3. On Portal B: set `Destination Portal = Portal A`, choose `Exit Side`.
-4. Both portals automatically block for `Travel Cooldown` after a teleport to prevent instant bounce-back.
-
----
+Portal IDs should describe their location rather than their order. Prefer
+`east_marsh_south_gate` over `portal_a`.
 
 ## PortalManager
 
 **File:** `Assets/Scripts/Portals/PortalManager.cs`
 
-Singleton (`DontDestroyOnLoad`). Loads portal definitions from JSON, handles cross-scene teleportation by storing the pending destination and spawning the traveler after `SceneManager.sceneLoaded`.
-
-### Config loading priority
-
-1. `portalConfigJson` — a `TextAsset` assigned directly in the Inspector.
-2. `Resources.Load` from `resourcesConfigPath` (default: `"Portals/portals"`).
-3. `StreamingAssets/portals.json`.
-
-### Inspector fields
-
-| Field | Default | Description |
-|---|---|---|
-| Portal Config Json | — | TextAsset override (skips file loading) |
-| Resources Config Path | `Portals/portals` | Path under `Resources/` |
-| Streaming Assets File Name | `portals.json` | File under `StreamingAssets/` |
-| Default Traveler Tag | `Player` | Tag filter for teleportation |
-| Traveler Cooldown Seconds | 0.2 | Per-traveler cooldown (by instance ID) |
-| Apply Destination Rotation | false | Rotate traveler on arrival |
-| Reset Velocity On Teleport | true | Zero `Rigidbody2D` velocity on arrival |
-
-### Usage from code
+`PortalManager` is a persistent singleton that handles both same-scene and
+cross-scene travel.
 
 ```csharp
-// Manager Mode teleport (also triggered automatically by PortalTrigger2D)
-PortalManager.Instance.TryUsePortal("town_entrance", playerTransform);
+PortalManager.Instance.TryUsePortal(sourcePortal, playerTransform);
+PortalManager.Instance.TryUsePortal("village_north_gate", playerTransform);
+PortalManager.Instance.TryTeleportToPortal(
+    "east_marsh_south_gate",
+    playerTransform,
+    "EastMarsh");
 ```
 
----
+`TryUsePortal` follows the route stored on the source portal.
+`TryTeleportToPortal` sends the traveler directly to a destination portal and
+is used by NPC dialogue and scripted travel.
 
-## PortalSpawnPoint
+## Creating a same-scene pair
 
-**File:** `Assets/Scripts/Portals/PortalSpawnPoint.cs`
+1. Create two portal GameObjects with trigger colliders.
+2. Add `PortalTrigger2D` to each.
+3. Give both globally unique IDs.
+4. Leave **Destination Scene** blank.
+5. Set each portal's **Destination Portal Id** to the other portal.
+6. Add an `ExitPoint` child to each and assign it to **Exit Point**.
+7. Position each exit point outside its portal collider.
 
-Marks a named position in a scene. `PortalManager` looks these up by `spawnId` after a scene load to place the traveler.
+## Creating a cross-scene pair
 
-Assign a unique `Spawn Id` in the Inspector to each `PortalSpawnPoint` in your scene.
+1. Add both scenes to Build Settings.
+2. Create and configure a portal in each scene.
+3. Give both portals globally unique IDs.
+4. Enter the other scene's name in **Destination Scene**.
+5. Enter the receiving portal's ID in **Destination Portal Id**.
+6. Assign an `ExitPoint` on both portals.
 
----
+Cross-scene object references are not required. The scene name and stable portal
+ID are resolved after the destination scene loads.
 
-## portals.json Schema
+## Dialogue travel
 
-**Location:** `StreamingAssets/portals.json`
+Dialogue choices may send the player directly to a portal:
 
 ```json
 {
-  "version": 1,
-  "portals": [
-    {
-      "id": "cave_entrance",
-      "destination": {
-        "scene": "Cave",
-        "useSpawnPoint": true,
-        "spawnId": "cave_from_overworld",
-        "usePortalExitOffset": false,
-        "destinationPortalId": "",
-        "exitSide": "Right",
-        "exitDistance": 1.25,
-        "position": { "x": 0, "y": 0, "z": 0 },
-        "rotationEuler": { "x": 0, "y": 0, "z": 0 }
-      },
-      "metadata": []
-    }
-  ]
+  "text": "Take me there.",
+  "endConversation": true,
+  "teleportScene": "",
+  "teleportPortalId": "portal_a_2"
 }
 ```
 
-### destination fields
+Leave `teleportScene` blank when the destination portal is in the current scene.
 
-| Field | Description |
-|---|---|
-| `scene` | Build Settings scene name to load. Empty = same scene. |
-| `useSpawnPoint` | If true, find a `PortalSpawnPoint` with matching `spawnId` in the destination scene. |
-| `spawnId` | ID to match against `PortalSpawnPoint` in the destination scene. |
-| `usePortalExitOffset` | Place traveler relative to the destination portal trigger instead of spawn point. |
-| `destinationPortalId` | Portal ID of the exit trigger (used with `usePortalExitOffset`). |
-| `exitSide` | Direction offset from exit trigger: `Above`, `Below`, `Left`, `Right`. |
-| `exitDistance` | World units of offset. |
-| `position` | Absolute fallback position if no spawn point or portal is found. |
-| `rotationEuler` | Optional rotation applied if `applyDestinationRotation` is enabled on `PortalManager`. |
+## Portal map export
 
----
+Use:
 
-## Quest integration
-
-When a player travels through a portal, fire:
-
-```csharp
-QuestEventBus.Raise("LocationReached", areaId);
+```text
+Tools > Portals > Export Portal Map
 ```
 
-Do this from the portal trigger or from a scene initialization script. The portal system itself does not fire quest events.
+The exporter scans every Unity scene under `Assets/Scenes`, including scenes
+that have not been added to Build Settings yet.
 
----
+It generates:
 
-## Setting Up a Same-Scene Portal (Local Mode)
+- `Documents/Generated/portal-map.json`
+- `Documents/Generated/portal-map.md`
 
-1. Create two GameObjects — `PortalA` and `PortalB`.
-2. Add `Collider2D` (Is Trigger ✓) to each.
-3. Add `PortalTrigger2D` to each. Leave `Use Manager Config` off.
-4. On `PortalA`: set `Destination Portal = PortalB`, pick `Exit Side = Right`.
-5. On `PortalB`: set `Destination Portal = PortalA`, pick `Exit Side = Left`.
+These files are read-only documentation. Runtime gameplay never reads them.
+The export also reports:
 
-## Setting Up a Cross-Scene Portal (Manager Mode)
+- Empty portal IDs
+- Duplicate portal IDs
+- Missing exit points
+- Empty destination IDs
+- Routes whose destination portal cannot be found
 
-1. Add a `PortalManager` GameObject to your first scene (or a persistent scene). It will `DontDestroyOnLoad`.
-2. Create `StreamingAssets/portals.json` with your portal definitions.
-3. In the destination scene, add a `PortalSpawnPoint` and set its `Spawn Id` to match `spawnId` in JSON.
-4. Place `PortalTrigger2D` at the entrance. Enable `Use Manager Config`, set `Portal Id` to the matching JSON id.
+Re-run the export whenever you want a current text or JSON view of the network.

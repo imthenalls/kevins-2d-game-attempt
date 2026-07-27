@@ -177,6 +177,27 @@ public class PlayerInteractionController : MonoBehaviour
             if (!TryApplyManualQuestTransition(selectedChoice))
                 return;
 
+            if (!string.IsNullOrWhiteSpace(selectedChoice.teleportPortalId))
+            {
+                string portalId = selectedChoice.teleportPortalId;
+                string destinationScene = selectedChoice.teleportScene;
+
+                EndDialogue();
+
+                PortalManager portalManager = PortalManager.Instance;
+                if (portalManager == null ||
+                    !portalManager.TryTeleportToPortal(
+                        portalId,
+                        transform,
+                        destinationScene))
+                {
+                    Debug.LogWarning(
+                        $"[PlayerInteractionController] Could not teleport player to portal '{portalId}'.");
+                }
+
+                return;
+            }
+
             if (selectedChoice.endConversation || string.IsNullOrWhiteSpace(selectedChoice.nextNodeId))
             {
                 EndDialogue();

@@ -56,11 +56,10 @@ flowchart TB
         subgraph PORTAL["Portal Prefab"]
             direction TB
             PT[PortalTrigger2D]
-            PD["PortalData\nScriptableObject"]
             PM["PortalManager\nsingleton"]
-            SP[PortalSpawnPoint]
-            PT --> PD
+            EP["ExitPoint\nchild Transform"]
             PT --> PM
+            PT --> EP
         end
     end
 

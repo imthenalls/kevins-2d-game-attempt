@@ -41,6 +41,41 @@
           "choices": []
         }
       ]
+    },
+    {
+      "dialogueId": "time_machine",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Time Machine",
+          "text": "I can bend the path between here and the portal. Do you want to travel?",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "Take me there.",
+              "nextNodeId": "",
+              "endConversation": true,
+              "teleportPortalId": "portal_a_2",
+              "teleportScene": ""
+            },
+            {
+              "text": "Not right now.",
+              "nextNodeId": "decline",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "decline",
+          "speakerName": "Time Machine",
+          "text": "Return when you are ready to cross the distance.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
     }
   ]
 }

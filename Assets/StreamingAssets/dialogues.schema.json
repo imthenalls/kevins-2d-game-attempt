@@ -28,7 +28,9 @@
         "endConversation": { "type": "boolean" },
         "questId": { "type": "string" },
         "questSourceNodeId": { "type": "string" },
-        "questTargetNodeId": { "type": "string" }
+        "questTargetNodeId": { "type": "string" },
+        "teleportPortalId": { "type": "string" },
+        "teleportScene": { "type": "string" }
       }
     },
     "node": {

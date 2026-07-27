@@ -57,4 +57,6 @@ public class DialogueChoiceDefinition
     public string questId;
     public string questSourceNodeId;
     public string questTargetNodeId;
+    public string teleportPortalId;
+    public string teleportScene;
 }
