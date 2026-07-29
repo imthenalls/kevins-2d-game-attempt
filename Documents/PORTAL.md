@@ -26,6 +26,7 @@ forced to be a trigger.
 | Destination Scene | Destination scene name; leave blank for the current scene |
 | Destination Portal Id | ID of the receiving `PortalTrigger2D` |
 | Exit Point | Child transform containing the exact arrival position |
+| Additional Incoming Sources | Optional notes for NPCs, quests, or scripted events that send travelers here |
 | Required Tag | Traveler tag, normally `Player` |
 | Travel Cooldown | Prevents immediate reuse |
 
@@ -113,5 +114,14 @@ The export also reports:
 - Missing exit points
 - Empty destination IDs
 - Routes whose destination portal cannot be found
+
+Incoming portal routes are calculated automatically. Use **Additional Incoming
+Sources** only for sources that are not portals, for example:
+
+```text
+NPC: time_machine
+Quest: rescue_the_archivist
+Fast Travel: east_marsh
+```
 
 Re-run the export whenever you want a current text or JSON view of the network.

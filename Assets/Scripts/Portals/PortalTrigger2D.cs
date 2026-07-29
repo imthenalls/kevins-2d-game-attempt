@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,10 @@ public class PortalTrigger2D : MonoBehaviour
     [Tooltip("Exact position where travelers arrive at this portal.")]
     [SerializeField] private Transform exitPoint;
 
+    [Header("Incoming Sources (Documentation)")]
+    [Tooltip("Optional notes for non-portal sources that can send a traveler here, such as an NPC, quest, or scripted event. Portal-to-portal links are derived automatically by the map exporter.")]
+    [SerializeField] private List<string> additionalIncomingSources = new List<string>();
+
     [Header("Who Can Use This Portal")]
     [SerializeField] private string requiredTag = "Player";
 
@@ -36,6 +41,7 @@ public class PortalTrigger2D : MonoBehaviour
     public string DestinationScene => destinationScene;
     public string DestinationPortalId => destinationPortalId;
     public Transform ExitPoint => exitPoint;
+    public IReadOnlyList<string> AdditionalIncomingSources => additionalIncomingSources;
     public float TravelCooldown => travelCooldown;
     public Vector3 ArrivalPosition => exitPoint != null ? exitPoint.position : transform.position;
 
@@ -50,6 +56,20 @@ public class PortalTrigger2D : MonoBehaviour
         portalId = portalId != null ? portalId.Trim() : string.Empty;
         destinationScene = destinationScene != null ? destinationScene.Trim() : string.Empty;
         destinationPortalId = destinationPortalId != null ? destinationPortalId.Trim() : string.Empty;
+
+        if (additionalIncomingSources == null)
+        {
+            additionalIncomingSources = new List<string>();
+        }
+        else
+        {
+            for (int i = 0; i < additionalIncomingSources.Count; i++)
+            {
+                additionalIncomingSources[i] = additionalIncomingSources[i] != null
+                    ? additionalIncomingSources[i].Trim()
+                    : string.Empty;
+            }
+        }
 
         Collider2D col = GetComponent<Collider2D>();
         if (col != null)

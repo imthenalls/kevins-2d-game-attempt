@@ -7,6 +7,10 @@
       "scene": "NewScene",
       "destinationScene": "NewScene",
       "destinationPortalId": "portal_b",
+      "incomingPortals": [
+        "NewScene/portal_b"
+      ],
+      "additionalIncomingSources": [],
       "hasExitPoint": true,
       "exitPosition": {
         "x": -7.22,
@@ -20,6 +24,12 @@
       "scene": "NewScene",
       "destinationScene": "NewScene",
       "destinationPortalId": "portal_b_2",
+      "incomingPortals": [
+        "NewScene/portal_b_2"
+      ],
+      "additionalIncomingSources": [
+        "NPC: time_machine"
+      ],
       "hasExitPoint": true,
       "exitPosition": {
         "x": -7.22,
@@ -33,6 +43,10 @@
       "scene": "NewScene",
       "destinationScene": "NewScene",
       "destinationPortalId": "portal_a",
+      "incomingPortals": [
+        "NewScene/portal_a"
+      ],
+      "additionalIncomingSources": [],
       "hasExitPoint": true,
       "exitPosition": {
         "x": 21.34,
@@ -46,6 +60,10 @@
       "scene": "NewScene",
       "destinationScene": "NewScene",
       "destinationPortalId": "portal_a_2",
+      "incomingPortals": [
+        "NewScene/portal_a_2"
+      ],
+      "additionalIncomingSources": [],
       "hasExitPoint": true,
       "exitPosition": {
         "x": 23.74,

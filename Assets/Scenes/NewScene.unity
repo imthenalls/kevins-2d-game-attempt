@@ -5519,6 +5519,8 @@ MonoBehaviour:
   destinationScene: ''
   destinationPortalId: portal_b_2
   exitPoint: {fileID: 910000006}
+  additionalIncomingSources:
+  - 'NPC: time_machine'
   requiredTag: Player
   travelCooldown: 0.2
 --- !u!212 &1205837288
