@@ -11,6 +11,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/ENTITY.md](Documents/ENTITY.md) | Entity folder: IEntityController, EntityStats, CombatReceiver, CombatAttacker |
 | [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, CombatReceiver, CombatAttacker, scene setup |
 | [Documents/NPC.md](Documents/NPC.md) | NPC controller, behaviors, dialogue, enemy setup |
+| [Documents/NPC_ITEM_GIFTS.md](Documents/NPC_ITEM_GIFTS.md) | Give an item to the player when an NPC conversation is completed |
 | [Documents/INVENTORY.md](Documents/INVENTORY.md) | Inventory model, UI, item data, canvas setup |
 | [Documents/PORTAL.md](Documents/PORTAL.md) | Portal trigger, manager, spawn points, JSON schema |
 | [Documents/QUEST_SYSTEM.md](Documents/QUEST_SYSTEM.md) | Quest graph architecture, JSON schema, runtime flow |

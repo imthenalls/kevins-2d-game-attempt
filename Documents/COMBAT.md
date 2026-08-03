@@ -4,6 +4,8 @@
 
 The combat system adds hit-taking and attack logic on top of `EntityStats`. HP and MP flow is handled entirely by `EntityStats`; the combat layer adds the _interaction_ between entities — who hit whom, how hard, and what happens on death.
 
+Player and NPC attacks include `EntityStats.BonusAttack`, allowing equipped weapons to increase final hit damage.
+
 Attack types, elements, and status effects are not implemented yet. `DamageInfo` has a dedicated extension point for them — see **Extending the System** at the bottom.
 
 ---

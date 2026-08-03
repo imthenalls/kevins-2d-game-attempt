@@ -103,10 +103,14 @@ public class CombatAttacker : MonoBehaviour
 
         if (nearest == null) return;
 
-        nearest.ReceiveHit(new DamageInfo(attackDamage, gameObject));
+        int totalDamage = attackDamage;
+        if (TryGetComponent(out EntityStats attackerStats))
+            totalDamage += attackerStats.BonusAttack;
+
+        nearest.ReceiveHit(new DamageInfo(totalDamage, gameObject));
         _cooldownTimer = attackCooldown;
 
-        OnAttackLanded?.Invoke(attackDamage);
+        OnAttackLanded?.Invoke(totalDamage);
         if (!nearest.Stats.IsAlive)
             OnKillLanded?.Invoke();
 

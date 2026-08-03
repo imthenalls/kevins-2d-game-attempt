@@ -182,7 +182,7 @@ public class PlayerInteractionController : MonoBehaviour
                 string portalId = selectedChoice.teleportPortalId;
                 string destinationScene = selectedChoice.teleportScene;
 
-                EndDialogue();
+                EndDialogue(completed: true);
 
                 PortalManager portalManager = PortalManager.Instance;
                 if (portalManager == null ||
@@ -200,7 +200,7 @@ public class PlayerInteractionController : MonoBehaviour
 
             if (selectedChoice.endConversation || string.IsNullOrWhiteSpace(selectedChoice.nextNodeId))
             {
-                EndDialogue();
+                EndDialogue(completed: true);
                 return;
             }
 
@@ -210,7 +210,7 @@ public class PlayerInteractionController : MonoBehaviour
 
         if (activeNode.endConversation || string.IsNullOrWhiteSpace(activeNode.nextNodeId))
         {
-            EndDialogue();
+            EndDialogue(completed: true);
             return;
         }
 
@@ -306,11 +306,12 @@ public class PlayerInteractionController : MonoBehaviour
         return advanced;
     }
 
-    private void EndDialogue()
+    private void EndDialogue(bool completed = false)
     {
-        if (activeDialogue != null)
+        NpcDialogue completedDialogue = activeDialogue;
+        if (completedDialogue != null)
         {
-            activeDialogue.EndConversation();
+            completedDialogue.EndConversation();
             activeDialogue = null;
         }
 
@@ -323,6 +324,11 @@ public class PlayerInteractionController : MonoBehaviour
         }
 
         SetPlayerMovementLocked(false);
+
+        if (completed)
+        {
+            completedDialogue?.GiveInventoryGift(gameObject);
+        }
     }
 
     // ── World interactable flow ───────────────────────────────────────────────

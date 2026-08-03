@@ -2,6 +2,28 @@
   "version": 1,
   "dialogues": [
     {
+      "dialogueId": "trainer_sword_gift",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Sword Trainer",
+          "text": "I have an iron sword for you. Put it to good use.",
+          "nextNodeId": "take_sword",
+          "endConversation": false,
+          "choices": []
+        },
+        {
+          "id": "take_sword",
+          "speakerName": "Sword Trainer",
+          "text": "The sword is yours now.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    },
+    {
       "dialogueId": "npc_guard_intro",
       "startNodeId": "start",
       "nodes": [

@@ -29,6 +29,11 @@ Handles top-down movement via `Rigidbody2D.linearVelocity`. Supports both the ne
 | Move Speed | 6 | Units per second |
 | Lock Rotation | true | Freezes Z rotation on `Rigidbody2D` |
 | Force No Gravity | true | Sets `gravityScale = 0` on `Rigidbody2D` |
+| Visual Transform | PlayerVisual | Child containing the player SpriteRenderer |
+| Face Movement Direction | true | Points the visual toward nonzero movement input |
+| Sprite Forward Angle | 90 | Local direction of the triangle tip; 90 means up |
+| Facing Turn Speed | 0 | Degrees per second; 0 turns immediately |
+| Facing Input Dead Zone | 0.01 | Prevents tiny controller-stick input from changing facing |
 
 ### API
 
@@ -44,6 +49,9 @@ bool moving = playerController.MovementEnabled;
 | Move | WASD / Arrow Keys / Left Stick | `Horizontal` + `Vertical` axes |
 
 Movement is clamped to magnitude 1 so diagonal speed is not faster than straight movement.
+Only the `PlayerVisual` child rotates, leaving the Rigidbody2D and collider fixed. Its
+`WeaponVisual` child uses `EquippedWeaponVisual` to show the currently equipped Weapon and
+inherits the same facing rotation.
 
 ### RequireComponent
 

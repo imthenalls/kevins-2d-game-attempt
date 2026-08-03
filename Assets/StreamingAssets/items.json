@@ -76,7 +76,9 @@
       "maxStackSize": 1,
       "sellValue": 80,
       "flags": ["Unique"],
-      "iconPath": ""
+      "iconPath": "Items/iron_sword",
+      "equipSlot": "Weapon",
+      "bonusAttack": 10
     },
     {
       "id": "leather_armor",

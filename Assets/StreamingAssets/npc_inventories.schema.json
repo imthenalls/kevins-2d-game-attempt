@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NPC Starting Inventories",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "npcInventories"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "npcInventories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["npcId", "items"],
+        "properties": {
+          "npcId": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["itemId", "quantity"],
+              "properties": {
+                "itemId": { "type": "string", "minLength": 1 },
+                "quantity": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

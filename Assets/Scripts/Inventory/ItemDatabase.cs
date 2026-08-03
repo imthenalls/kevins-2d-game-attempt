@@ -7,7 +7,8 @@ using UnityEngine;
 /// Singleton that loads items.json from StreamingAssets and provides lookup by itemId.
 /// Instantiates ItemData objects at runtime — no ScriptableObject assets needed per item.
 ///
-/// Setup: Add ItemDatabase to the same persistent bootstrap GameObject as SaveManager.
+/// Setup: none required. A persistent ItemDatabase is created automatically before
+/// the first scene loads. A manually placed instance is still supported.
 ///
 /// Usage:
 ///   ItemData sword = ItemDatabase.Instance.Get("iron_sword");
@@ -19,6 +20,18 @@ public class ItemDatabase : MonoBehaviour
     public static ItemDatabase Instance { get; private set; }
 
     private readonly Dictionary<string, ItemData> _items = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void EnsureRuntimeInstance()
+    {
+        if (Instance != null)
+        {
+            return;
+        }
+
+        var databaseObject = new GameObject("Item Database");
+        databaseObject.AddComponent<ItemDatabase>();
+    }
 
     private void Awake()
     {
@@ -97,7 +110,17 @@ public class ItemDatabase : MonoBehaviour
             data.flags        = ParseFlags(entry.flags);
 
             if (!string.IsNullOrEmpty(entry.iconPath))
+            {
                 data.icon = Resources.Load<Sprite>(entry.iconPath);
+                if (data.icon == null)
+                {
+                    Sprite[] sprites = Resources.LoadAll<Sprite>(entry.iconPath);
+                    if (sprites.Length > 0)
+                    {
+                        data.icon = sprites[0];
+                    }
+                }
+            }
 
             if (data.IsEquip)
             {

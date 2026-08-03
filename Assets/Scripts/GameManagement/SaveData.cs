@@ -14,6 +14,7 @@ using System.Collections.Generic;
 ///   - WorldStateManager facts (serialized as a FactEntry list)
 ///   - Active quest state (node positions + objective counts)
 ///   - Occupied inventory slots (referenced by itemId, resolved via ItemDatabase on load)
+///   - Player equipment slots (referenced by itemId and EquipSlotType)
 ///   - NPC / enemy state: world position, HP / MP (enemies only), and inventory slots
 ///   - NPC Wallet snapshots and the completed market-trade ledger
 ///
@@ -27,6 +28,7 @@ using System.Collections.Generic;
 public class SaveData
 {
     // Version 2 unifies the former wallet balance and EntityStats MP into Wallet mana.
+    // Version 3 adds persistent player equipment slots.
     // Missing fields deserialize as 0, so pre-unification saves are version 0.
     public int saveVersion;
 
@@ -61,6 +63,9 @@ public class SaveData
     // Place all ItemData ScriptableObjects inside Assets/Resources/Items/.
     public List<InventorySlotEntry> inventorySlots = new();
 
+    // Equipped items are owned outside the inventory grid and saved separately.
+    public List<EquipmentSaveEntry> playerEquipment = new();
+
     // ── NPC / Enemy state ─────────────────────────────────────────────────────
     // One entry per NPC in the current scene. Keyed by NpcController.NpcId.
     public List<NpcSaveEntry> npcStates = new();
@@ -88,6 +93,13 @@ public class InventorySlotEntry
     public int    slotIndex;
     public string itemId;    // matches ItemData.itemId (registered in ItemDatabase)
     public int    quantity;
+}
+
+[Serializable]
+public class EquipmentSaveEntry
+{
+    public string slot;
+    public string itemId;
 }
 
 [Serializable]

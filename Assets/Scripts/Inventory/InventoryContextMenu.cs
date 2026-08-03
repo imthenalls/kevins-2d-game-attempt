@@ -1,10 +1,11 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// Right-click context menu shown when the player right-clicks an occupied inventory slot.
 /// Dynamically shows or hides Use / Drop / Split / Inspect buttons based on the item's
-/// type and flags (e.g. Use only for Consumables; Drop hidden for Quest/Key items).
+/// type and flags (Use for consumables, Equip for equipment; Drop hidden for Quest/Key items).
 ///
 /// Unity setup:
 ///   1. Place one instance on a GameObject inside the same Canvas as InventoryUI.
@@ -54,6 +55,8 @@ public class InventoryContextMenu : MonoBehaviour
     {
         if (instance == null) return;
 
+        InventoryTooltip.Hide();
+
         instance.model            = inventoryModel;
         instance.targetSlotIndex  = slotIndex;
         instance.lastScreenPosition = screenPosition;
@@ -63,7 +66,16 @@ public class InventoryContextMenu : MonoBehaviour
 
         // Configure visible buttons based on item properties
         if (instance.useButton != null)
-            instance.useButton.gameObject.SetActive(slot.item.type == ItemType.Consumable);
+        {
+            bool canUse = slot.item.type == ItemType.Consumable || slot.item.IsEquip;
+            instance.useButton.gameObject.SetActive(canUse);
+            if (canUse)
+            {
+                TextMeshProUGUI label = instance.useButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (label != null)
+                    label.text = slot.item.IsEquip ? "Equip" : "Use";
+            }
+        }
 
         if (instance.splitButton != null)
             instance.splitButton.gameObject.SetActive(slot.item.IsStackable && slot.quantity > 1);
@@ -87,6 +99,7 @@ public class InventoryContextMenu : MonoBehaviour
         }
 
         instance.panel.gameObject.SetActive(true);
+        instance.transform.SetAsLastSibling();
         instance.panel.SetAsLastSibling();
     }
 
@@ -103,9 +116,37 @@ public class InventoryContextMenu : MonoBehaviour
         if (slot.IsEmpty) return;
 
         var item = slot.item;
-        model.RemoveItem(item, 1);
-
         var player = UnityEngine.Object.FindAnyObjectByType<PlayerController2D>();
+
+        if (item.IsEquip)
+        {
+            EquipmentManager equipment = player != null ? player.GetComponent<EquipmentManager>() : null;
+            if (equipment == null)
+            {
+                Debug.LogWarning("[InventoryContextMenu] Player has no EquipmentManager; item was not removed.");
+                Hide();
+                return;
+            }
+
+            if (!equipment.TryEquipFromInventory(model, item, out ItemData displaced))
+            {
+                Debug.LogWarning($"[InventoryContextMenu] Could not equip '{item.itemName}'.");
+                Hide();
+                return;
+            }
+
+            QuestEventBus.Raise("ItemEquipped", item.itemId, 1);
+            if (displaced != null)
+                QuestEventBus.Raise("ItemUnequipped", displaced.itemId, 1);
+
+            InventoryTooltip.Hide();
+            Hide();
+            return;
+        }
+
+        if (!model.RemoveItem(item, 1))
+            return;
+
         if (player?.Stats != null)
         {
             if (item.healHp > 0) player.Stats.Heal(item.healHp);

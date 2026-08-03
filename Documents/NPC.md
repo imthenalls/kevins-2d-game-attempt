@@ -66,6 +66,8 @@ Do not add `EntityStats` or `CombatReceiver` manually to enemy prefabs — `NpcC
 
 When Wallet is auto-added, **Trader Starting Mana** and **Trader Mana Capacity** on `NpcController` initialize it. Defaults are 50/500, leaving capacity to receive sales. A manually attached Wallet takes precedence. All player/NPC and NPC/NPC exchanges go through `TradeService`; see [TRADE_SYSTEM.md](TRADE_SYSTEM.md).
 
+NPCs listed in `StreamingAssets/npc_inventories.json` also receive an inventory automatically through `EnsureInventory()`. The JSON defines starting ownership; `SaveManager` persists later changes.
+
 ### Behavior state
 
 | State | Meaning |
@@ -197,6 +199,10 @@ The quest edge must use `"automatic": false`, be reachable from the active sourc
 
 1. `DialogueGraphAsset` assigned in Inspector.
 2. `dialogueId` looked up in `DialogueDatabase` (from `dialogues.json` in `StreamingAssets`).
+
+### NPC-owned inventory gift
+
+`NpcDialogue` can transfer an item the NPC already owns when the player reaches a normal conversation ending. Starting NPC ownership comes from `npc_inventories.json`; the transfer removes the item from the NPC and adds it to the player atomically. See [NPC_ITEM_GIFTS.md](NPC_ITEM_GIFTS.md).
 
 ### DialogueUIController
 

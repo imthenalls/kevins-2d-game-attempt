@@ -22,6 +22,7 @@ The save system serializes all meaningful game state to a single JSON file on di
 | World facts | `WorldStateDB` |
 | Active quest states (node + objective counts) | `QuestManager` |
 | Inventory slots (index, item, quantity) | `InventoryUI.Model` |
+| Player equipment slots | `EquipmentManager.Model` |
 
 The save file is written to `Application.persistentDataPath/save.json` (on Windows this is `%APPDATA%\..\LocalLow\<Company>\<Product>\save.json`).
 
@@ -114,9 +115,17 @@ Save version 2 unifies player currency and MP. When loading an older save, `Save
 
 Legacy `playerMp` and `playerMaxMp` fields remain in `SaveData` for this migration and for diagnosing older files. New saves write the canonical Wallet values into both the Wallet snapshot and those compatibility fields.
 
+## Equipment Save Integration
+
+Save version 3 stores the item id assigned to each player `EquipSlotType`. Equipped items
+are not duplicated in the inventory slot list. Loading restores equipment after base stats
+and inventory so equipment bonuses are applied exactly once.
+
 ## Trade Save Integration
 
 `NpcSaveEntry.wallet` stores the Wallet for inventory-enabled NPC participants. Empty saved NPC inventories are cleared correctly on load, so selling the final item remains persistent.
+
+NPC inventory JSON is starting state only. `NpcInventoryDatabase` seeds it before a saved scene is restored, and `SaveManager` then replaces it with the saved NPC slots. Therefore an NPC-owned gift that has already been transferred does not regenerate after loading.
 
 `SaveData.marketTransactions` stores the newest bounded market entries from `TradeService`. Loading restores the ledger without replaying Wallet changes, item movement, trade events, or quest events.
 

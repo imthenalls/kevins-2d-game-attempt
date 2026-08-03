@@ -168,7 +168,7 @@
 <g id="node10" class="node">
 <title>PC</title>
 <path fill="#ececff" stroke="#9370db" d="M823.1,-259.6C823.1,-259.6 736.9,-259.6 736.9,-259.6 730.9,-259.6 724.9,-253.6 724.9,-247.6 724.9,-247.6 724.9,-235.6 724.9,-235.6 724.9,-229.6 730.9,-223.6 736.9,-223.6 736.9,-223.6 823.1,-223.6 823.1,-223.6 829.1,-223.6 835.1,-229.6 835.1,-235.6 835.1,-235.6 835.1,-247.6 835.1,-247.6 835.1,-253.6 829.1,-259.6 823.1,-259.6"/>
-<text xml:space="preserve" text-anchor="middle" x="780" y="-238.3" font-family="Arial" font-size="11.00">PlayerController2D</text>
+<text xml:space="preserve" text-anchor="middle" x="780" y="-238.3" font-family="Arial" font-size="11.00">PlayerController2D + EquipmentManager + PlayerVisual &gt; WeaponVisual</text>
 </g>
 <!-- ES_P -->
 <g id="node12" class="node">
@@ -208,7 +208,7 @@
 <g id="node20" class="node">
 <title>ND</title>
 <path fill="#ececff" stroke="#9370db" d="M2502.13,-160.28C2502.13,-160.28 2445.87,-160.28 2445.87,-160.28 2439.87,-160.28 2433.87,-154.28 2433.87,-148.28 2433.87,-148.28 2433.87,-136.28 2433.87,-136.28 2433.87,-130.28 2439.87,-124.28 2445.87,-124.28 2445.87,-124.28 2502.13,-124.28 2502.13,-124.28 2508.13,-124.28 2514.13,-130.28 2514.13,-136.28 2514.13,-136.28 2514.13,-148.28 2514.13,-148.28 2514.13,-154.28 2508.13,-160.28 2502.13,-160.28"/>
-<text xml:space="preserve" text-anchor="middle" x="2474" y="-138.98" font-family="Arial" font-size="11.00">NpcDialogue</text>
+<text xml:space="preserve" text-anchor="middle" x="2474" y="-138.98" font-family="Arial" font-size="11.00">NpcDialogue (owned-inventory gift; JSON seeded)</text>
 </g>
 <!-- PI&#45;&gt;ND -->
 <g id="edge27" class="edge">
@@ -287,14 +287,14 @@
 <title>INV_N</title>
 <path fill="#ececff" stroke="#9370db" d="M2641.25,-161.24C2641.25,-161.24 2550.75,-161.24 2550.75,-161.24 2544.75,-161.24 2538.75,-155.24 2538.75,-149.24 2538.75,-149.24 2538.75,-135.32 2538.75,-135.32 2538.75,-129.32 2544.75,-123.32 2550.75,-123.32 2550.75,-123.32 2641.25,-123.32 2641.25,-123.32 2647.25,-123.32 2653.25,-129.32 2653.25,-135.32 2653.25,-135.32 2653.25,-149.24 2653.25,-149.24 2653.25,-155.24 2647.25,-161.24 2641.25,-161.24"/>
 <text xml:space="preserve" text-anchor="middle" x="2596" y="-145.58" font-family="Arial" font-size="11.00">InventoryModel</text>
-<text xml:space="preserve" text-anchor="middle" x="2596" y="-132.38" font-family="Arial" font-size="11.00">when Has Inventory</text>
+<text xml:space="preserve" text-anchor="middle" x="2596" y="-132.38" font-family="Arial" font-size="11.00">Inspector or JSON-seeded ownership</text>
 </g>
 <!-- NC2&#45;&gt;INV_N -->
 <g id="edge11" class="edge">
 <title>NC2&#45;&gt;INV_N</title>
 <path fill="none" stroke="#333333" d="M2596,-222.29C2596,-207.48 2596,-186.41 2596,-169.75"/>
 <polygon fill="#333333" stroke="#333333" points="2598.45,-170.02 2596,-163.02 2593.55,-170.02 2598.45,-170.02"/>
-<text xml:space="preserve" text-anchor="middle" x="2610.76" y="-192.54" font-family="Arial" font-size="9.00">creates</text>
+<text xml:space="preserve" text-anchor="middle" x="2610.76" y="-192.54" font-family="Arial" font-size="9.00">creates / JSON loader ensures</text>
 </g>
 <!-- MW_N -->
 <g id="node23" class="node">
@@ -371,7 +371,7 @@
 <g id="node29" class="node">
 <title>IUI</title>
 <path fill="#ececff" stroke="#9370db" d="M2166.76,-428.72C2166.76,-428.72 2117.24,-428.72 2117.24,-428.72 2111.24,-428.72 2105.24,-422.72 2105.24,-416.72 2105.24,-416.72 2105.24,-404.72 2105.24,-404.72 2105.24,-398.72 2111.24,-392.72 2117.24,-392.72 2117.24,-392.72 2166.76,-392.72 2166.76,-392.72 2172.76,-392.72 2178.76,-398.72 2178.76,-404.72 2178.76,-404.72 2178.76,-416.72 2178.76,-416.72 2178.76,-422.72 2172.76,-428.72 2166.76,-428.72"/>
-<text xml:space="preserve" text-anchor="middle" x="2142" y="-407.42" font-family="Arial" font-size="11.00">InventoryUI</text>
+<text xml:space="preserve" text-anchor="middle" x="2142" y="-407.42" font-family="Arial" font-size="11.00">InventoryUI + scene EquipmentPanel (3 serialized EquipmentSlotUI drop targets)</text>
 </g>
 <!-- IM -->
 <g id="node30" class="node">
@@ -425,7 +425,7 @@
 <g id="node34" class="node">
 <title>IT</title>
 <path fill="#ececff" stroke="#9370db" d="M2121.77,-160.28C2121.77,-160.28 2050.23,-160.28 2050.23,-160.28 2044.23,-160.28 2038.23,-154.28 2038.23,-148.28 2038.23,-148.28 2038.23,-136.28 2038.23,-136.28 2038.23,-130.28 2044.23,-124.28 2050.23,-124.28 2050.23,-124.28 2121.77,-124.28 2121.77,-124.28 2127.77,-124.28 2133.77,-130.28 2133.77,-136.28 2133.77,-136.28 2133.77,-148.28 2133.77,-148.28 2133.77,-154.28 2127.77,-160.28 2121.77,-160.28"/>
-<text xml:space="preserve" text-anchor="middle" x="2086" y="-138.98" font-family="Arial" font-size="11.00">InventoryTooltip</text>
+<text xml:space="preserve" text-anchor="middle" x="2086" y="-138.98" font-family="Arial" font-size="11.00">InventoryTooltip (white box, non-blocking CanvasGroup)</text>
 </g>
 <!-- ISU&#45;&gt;IT -->
 <g id="edge20" class="edge">

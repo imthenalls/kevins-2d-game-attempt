@@ -1,5 +1,9 @@
 # Inventory System
 
+The inventory Canvas includes an editable `EquipmentPanel` companion with three
+`EquipmentSlotUI` drop targets for Weapon, Armor, and Accessory items. It follows the
+inventory panel's open/close state automatically.
+
 ## Overview
 
 The inventory is a grid-based system split cleanly into data and UI layers. The data model is pure C# with no Unity dependency — the UI layer subscribes to its `OnChanged` event and redraws.
@@ -134,6 +138,10 @@ Hover triggers `InventoryTooltip.Show` / `.Hide` automatically.
 
 Static show/hide calls. Place one instance under the Canvas.
 
+At runtime the tooltip enforces a 320x190 white panel with black text, readable padding,
+screen-edge clamping, and disabled raycast blocking. Disabling raycasts prevents the tooltip
+from stealing hover from the slot and rapidly flashing on and off.
+
 ```csharp
 InventoryTooltip.Show(itemData);
 InventoryTooltip.Hide();
@@ -146,6 +154,10 @@ InventoryTooltip.Hide();
 **File:** `Assets/Scripts/Inventory/InventoryContextMenu.cs`
 
 Static show/hide calls. Appears on right-click. Place one instance under the Canvas.
+
+The action button reads **Use** for consumables and **Equip** for equipment. Equipping moves
+the item out of the inventory grid into the player's matching equipment slot and returns a
+displaced item to the inventory.
 
 ```csharp
 InventoryContextMenu.Show(model, slotIndex, screenPosition);
@@ -189,5 +201,9 @@ Raise a quest event after a pickup:
 ```csharp
 QuestEventBus.Raise("ItemCollected", itemData.name);
 ```
+
+When an item is already owned by an NPC or container, use `InventoryTransferService.TryGive`
+instead of `InventoryHelper.GiveItem`. It atomically removes the item from the source inventory
+and adds it to the player, leaving both unchanged if stock or capacity validation fails.
 
 Item-for-mana exchanges must use `TradeService`, not separate `RemoveItem`/`AddItem` calls. See [TRADE_SYSTEM.md](TRADE_SYSTEM.md).

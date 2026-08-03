@@ -29,7 +29,8 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 2;
+    private const int CurrentSaveVersion = 3;
+    private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
 
@@ -112,6 +113,23 @@ public class SaveManager : MonoBehaviour
         }
 
         // NPCs — position, stats (enemies), and inventory (vendors/loot)
+        // Equipped items are owned outside the inventory grid.
+        if (player != null && player.TryGetComponent(out EquipmentManager equipment))
+        {
+            foreach (EquipSlotType slotType in Enum.GetValues(typeof(EquipSlotType)))
+            {
+                ItemData equippedItem = equipment.Model.GetEquipped(slotType);
+                if (equippedItem != null)
+                {
+                    data.playerEquipment.Add(new EquipmentSaveEntry
+                    {
+                        slot = slotType.ToString(),
+                        itemId = equippedItem.itemId,
+                    });
+                }
+            }
+        }
+
         foreach (var npc in FindObjectsByType<NpcController>(FindObjectsSortMode.None))
         {
             var entry = new NpcSaveEntry
@@ -251,6 +269,31 @@ public class SaveManager : MonoBehaviour
         }
 
         // NPCs — restore position, stats, and inventory
+        // Restore equipment after base stats and inventory so bonuses apply once.
+        if (player != null && player.TryGetComponent(out EquipmentManager equipment))
+        {
+            foreach (EquipSlotType slotType in Enum.GetValues(typeof(EquipSlotType)))
+                equipment.Unequip(slotType);
+
+            if (data.playerEquipment != null)
+            {
+                foreach (EquipmentSaveEntry entry in data.playerEquipment)
+                {
+                    if (!Enum.TryParse(entry.slot, out EquipSlotType slotType))
+                        continue;
+
+                    ItemData item = ItemDatabase.Instance?.Get(entry.itemId);
+                    if (item == null || !item.IsEquip || item.equipSlot != slotType)
+                    {
+                        Debug.LogWarning($"[SaveManager] Invalid equipped item '{entry.itemId}' for slot '{entry.slot}'.");
+                        continue;
+                    }
+
+                    equipment.Equip(slotType, item);
+                }
+            }
+        }
+
         if (data.npcStates != null && data.npcStates.Count > 0)
         {
             // Build a lookup by npcId for O(1) access
@@ -349,7 +392,7 @@ public class SaveManager : MonoBehaviour
     /// </summary>
     private static WalletSaveData BuildWalletSaveDataForLoad(SaveData data)
     {
-        if (data.saveVersion >= CurrentSaveVersion && data.wallet != null)
+        if (data.saveVersion >= ManaUnifiedSaveVersion && data.wallet != null)
             return data.wallet;
 
         var migrated = new WalletSaveData();

@@ -28,6 +28,7 @@ using UnityEngine;
 /// Runtime API:
 ///   NpcId/TradeParticipantId identify the NPC.
 ///   Inventory/TradeInventory and ManaWallet/TradeWallet expose trade-owned state.
+///   EnsureInventory creates inventory/Wallet ownership for JSON-configured NPCs.
 ///   TradeService accepts this component as a buyer or seller.
 /// </summary>
 [DisallowMultipleComponent]
@@ -95,17 +96,7 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
         }
 
         if (hasInventory)
-        {
-            Inventory = new InventoryModel(inventoryRows, inventoryColumns);
-            bool hadWallet = gameObject.TryGetComponent(out Wallet wallet);
-            ManaWallet = hadWallet ? wallet : gameObject.AddComponent<Wallet>();
-            if (!hadWallet)
-            {
-                ManaWallet.InitializeMana(
-                    Mathf.Clamp(traderStartingMana, 0, traderManaCapacity),
-                    traderManaCapacity);
-            }
-        }
+            EnsureInventory();
     }
 
     private void OnValidate()
@@ -129,6 +120,32 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     public void SetBehaviorState(NpcBehaviorState newState)
     {
         behaviorState = newState;
+    }
+
+    /// <summary>
+    /// Creates this NPC's inventory and Wallet if they do not already exist.
+    /// Called automatically for Inspector-enabled inventories and by
+    /// NpcInventoryDatabase for NPCs configured in npc_inventories.json.
+    /// </summary>
+    public InventoryModel EnsureInventory()
+    {
+        hasInventory = true;
+        if (Inventory == null)
+            Inventory = new InventoryModel(inventoryRows, inventoryColumns);
+
+        if (ManaWallet == null)
+        {
+            bool hadWallet = gameObject.TryGetComponent(out Wallet wallet);
+            ManaWallet = hadWallet ? wallet : gameObject.AddComponent<Wallet>();
+            if (!hadWallet)
+            {
+                ManaWallet.InitializeMana(
+                    Mathf.Clamp(traderStartingMana, 0, traderManaCapacity),
+                    traderManaCapacity);
+            }
+        }
+
+        return Inventory;
     }
 
     /// <summary>

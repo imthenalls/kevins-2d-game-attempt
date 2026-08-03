@@ -15,6 +15,7 @@ using UnityEngine;
 ///
 /// Runtime API:
 ///   ItemData displaced = equipManager.Equip(EquipSlotType.Weapon, swordData);
+///   bool equipped = equipManager.TryEquipFromInventory(inventory, swordData, out displaced);
 ///   ItemData removed   = equipManager.Unequip(EquipSlotType.Armor);
 ///   ItemData current   = equipManager.Model.GetEquipped(EquipSlotType.Accessory);
 /// </summary>
@@ -43,6 +44,36 @@ public class EquipmentManager : MonoBehaviour
     /// Returns null if the item is invalid for the slot.
     /// </summary>
     public ItemData Equip(EquipSlotType slot, ItemData item) => Model.Equip(slot, item);
+
+    /// <summary>
+    /// Removes one equipment item from an inventory and equips it. Any displaced item is
+    /// returned to that inventory. Unexpected placement failure rolls the operation back.
+    /// </summary>
+    public bool TryEquipFromInventory(
+        InventoryModel inventory,
+        ItemData item,
+        out ItemData displaced)
+    {
+        displaced = null;
+        if (inventory == null || item == null || !item.IsEquip || !inventory.HasItem(item))
+            return false;
+
+        if (!inventory.RemoveItem(item, 1))
+            return false;
+
+        displaced = Model.Equip(item.equipSlot, item);
+        if (displaced == null)
+            return true;
+
+        if (inventory.AddItem(displaced, 1) == 0)
+            return true;
+
+        ItemData newlyEquipped = Model.Equip(item.equipSlot, displaced);
+        if (newlyEquipped != null)
+            inventory.AddItem(newlyEquipped, 1);
+        displaced = null;
+        return false;
+    }
 
     /// <summary>
     /// Remove the item from <paramref name="slot"/> and return it.

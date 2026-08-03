@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "npcInventories": [
+    {
+      "npcId": "trainer_sword_giver",
+      "items": [
+        {
+          "itemId": "iron_sword",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}

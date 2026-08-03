@@ -22,7 +22,7 @@ flowchart TB
         end
         subgraph PLAYER["Player Prefab"]
             direction TB
-            PC[PlayerController2D]
+            PC["PlayerController2D + EquipmentManager\nPlayerVisual > WeaponVisual (equipped sprite)"]
             PI[PlayerInteractionController]
             ES_P["EntityStats\nHP + mana facade"]
             MW_P["Wallet\ncanonical mana + capacity"]
@@ -43,13 +43,13 @@ flowchart TB
         subgraph NPC["Friendly NPC Prefab"]
             direction TB
             NC2["NpcController\nNpcType=Friendly"]
-            ND[NpcDialogue]
+            ND["NpcDialogue\noptional owned-inventory gift"]
             DUI[DialogueUIController]
-            INV_N["InventoryModel\nwhen Has Inventory"]
+            INV_N["InventoryModel\nInspector or JSON-seeded ownership"]
             MW_N["Wallet\nauto-added with inventory\nmana/capacity from NPC"]
             COL_N["Collider2D / Layer: NPC"]
             NC2 --> ND
-            NC2 -->|creates| INV_N
+            NC2 -->|creates / JSON loader ensures| INV_N
             NC2 -->|Awake finds/adds| MW_N
             ND --> DUI
         end
@@ -66,12 +66,12 @@ flowchart TB
     subgraph ROW3[" "]
         subgraph SLOT["Slot Prefab (UI)"]
             direction TB
-            IUI[InventoryUI]
+            IUI["InventoryUI + scene EquipmentPanel\n3 serialized EquipmentSlotUI drop targets"]
             IM[InventoryModel]
             ISU[InventorySlotUI]
             IS[InventorySlot]
             IC[InventoryContextMenu]
-            IT[InventoryTooltip]
+            IT["InventoryTooltip\nwhite box + non-blocking CanvasGroup"]
             IUI --> IM
             IUI --> ISU
             ISU --> IS

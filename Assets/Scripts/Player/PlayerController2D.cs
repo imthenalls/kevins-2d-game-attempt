@@ -38,6 +38,16 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     [SerializeField] private bool lockRotation = true;
     [SerializeField] private bool forceNoGravity = true;
 
+    [Header("Movement Facing")]
+    [Tooltip("Visual child to rotate without rotating the Rigidbody2D or collider.")]
+    [SerializeField] private Transform visualTransform;
+    [SerializeField] private bool faceMovementDirection = true;
+    [Tooltip("Direction the sprite tip points at zero rotation. Use 90 for up, 0 for right.")]
+    [SerializeField] private float spriteForwardAngle = 90f;
+    [Tooltip("Degrees per second. Set to 0 for immediate facing.")]
+    [SerializeField, Min(0f)] private float facingTurnSpeed;
+    [SerializeField, Min(0f)] private float facingInputDeadZone = 0.01f;
+
     private Rigidbody2D rb;
     private Vector2 moveInput;
     private bool movementEnabled = true;
@@ -121,11 +131,35 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
         float vertical = Input.GetAxisRaw("Vertical");
         moveInput = new Vector2(horizontal, vertical).normalized;
 #endif
+
+        UpdateMovementFacing();
     }
 
     private void FixedUpdate()
     {
         rb.linearVelocity = movementEnabled ? moveInput * moveSpeed : Vector2.zero;
+    }
+
+    private void UpdateMovementFacing()
+    {
+        if (!faceMovementDirection ||
+            visualTransform == null ||
+            moveInput.sqrMagnitude <= facingInputDeadZone * facingInputDeadZone)
+        {
+            return;
+        }
+
+        float movementAngle = Mathf.Atan2(moveInput.y, moveInput.x) * Mathf.Rad2Deg;
+        float targetAngle = movementAngle - spriteForwardAngle;
+        float currentAngle = visualTransform.localEulerAngles.z;
+        float nextAngle = facingTurnSpeed <= 0f
+            ? targetAngle
+            : Mathf.MoveTowardsAngle(
+                currentAngle,
+                targetAngle,
+                facingTurnSpeed * Time.deltaTime);
+
+        visualTransform.localRotation = Quaternion.Euler(0f, 0f, nextAngle);
     }
 
     public void SetMovementEnabled(bool enabled)

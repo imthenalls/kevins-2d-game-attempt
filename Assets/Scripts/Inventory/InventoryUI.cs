@@ -68,6 +68,9 @@ public class InventoryUI : MonoBehaviour
     /// </summary>
     public int DragFromIndex => dragFromIndex;
 
+    /// <summary>Root inventory panel used to position the companion equipment panel.</summary>
+    public RectTransform PanelRoot => panelRoot;
+
     private Canvas parentCanvas;
     private RectTransform canvasRect;
 
@@ -107,6 +110,7 @@ public class InventoryUI : MonoBehaviour
 
         SetupGridLayout();
         BuildGrid();
+        EquipmentUI.GetOrCreate(panelRoot);
         SetPanelVisible(false);
 
         if (dragGhostImage != null)
@@ -261,6 +265,8 @@ public class InventoryUI : MonoBehaviour
     {
         if (panelRoot != null)
             panelRoot.gameObject.SetActive(visible);
+
+        EquipmentUI.Instance?.SetVisible(visible);
 
         if (!visible)
         {
