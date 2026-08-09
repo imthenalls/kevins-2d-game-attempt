@@ -182,7 +182,8 @@ public enum NpcBehaviorState
 {
     Idle,
     Talking,
-    Disabled
+    Disabled,
+    Combat
 }
 
 public enum NpcType

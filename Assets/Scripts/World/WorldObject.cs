@@ -33,7 +33,7 @@ public class WorldObject : MonoBehaviour, IInteractable
     [SerializeField, Min(0.25f)] private float interactionRange = 1.5f;
 
     [Header("Text")]
-    [Tooltip("Each element is one page of text shown in the dialogue box. Player presses E to advance.")]
+    [Tooltip("Each element is one page of text shown in the dialogue box. Player presses Space to advance.")]
     [SerializeField, TextArea(2, 5)] private string[] lines = { "..." };
 
     [Header("Reward")]

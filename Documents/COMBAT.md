@@ -102,6 +102,8 @@ The only difference between the two is the **Use Player Input** toggle.
 | Attack Damage | 10 | Damage dealt per hit |
 | Attack Range | 1.5 | World-space radius scanned for target colliders |
 | Attack Cooldown | 0.5 | Seconds between attacks |
+| Attack Windup | 0.15 | Delay from swing start until the hit scan |
+| Attack Duration | 0.3 | Duration exposed to weapon swing visuals |
 | Target Layers | DefaultRaycastLayers | Layer mask this entity is allowed to hit |
 | Use Player Input | true | **Player:** on. **NPC:** off — AI calls `TryAttack()` directly |
 | Legacy Attack Key | Space | Fallback input when Input System is off (player only) |
@@ -115,12 +117,18 @@ The only difference between the two is the **Use Player Input** toggle.
 ### How it works
 
 1. When **Use Player Input** is on, `Update` reads input and calls `TryAttack()`.
-2. `OverlapCircleNonAlloc` scans `attackRange` for colliders on `targetLayers`.
-3. The nearest living `CombatReceiver` is found (always skips self).
-4. `nearest.ReceiveHit(new DamageInfo(attackDamage, gameObject))` is called.
-5. A cooldown timer blocks further attacks until it expires.
+2. The cooldown begins and `OnAttackStarted` triggers the equipped weapon animation.
+3. After **Attack Windup**, `OverlapCircleNonAlloc` scans `attackRange`.
+4. The nearest living `CombatReceiver` is found (always skips self).
+5. `nearest.ReceiveHit(new DamageInfo(attackDamage, gameObject))` is called.
+6. A cooldown timer blocks further attacks until both cooldown and swing are complete.
 
-For **NPC attackers**, an AI behavior script calls `combatAttacker.TryAttack()` on a timer instead of relying on input.
+The swing begins even if no target is nearby; a miss simply finds no receiver at impact.
+`NewScene` uses a 0.15-second windup and 0.3-second duration, placing damage at the middle
+of the visible sword arc. See [WEAPON_SWING.md](WEAPON_SWING.md).
+
+For **NPC attackers**, `NpcProximityMeleeController` calls `TryAttack()` while the player is
+inside `AttackRange`. The component's cooldown accepts only valid attack starts.
 
 A red wire circle gizmo shows the attack range in Scene view when the GameObject is selected.
 
@@ -166,5 +174,5 @@ Enemy NPC (GameObject)
 | **Defence / armor** | Add a `defense` field to `CombatReceiver`; subtract it from `info.Amount` before calling `TakeDamage` |
 | **Hit all targets in range** | In `CombatAttacker.TryAttack`, loop all found receivers instead of picking nearest |
 | **Ranged attacks / projectiles** | Create `Projectile.cs`; carry a `DamageInfo`; call `ReceiveHit` on `OnTriggerEnter2D` |
-| **Enemy attacks player** | Add an attack behavior script (similar to `NpcWanderBehavior`) that calls `combatAttacker.TryAttack()` on a timer |
+| **Enemy attacks player** | Add `NpcProximityMeleeController`; see [NPC_MELEE_AI.md](NPC_MELEE_AI.md) |
 | **On-hit VFX / SFX** | Subscribe to `CombatReceiver.OnHit` and spawn a particle or play a clip |

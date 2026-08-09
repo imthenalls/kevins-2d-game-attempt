@@ -8,8 +8,8 @@ using UnityEngine.InputSystem;
 /// Handles player–NPC interaction and walks through a dialogue graph node by node.
 /// Each frame it listens for the interact key (E / gamepad South), then does an
 /// OverlapCircle search for the nearest NpcDialogue within interactionSearchRadius
-/// and begins the conversation. While in dialogue it routes input to choice navigation
-/// and node advancement until the graph ends or the player cancels.
+/// and begins the conversation. While in dialogue, Space advances text and confirms
+/// choices until the graph ends or the player cancels.
 ///
 /// Unity setup:
 ///   1. Add to the player GameObject alongside PlayerController2D.
@@ -18,10 +18,11 @@ using UnityEngine.InputSystem;
 ///      both are found automatically in the scene if left blank.
 ///   4. Adjust Interaction Search Radius to match your intended interaction range.
 ///
-/// Controls while in dialogue:
-///   Interact (E / gamepad South)  — advance to the next node / confirm selected choice.
+/// Controls:
+///   Start conversation: E / gamepad South.
+///   Advance dialogue / confirm choice: Space / gamepad South.
 ///   Up / Down (W–S / D-pad)       — navigate multi-choice option lists.
-///   Cancel (Escape / gamepad East) — exit the dialogue early.
+///   NPC dialogue is not dismissed by Escape; finish it with Space.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerInteractionController : MonoBehaviour
@@ -36,6 +37,7 @@ public class PlayerInteractionController : MonoBehaviour
 
     [Header("Legacy Input Fallback")]
     [SerializeField] private KeyCode legacyInteractKey = KeyCode.E;
+    [SerializeField] private KeyCode legacyAdvanceKey = KeyCode.Space;
     [SerializeField] private string legacyInteractButton = "Submit";
     private readonly Collider2D[] overlapResults = new Collider2D[12];
     private NpcDialogue activeDialogue;
@@ -57,12 +59,6 @@ public class PlayerInteractionController : MonoBehaviour
     {
         if (activeDialogue != null)
         {
-            if (WasCancelPressedThisFrame())
-            {
-                EndDialogue();
-                return;
-            }
-
             if (activeDialogue.Controller != null && !activeDialogue.Controller.CanInteract(transform.position))
             {
                 EndDialogue();
@@ -81,7 +77,7 @@ public class PlayerInteractionController : MonoBehaviour
                 return;
             }
 
-            if (WasInteractPressedThisFrame())
+            if (WasDialogueAdvancePressedThisFrame())
             {
                 AdvanceDialogue();
             }
@@ -96,10 +92,14 @@ public class PlayerInteractionController : MonoBehaviour
                 EndInteractable();
                 return;
             }
-            if (WasInteractPressedThisFrame())
+            if (WasDialogueAdvancePressedThisFrame())
                 AdvanceInteractable();
             return;
         }
+
+        // Inventory owns the interact key while open (E equips its selected item).
+        if (InventoryUI.Instance != null && InventoryUI.Instance.IsOpen)
+            return;
 
         if (WasInteractPressedThisFrame())
         {
@@ -414,7 +414,26 @@ public class PlayerInteractionController : MonoBehaviour
 
         return false;
 #else
-        if (Input.GetKeyDown(legacyInteractKey))
+        return Input.GetKeyDown(legacyInteractKey);
+#endif
+    }
+
+    private bool WasDialogueAdvancePressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            return true;
+        }
+
+        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame)
+        {
+            return true;
+        }
+
+        return false;
+#else
+        if (Input.GetKeyDown(legacyAdvanceKey))
         {
             return true;
         }

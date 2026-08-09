@@ -12,6 +12,7 @@ using UnityEngine;
 ///      is returned so you can move it back to the inventory.
 ///   3. Call Unequip(slot) to remove an item; the removed item is returned.
 ///   4. Subscribe to Model.OnSlotChanged for UI or external reactions.
+///   5. For scene-authored starting gear, enter item IDs from items.json in Starting Loadout.
 ///
 /// Runtime API:
 ///   ItemData displaced = equipManager.Equip(EquipSlotType.Weapon, swordData);
@@ -23,6 +24,11 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class EquipmentManager : MonoBehaviour
 {
+    [Header("Starting Loadout (optional item IDs)")]
+    [SerializeField] private string startingWeaponItemId;
+    [SerializeField] private string startingArmorItemId;
+    [SerializeField] private string startingAccessoryItemId;
+
     private EntityStats _stats;
 
     /// <summary>The underlying data model. Subscribe to Model.OnSlotChanged for change events.</summary>
@@ -33,6 +39,13 @@ public class EquipmentManager : MonoBehaviour
         _stats = GetComponent<EntityStats>();
         Model  = new EquipmentModel();
         Model.OnSlotChanged += HandleSlotChanged;
+    }
+
+    private void Start()
+    {
+        EquipStartingItem(EquipSlotType.Weapon, startingWeaponItemId);
+        EquipStartingItem(EquipSlotType.Armor, startingArmorItemId);
+        EquipStartingItem(EquipSlotType.Accessory, startingAccessoryItemId);
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -80,6 +93,27 @@ public class EquipmentManager : MonoBehaviour
     /// Returns null if the slot was already empty.
     /// </summary>
     public ItemData Unequip(EquipSlotType slot) => Model.Unequip(slot);
+
+    private void EquipStartingItem(EquipSlotType slot, string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+            return;
+
+        ItemData item = ItemDatabase.Instance != null ? ItemDatabase.Instance.Get(itemId) : null;
+        if (item == null)
+        {
+            Debug.LogWarning($"[EquipmentManager] Starting item '{itemId}' was not found on {name}.");
+            return;
+        }
+
+        if (!item.IsEquip || item.equipSlot != slot)
+        {
+            Debug.LogWarning($"[EquipmentManager] Starting item '{itemId}' does not fit {slot} on {name}.");
+            return;
+        }
+
+        Model.Equip(slot, item);
+    }
 
     // ── Stat application ──────────────────────────────────────────────────────
 

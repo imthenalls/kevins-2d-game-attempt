@@ -68,7 +68,16 @@ previously in that slot returns to the inventory.
 
 1. Select the NPC prefab.
 2. Click **Add Component → Equipment Manager**.
-3. Use `NpcController` or a custom script to call `Equip()` on start to pre-equip items.
+3. Enter an item ID such as `iron_sword` in **Starting Weapon Item Id**, or use
+   `NpcController`/custom code to call `Equip()` at runtime.
+
+### Starting Loadout
+
+`EquipmentManager` has optional **Starting Weapon/Armor/Accessory Item Id** fields. Each ID
+is resolved through `ItemDatabase` during `Start`, validated against its slot, and genuinely
+equipped so bonuses, events, and visible equipment all use the normal equipment path.
+
+`NewScene` uses this on `sword guard npc` with `startingWeaponItemId: iron_sword`.
 
 ---
 
@@ -151,8 +160,9 @@ places that item's icon sprite on the world SpriteRenderer; unequipping clears a
 The scene renderer uses sorting order 2 so the sword appears over the character. Its local
 position, rotation, and scale can be adjusted directly on `WeaponVisual` in the Inspector.
 
-This component only displays the held weapon. Swing animation and attack timing are handled
-separately so visual motion can later be synchronized with `CombatAttacker`.
+The component also listens to `CombatAttacker.OnAttackStarted` and rotates `WeaponVisual`
+through its swing arc. `CombatAttacker` delays the hit scan to the midpoint of that arc. See
+[WEAPON_SWING.md](WEAPON_SWING.md) for scene wiring and tuning.
 
 ---
 

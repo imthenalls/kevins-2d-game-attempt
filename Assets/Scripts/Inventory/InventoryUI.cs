@@ -61,6 +61,8 @@ public class InventoryUI : MonoBehaviour
     private InventoryModel model;
     private InventorySlotUI[] slotUIs;
     private int dragFromIndex = -1;
+    private int selectedSlotIndex = -1;
+    private int inventoryOpenedFrame = -1;
 
     /// <summary>
     /// The inventory slot index currently being dragged, or -1 when no drag is active.
@@ -128,7 +130,25 @@ public class InventoryUI : MonoBehaviour
         if (!InputLocked && WasTogglePressedThisFrame())
             Toggle();
 
-        if (IsOpen && dragFromIndex >= 0)
+        if (!IsOpen) return;
+
+        if (WasEscapePressedThisFrame())
+        {
+            // Loot, equipment, context, tooltip, and split UI all belong to the
+            // inventory menu stack. Close the stack together on Escape.
+            if (LootContainerUI.IsOpen)
+                LootContainerUI.Hide();
+            Close();
+            return;
+        }
+
+        HandleKeyboardSelection();
+
+        // Do not reuse the key press that caused another system to open the inventory.
+        if (Time.frameCount > inventoryOpenedFrame && WasEquipPressedThisFrame())
+            TryEquipSelectedItem();
+
+        if (dragFromIndex >= 0)
             UpdateDragGhostPosition();
     }
 
@@ -176,6 +196,7 @@ public class InventoryUI : MonoBehaviour
             slotGo.Dropped       += OnSlotDropped;
             slotGo.RightClicked  += OnSlotRightClicked;
             slotGo.ShiftClicked  += OnSlotShiftClicked;
+            slotGo.LeftClicked   += SelectSlot;
             slotUIs[i] = slotGo;
         }
     }
@@ -250,7 +271,10 @@ public class InventoryUI : MonoBehaviour
     {
         if (slotUIs == null) return;
         for (int i = 0; i < slotUIs.Length; i++)
+        {
             slotUIs[i].Refresh();
+            slotUIs[i].SetSelected(i == selectedSlotIndex);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -263,10 +287,19 @@ public class InventoryUI : MonoBehaviour
 
     private void SetPanelVisible(bool visible)
     {
+        bool wasVisible = IsOpen;
+
         if (panelRoot != null)
             panelRoot.gameObject.SetActive(visible);
 
         EquipmentUI.Instance?.SetVisible(visible);
+
+        if (visible)
+        {
+            if (!wasVisible)
+                inventoryOpenedFrame = Time.frameCount;
+            EnsureSelection();
+        }
 
         if (!visible)
         {
@@ -290,12 +323,153 @@ public class InventoryUI : MonoBehaviour
     // Input helpers
     // -------------------------------------------------------------------------
 
+    private void HandleKeyboardSelection()
+    {
+        if (WasLeftPressedThisFrame())       MoveSelection(-1, 0);
+        else if (WasRightPressedThisFrame()) MoveSelection(1, 0);
+        else if (WasUpPressedThisFrame())    MoveSelection(0, -1);
+        else if (WasDownPressedThisFrame())  MoveSelection(0, 1);
+    }
+
+    private void EnsureSelection()
+    {
+        if (selectedSlotIndex >= 0 && selectedSlotIndex < model.SlotCount)
+        {
+            SelectSlot(selectedSlotIndex);
+            return;
+        }
+
+        int firstOccupied = -1;
+        for (int i = 0; i < model.SlotCount; i++)
+        {
+            if (!model.GetSlot(i).IsEmpty)
+            {
+                firstOccupied = i;
+                break;
+            }
+        }
+
+        SelectSlot(firstOccupied >= 0 ? firstOccupied : 0);
+    }
+
+    private void MoveSelection(int columnDelta, int rowDelta)
+    {
+        EnsureSelection();
+        if (selectedSlotIndex < 0 || columns <= 0) return;
+
+        int rowCount = Mathf.CeilToInt(model.SlotCount / (float)columns);
+        int currentRow = selectedSlotIndex / columns;
+        int currentColumn = selectedSlotIndex % columns;
+        int nextRow = Mathf.Clamp(currentRow + rowDelta, 0, rowCount - 1);
+        int nextColumn = Mathf.Clamp(currentColumn + columnDelta, 0, columns - 1);
+        int nextIndex = Mathf.Min(nextRow * columns + nextColumn, model.SlotCount - 1);
+        SelectSlot(nextIndex);
+    }
+
+    private void SelectSlot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= model.SlotCount) return;
+
+        selectedSlotIndex = slotIndex;
+        InventoryContextMenu.Hide();
+        InventoryTooltip.Hide();
+
+        if (slotUIs == null) return;
+        for (int i = 0; i < slotUIs.Length; i++)
+            slotUIs[i].SetSelected(i == selectedSlotIndex);
+    }
+
+    private void TryEquipSelectedItem()
+    {
+        if (selectedSlotIndex < 0 || selectedSlotIndex >= model.SlotCount) return;
+
+        InventorySlot slot = model.GetSlot(selectedSlotIndex);
+        if (slot == null || slot.IsEmpty || !slot.item.IsEquip) return;
+
+        if (playerController == null)
+            playerController = FindAnyObjectByType<PlayerController2D>();
+
+        EquipmentManager equipment = playerController != null
+            ? playerController.GetComponent<EquipmentManager>()
+            : null;
+        if (equipment == null)
+        {
+            Debug.LogWarning("[InventoryUI] Player has no EquipmentManager; selected item was not equipped.", this);
+            return;
+        }
+
+        ItemData item = slot.item;
+        if (!equipment.TryEquipFromInventory(model, item, out ItemData displaced))
+        {
+            Debug.LogWarning($"[InventoryUI] Could not equip '{item.itemName}'.", this);
+            return;
+        }
+
+        QuestEventBus.Raise("ItemEquipped", item.itemId, 1);
+        if (displaced != null)
+            QuestEventBus.Raise("ItemUnequipped", displaced.itemId, 1);
+    }
+
     private bool WasTogglePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
         return Keyboard.current != null && Keyboard.current.iKey.wasPressedThisFrame;
 #else
         return Input.GetKeyDown(legacyToggleKey);
+#endif
+    }
+
+    private bool WasEquipPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.E);
+#endif
+    }
+
+    private bool WasEscapePressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.Escape);
+#endif
+    }
+
+    private bool WasLeftPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.leftArrowKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.LeftArrow);
+#endif
+    }
+
+    private bool WasRightPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.rightArrowKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.RightArrow);
+#endif
+    }
+
+    private bool WasUpPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.upArrowKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.UpArrow);
+#endif
+    }
+
+    private bool WasDownPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.downArrowKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.DownArrow);
 #endif
     }
 

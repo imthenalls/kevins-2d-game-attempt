@@ -34,6 +34,7 @@ public class InventorySlotUI : MonoBehaviour,
     [Header("Colors")]
     [SerializeField] private Color normalColor  = new Color(0.15f, 0.15f, 0.15f, 0.85f);
     [SerializeField] private Color hoveredColor = new Color(0.30f, 0.30f, 0.30f, 0.90f);
+    [SerializeField] private Color selectedColor = new Color(0.95f, 0.72f, 0.18f, 1f);
 
     public int SlotIndex { get; private set; }
     public InventorySlot Slot { get; private set; }
@@ -44,9 +45,18 @@ public class InventorySlotUI : MonoBehaviour,
     public event Action<int>          Dropped;       // slotIndex (this slot is the drop target)
     public event Action<int, Vector2> RightClicked;  // slotIndex, screen position
     public event Action<int, Vector2> ShiftClicked;  // slotIndex, screen position (Shift+left-click)
+    public event Action<int>          LeftClicked;   // slotIndex
+
+    private bool isHovered;
+    private bool isSelected;
 
     public void Setup(int index, InventorySlot slot)
     {
+        // The slot's root Image is its background. Resolve it automatically so a
+        // missing prefab reference cannot silently disable hover/selection feedback.
+        if (backgroundImage == null)
+            backgroundImage = GetComponent<Image>();
+
         SlotIndex = index;
         Slot = slot;
         Refresh();
@@ -82,16 +92,22 @@ public class InventorySlotUI : MonoBehaviour,
             }
         }
 
-        if (backgroundImage != null)
-            backgroundImage.color = normalColor;
+        RefreshBackground();
+    }
+
+    /// <summary>Show or clear the persistent keyboard/mouse selection highlight.</summary>
+    public void SetSelected(bool selected)
+    {
+        isSelected = selected;
+        RefreshBackground();
     }
 
     // --- Pointer events ---
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (backgroundImage != null)
-            backgroundImage.color = hoveredColor;
+        isHovered = true;
+        RefreshBackground();
 
         if (Slot != null && !Slot.IsEmpty)
             InventoryTooltip.Show(Slot.item);
@@ -99,25 +115,36 @@ public class InventorySlotUI : MonoBehaviour,
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (backgroundImage != null)
-            backgroundImage.color = normalColor;
+        isHovered = false;
+        RefreshBackground();
 
         InventoryTooltip.Hide();
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (Slot == null || Slot.IsEmpty) return;
-
-        if (eventData.button == PointerEventData.InputButton.Left && IsShiftHeld()
-            && Slot.item.IsStackable && Slot.quantity > 1)
+        if (eventData.button == PointerEventData.InputButton.Left)
         {
-            ShiftClicked?.Invoke(SlotIndex, eventData.position);
+            if (Slot != null && !Slot.IsEmpty && IsShiftHeld()
+                && Slot.item.IsStackable && Slot.quantity > 1)
+            {
+                ShiftClicked?.Invoke(SlotIndex, eventData.position);
+                return;
+            }
+
+            LeftClicked?.Invoke(SlotIndex);
             return;
         }
 
-        if (eventData.button == PointerEventData.InputButton.Right)
+        if (eventData.button == PointerEventData.InputButton.Right
+            && Slot != null && !Slot.IsEmpty)
             RightClicked?.Invoke(SlotIndex, eventData.position);
+    }
+
+    private void RefreshBackground()
+    {
+        if (backgroundImage == null) return;
+        backgroundImage.color = isSelected ? selectedColor : isHovered ? hoveredColor : normalColor;
     }
 
     private static bool IsShiftHeld()

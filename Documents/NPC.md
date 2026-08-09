@@ -228,6 +228,33 @@ Static-access singleton (`DialogueUIController.GetOrCreate()`). Called by `Playe
 7. Set `Npc Type = Enemy` and `Enemy Max Hp` on `NpcController`.
 8. `EntityStats` is added automatically at runtime — no manual setup needed.
 
+### Wandering equipped melee NPC in NewScene
+
+`sword guard npc` is a scene-authored Enemy positioned at `(3, -1.5)`. It wanders while the
+player is distant, then stops and swings its equipped sword inside melee range. Its hierarchy is:
+
+```
+sword guard npc
+  NpcController                  npcId: sword_guard
+  EntityStats
+  EquipmentManager              Starting Weapon Item Id: iron_sword
+  CombatAttacker                 Use Player Input: disabled
+  Rigidbody2D
+  NpcBehaviorManager
+  NpcWanderBehavior
+  NpcProximityMeleeController
+  CircleCollider2D
+  SpriteRenderer
+  WeaponVisual
+    SpriteRenderer
+    EquippedWeaponVisual
+```
+
+The sword is loaded from `items.json`, equipped through `EquipmentManager`, and displayed
+by `EquippedWeaponVisual`. `NpcProximityMeleeController` pauses wandering, faces the player,
+and calls `TryAttack()` while inside the attacker's 1.5-unit range. See
+[NPC_MELEE_AI.md](NPC_MELEE_AI.md).
+
 ---
 
 ## Notifying the Quest System

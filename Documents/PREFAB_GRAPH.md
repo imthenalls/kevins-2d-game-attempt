@@ -22,7 +22,7 @@ flowchart TB
         end
         subgraph PLAYER["Player Prefab"]
             direction TB
-            PC["PlayerController2D + EquipmentManager\nPlayerVisual > WeaponVisual (equipped sprite)"]
+            PC["PlayerController2D + EquipmentManager + CombatAttacker\nPlayerVisual > WeaponVisual (equipped sprite + swing)"]
             PI[PlayerInteractionController]
             ES_P["EntityStats\nHP + mana facade"]
             MW_P["Wallet\ncanonical mana + capacity"]
@@ -42,7 +42,7 @@ flowchart TB
     subgraph ROW2[" "]
         subgraph NPC["Friendly NPC Prefab"]
             direction TB
-            NC2["NpcController\nNpcType=Friendly"]
+            NC2["Sword Guard Enemy\nWander + ProximityMelee + iron_sword swing"]
             ND["NpcDialogue\noptional owned-inventory gift"]
             DUI[DialogueUIController]
             INV_N["InventoryModel\nInspector or JSON-seeded ownership"]

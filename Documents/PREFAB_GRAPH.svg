@@ -168,7 +168,7 @@
 <g id="node10" class="node">
 <title>PC</title>
 <path fill="#ececff" stroke="#9370db" d="M823.1,-259.6C823.1,-259.6 736.9,-259.6 736.9,-259.6 730.9,-259.6 724.9,-253.6 724.9,-247.6 724.9,-247.6 724.9,-235.6 724.9,-235.6 724.9,-229.6 730.9,-223.6 736.9,-223.6 736.9,-223.6 823.1,-223.6 823.1,-223.6 829.1,-223.6 835.1,-229.6 835.1,-235.6 835.1,-235.6 835.1,-247.6 835.1,-247.6 835.1,-253.6 829.1,-259.6 823.1,-259.6"/>
-<text xml:space="preserve" text-anchor="middle" x="780" y="-238.3" font-family="Arial" font-size="11.00">PlayerController2D + EquipmentManager + PlayerVisual &gt; WeaponVisual</text>
+<text xml:space="preserve" text-anchor="middle" x="780" y="-238.3" font-family="Arial" font-size="11.00">PlayerController2D + EquipmentManager + CombatAttacker + WeaponVisual swing</text>
 </g>
 <!-- ES_P -->
 <g id="node12" class="node">
@@ -273,8 +273,8 @@
 <g id="node19" class="node">
 <title>NC2</title>
 <path fill="#ececff" stroke="#9370db" d="M2637.42,-260.56C2637.42,-260.56 2554.58,-260.56 2554.58,-260.56 2548.58,-260.56 2542.58,-254.56 2542.58,-248.56 2542.58,-248.56 2542.58,-234.64 2542.58,-234.64 2542.58,-228.64 2548.58,-222.64 2554.58,-222.64 2554.58,-222.64 2637.42,-222.64 2637.42,-222.64 2643.42,-222.64 2649.42,-228.64 2649.42,-234.64 2649.42,-234.64 2649.42,-248.56 2649.42,-248.56 2649.42,-254.56 2643.42,-260.56 2637.42,-260.56"/>
-<text xml:space="preserve" text-anchor="middle" x="2596" y="-244.9" font-family="Arial" font-size="11.00">NpcController</text>
-<text xml:space="preserve" text-anchor="middle" x="2596" y="-231.7" font-family="Arial" font-size="11.00">NpcType=Friendly</text>
+<text xml:space="preserve" text-anchor="middle" x="2596" y="-244.9" font-family="Arial" font-size="11.00">Sword Guard Enemy</text>
+<text xml:space="preserve" text-anchor="middle" x="2596" y="-231.7" font-family="Arial" font-size="11.00">Wander + ProximityMelee + iron_sword swing</text>
 </g>
 <!-- NC2&#45;&gt;ND -->
 <g id="edge10" class="edge">

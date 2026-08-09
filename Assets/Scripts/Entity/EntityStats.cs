@@ -155,10 +155,11 @@ public class EntityStats : MonoBehaviour
     /// <summary>Set HP directly (e.g. full restore on level-up).</summary>
     public void SetHp(int value)
     {
+        bool wasAlive = IsAlive;
         _hp = Mathf.Clamp(value, 0, maxHp);
         OnHpChanged?.Invoke(_hp, maxHp);
 
-        if (_hp == 0 && IsAlive)
+        if (wasAlive && _hp == 0)
             OnDeath?.Invoke();
     }
 

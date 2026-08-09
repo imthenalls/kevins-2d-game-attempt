@@ -48,6 +48,15 @@ public class CombatReceiver : MonoBehaviour
     }
 
     /// <summary>
+    /// Set invincibility from scripts, UnityEvents, dialogue actions, or triggers.
+    /// While enabled, ReceiveHit ignores all incoming damage.
+    /// </summary>
+    public void SetInvincible(bool value)
+    {
+        invincible = value;
+    }
+
+    /// <summary>
     /// Multiplies all incoming damage before it reaches HP.
     /// 1.0 = normal, 2.0 = double damage, 0.5 = half damage.
     /// Set by SceneRulesManager; defaults to 1.0.

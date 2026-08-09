@@ -16,6 +16,8 @@ using UnityEngine.InputSystem;
 /// Set Self Recoil Damage > 0 to deal a flat HP cost to the attacker on every swing.
 ///
 /// The attack range is visualised as a red wire circle in Scene view.
+/// OnAttackStarted fires immediately for animation; the hit scan occurs after Attack Windup
+/// so weapon visuals can line up their strike with damage.
 /// </summary>
 [DisallowMultipleComponent]
 public class CombatAttacker : MonoBehaviour
@@ -24,6 +26,10 @@ public class CombatAttacker : MonoBehaviour
     [SerializeField, Min(1)]    private int       attackDamage   = 10;
     [SerializeField, Min(0.1f)] private float     attackRange    = 1.5f;
     [SerializeField, Min(0f)]   private float     attackCooldown = 0.5f;
+    [Tooltip("Seconds from swing start until the melee hit scan.")]
+    [SerializeField, Min(0f)]   private float     attackWindup   = 0.15f;
+    [Tooltip("Visual swing length exposed to weapon animation components.")]
+    [SerializeField, Min(0.01f)] private float    attackDuration = 0.3f;
     [SerializeField]            private LayerMask targetLayers   = Physics2D.DefaultRaycastLayers;
 
     [Header("Self Damage")]
@@ -39,6 +45,9 @@ public class CombatAttacker : MonoBehaviour
 
     // ── Output events ────────────────────────────────────────────────────────
 
+    /// <summary>Fired immediately when a cooldown-ready attack begins.</summary>
+    public event Action OnAttackStarted;
+
     /// <summary>
     /// Fired after a hit successfully lands. Argument is the raw (pre-multiplier) damage amount.
     /// Subscribe from CharacterStatistics, VFX/SFX systems, or analytics.
@@ -53,6 +62,16 @@ public class CombatAttacker : MonoBehaviour
 
     private readonly Collider2D[] _overlapResults = new Collider2D[16];
     private float _cooldownTimer;
+    private float _impactTimer = -1f;
+
+    /// <summary>Configured visual duration for listeners animating this attack.</summary>
+    public float AttackDuration => attackDuration;
+
+    /// <summary>Configured delay between swing start and damage impact.</summary>
+    public float AttackWindup => attackWindup;
+
+    /// <summary>World-space radius used by the melee impact scan.</summary>
+    public float AttackRange => attackRange;
 
     // ── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -61,6 +80,13 @@ public class CombatAttacker : MonoBehaviour
         if (_cooldownTimer > 0f)
             _cooldownTimer -= Time.deltaTime;
 
+        if (_impactTimer >= 0f)
+        {
+            _impactTimer -= Time.deltaTime;
+            if (_impactTimer <= 0f)
+                ResolveAttackImpact();
+        }
+
         if (usePlayerInput && WasAttackPressedThisFrame())
             TryAttack();
     }
@@ -68,15 +94,27 @@ public class CombatAttacker : MonoBehaviour
     // ── Public API ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Attempt an attack. Finds the nearest living CombatReceiver within attackRange
-    /// on targetLayers and calls ReceiveHit on it.
-    /// No-op while the cooldown is active.
+    /// Attempt an attack. Starts the cooldown and raises OnAttackStarted immediately,
+    /// then scans for the nearest living CombatReceiver after attackWindup seconds.
+    /// No-op while the cooldown is active or another impact is pending.
     /// Called automatically by Update when usePlayerInput is true.
     /// Call directly from AI behavior scripts when usePlayerInput is false.
     /// </summary>
     public void TryAttack()
     {
-        if (_cooldownTimer > 0f) return;
+        if (!isActiveAndEnabled || _cooldownTimer > 0f || _impactTimer >= 0f) return;
+
+        _cooldownTimer = Mathf.Max(attackCooldown, attackDuration);
+        _impactTimer = attackWindup;
+        OnAttackStarted?.Invoke();
+
+        if (_impactTimer <= 0f)
+            ResolveAttackImpact();
+    }
+
+    private void ResolveAttackImpact()
+    {
+        _impactTimer = -1f;
 
         int hitCount = Physics2D.OverlapCircleNonAlloc(
             transform.position, attackRange, _overlapResults, targetLayers);
@@ -108,8 +146,6 @@ public class CombatAttacker : MonoBehaviour
             totalDamage += attackerStats.BonusAttack;
 
         nearest.ReceiveHit(new DamageInfo(totalDamage, gameObject));
-        _cooldownTimer = attackCooldown;
-
         OnAttackLanded?.Invoke(totalDamage);
         if (!nearest.Stats.IsAlive)
             OnKillLanded?.Invoke();
