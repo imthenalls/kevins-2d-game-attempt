@@ -28,6 +28,8 @@ public class NpcProximityMeleeController : MonoBehaviour
     [SerializeField] private CombatAttacker attacker;
     [SerializeField] private SpriteRenderer bodyRenderer;
 
+    private EquippedWeaponVisual weaponVisual;
+
     public bool IsEngaged { get; private set; }
 
     private void Awake()
@@ -40,6 +42,7 @@ public class NpcProximityMeleeController : MonoBehaviour
             attacker = GetComponent<CombatAttacker>();
         if (bodyRenderer == null)
             bodyRenderer = GetComponent<SpriteRenderer>();
+        weaponVisual = GetComponentInChildren<EquippedWeaponVisual>(true);
     }
 
     private void LateUpdate()
@@ -74,8 +77,13 @@ public class NpcProximityMeleeController : MonoBehaviour
         npcController.SetBehaviorState(NpcBehaviorState.Combat);
         StopMoving();
 
-        if (bodyRenderer != null && Mathf.Abs(toPlayer.x) > 0.01f)
-            bodyRenderer.flipX = toPlayer.x < 0f;
+        if (Mathf.Abs(toPlayer.x) > 0.01f)
+        {
+            bool faceLeft = toPlayer.x < 0f;
+            if (bodyRenderer != null)
+                bodyRenderer.flipX = faceLeft;
+            weaponVisual?.SetFacingLeft(faceLeft);
+        }
 
         attacker.TryAttack();
     }

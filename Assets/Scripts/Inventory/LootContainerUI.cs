@@ -52,9 +52,10 @@ public class LootContainerUI : MonoBehaviour
     /// Opens the loot panel and shows all items from <paramref name="source"/>.
     /// Also opens the player's inventory panel so both are visible side by side.
     /// </summary>
-    public static void Show(InventoryModel source, string containerName)
+    public static bool Show(InventoryModel source, string containerName)
     {
-        if (instance == null || source == null) return;
+        if (instance == null || source == null)
+            return false;
 
         instance.Bind(source, containerName);
         instance.panel.gameObject.SetActive(true);
@@ -62,6 +63,7 @@ public class LootContainerUI : MonoBehaviour
 
         // Open the player inventory alongside the loot panel
         InventoryUI.Instance?.Open();
+        return true;
     }
 
     /// <summary>Hides the loot panel and cleans up subscriptions.</summary>

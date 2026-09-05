@@ -136,6 +136,28 @@
       "iconPath": ""
     },
     {
+      "id": "gold_coin",
+      "name": "Gold Coin",
+      "description": "A bright coin recovered from a defeated enemy.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 999,
+      "sellValue": 1,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "broken_sword",
+      "name": "Broken Sword",
+      "description": "The snapped remains of a sword. It may still be useful as scrap.",
+      "type": "Material",
+      "isEquip": false,
+      "maxStackSize": 20,
+      "sellValue": 8,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
       "id": "ancient_amulet",
       "name": "Ancient Amulet",
       "description": "You were asked to retrieve this. Don't lose it.",

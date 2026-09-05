@@ -2,8 +2,9 @@ using UnityEngine;
 
 /// <summary>
 /// NPC behavior that walks the NPC to a random position within a radius each activation.
-/// Uses Rigidbody2D.velocity so physics colliders stop it naturally.
-/// Raycasts ahead each frame — gives up if a wall is detected rather than grinding into it.
+/// Uses Rigidbody2D velocity so physics colliders stop it naturally.
+/// Casts the NPC's collider shape ahead each frame and abandons targets when movement stalls,
+/// preventing the NPC from continually pushing into walls or corners.
 /// Tries up to 8 random target positions on enter to find an unobstructed path.
 /// Flips the SpriteRenderer horizontally to face the direction of travel.
 ///
@@ -35,13 +36,17 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     private Collider2D[] _ownColliders;
     private Vector2 _target;
     private bool _done;
+    private Vector2 _lastProgressPosition;
+    private float _stalledTime;
 
     private static readonly RaycastHit2D[] _hitBuffer = new RaycastHit2D[16];
+    private const float ProgressDistance = 0.01f;
+    private const float StalledTimeout = 0.5f;
 
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
-        _ownColliders = GetComponents<Collider2D>();
+        _ownColliders = GetComponentsInChildren<Collider2D>();
         if (spriteRenderer == null)
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
     }
@@ -49,6 +54,8 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     public void OnEnter()
     {
         _done = false;
+        _stalledTime = 0f;
+        _lastProgressPosition = _rb.position;
         _target = PickTarget();
     }
 
@@ -66,8 +73,15 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
 
         Vector2 direction = toTarget / distance;
 
-        // Raycast ahead — if a wall is within lookAhead distance, give up now
+        // Cast the full body shape rather than a zero-width ray from its center.
+        // This catches diagonal and edge contacts before physics pins the body to a wall.
         if (HitsWall(pos, direction, wallLookAhead))
+        {
+            Stop();
+            return;
+        }
+
+        if (HasStalled(pos))
         {
             Stop();
             return;
@@ -89,6 +103,19 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     {
         _rb.linearVelocity = Vector2.zero;
         _done = true;
+    }
+
+    private bool HasStalled(Vector2 position)
+    {
+        if ((position - _lastProgressPosition).sqrMagnitude >= ProgressDistance * ProgressDistance)
+        {
+            _lastProgressPosition = position;
+            _stalledTime = 0f;
+            return false;
+        }
+
+        _stalledTime += Time.deltaTime;
+        return _stalledTime >= StalledTimeout;
     }
 
     /// <summary>
@@ -115,24 +142,59 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     }
 
     /// <summary>
-    /// Returns true if any collider OTHER than this NPC is hit along the ray.
+    /// Returns true if any collider OTHER than this NPC is hit along the path.
+    /// Uses each enabled, solid collider's real shape so the test matches the body footprint.
     /// Uses a shared buffer to avoid allocations.
     /// </summary>
     private bool HitsWall(Vector2 origin, Vector2 direction, float distance)
     {
-        int count = Physics2D.RaycastNonAlloc(origin, direction, _hitBuffer, distance, wallLayers);
-        for (int i = 0; i < count; i++)
+        var filter = new ContactFilter2D
         {
-            Collider2D col = _hitBuffer[i].collider;
-            if (col == null) continue;
+            useLayerMask = true,
+            layerMask = wallLayers,
+            useTriggers = false
+        };
 
-            bool isSelf = false;
-            foreach (Collider2D own in _ownColliders)
+        bool castAnyBodyCollider = false;
+        foreach (Collider2D own in _ownColliders)
+        {
+            if (own == null || !own.enabled || own.isTrigger)
+                continue;
+
+            castAnyBodyCollider = true;
+            int count = own.Cast(direction, filter, _hitBuffer, distance);
+            for (int i = 0; i < count; i++)
             {
-                if (col == own) { isSelf = true; break; }
+                Collider2D hit = _hitBuffer[i].collider;
+                if (hit != null && !IsOwnCollider(hit))
+                    return true;
             }
-            if (!isSelf) return true;
         }
+
+        // Keep raycast behavior as a safe fallback for an incorrectly configured NPC
+        // that has no enabled solid collider.
+        if (!castAnyBodyCollider)
+        {
+            int count = Physics2D.RaycastNonAlloc(origin, direction, _hitBuffer, distance, wallLayers);
+            for (int i = 0; i < count; i++)
+            {
+                Collider2D hit = _hitBuffer[i].collider;
+                if (hit != null && !hit.isTrigger && !IsOwnCollider(hit))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsOwnCollider(Collider2D candidate)
+    {
+        foreach (Collider2D own in _ownColliders)
+        {
+            if (candidate == own)
+                return true;
+        }
+
         return false;
     }
 }

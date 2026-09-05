@@ -16,7 +16,8 @@ using UnityEngine;
 ///
 /// Enemy death integration:
 ///   When an entity with NpcController (NpcType.Enemy) dies, this component
-///   automatically raises QuestEventBus.Raise("EnemyKilled", npcId).
+///   creates its separate loot pile, hides the body, and raises
+///   QuestEventBus.Raise("EnemyKilled", npcId).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EntityStats))]
@@ -110,9 +111,18 @@ public class CombatReceiver : MonoBehaviour
         if (_deathFired) return;
         _deathFired = true;
 
-        // Raise quest event when an enemy is killed.
+        // Stop the defeated enemy, move its owned inventory into a separate world drop,
+        // then hide the body while preserving this object for save/death bookkeeping.
         if (_npcController != null && _npcController.NpcType == NpcType.Enemy)
+        {
+            _npcController.SetBehaviorState(NpcBehaviorState.Disabled);
+            if (TryGetComponent(out Rigidbody2D body))
+                body.linearVelocity = Vector2.zero;
+
+            EnemyLootDrop.Spawn(_npcController);
+            _npcController.HideDefeatedBody();
             QuestEventBus.Raise("EnemyKilled", _npcController.NpcId);
+        }
 
         OnDeath?.Invoke(this);
     }

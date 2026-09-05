@@ -119,6 +119,9 @@ Canvas
 | Enemy NPC | `EntityStats` | Auto via `NpcController.Awake()` when `Npc Type = Enemy` |
 | UI | `EntityStatsUI` | Manual — add to Canvas GameObject |
 
+Enemy NPC world bars are rendered directly by `NpcController` and require no `EntityStatsUI`
+or Canvas wiring. See [NPC_HEALTH_BARS.md](NPC_HEALTH_BARS.md).
+
 ---
 
 ## Usage Examples

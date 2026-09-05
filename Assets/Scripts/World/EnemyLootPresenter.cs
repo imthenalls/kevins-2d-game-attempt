@@ -2,16 +2,14 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Populates an enemy's inventory with configurable loot and opens the LootContainerUI
-/// when the enemy dies. Add this alongside NpcController (NpcType.Enemy) with Has Inventory
-/// enabled so the NPC owns an InventoryModel to receive and hold the items.
+/// Adds optional Inspector-configured items to an enemy's owned inventory. The automatic
+/// EnemyLootDrop system turns that inventory into a separate interactable pile on death.
 ///
 /// Unity setup:
-///   1. On the enemy GameObject, add NpcController, set Type to Enemy, and enable Has Inventory.
-///      Set Inventory Rows/Columns to match the expected loot count.
+///   1. On the enemy GameObject, add NpcController and set Type to Enemy.
 ///   2. Add this component.
 ///   3. Fill the Loot array with the items this enemy drops.
-///   Only one instance per enemy — NpcController's inventory is pre-populated on Start().
+///   This component is optional; JSON loot in enemy_loot.json needs no scene component.
 /// </summary>
 [RequireComponent(typeof(NpcController))]
 [RequireComponent(typeof(CombatReceiver))]
@@ -33,56 +31,22 @@ public class EnemyLootPresenter : MonoBehaviour
     // ── State ─────────────────────────────────────────────────────────────────
 
     private NpcController   _npc;
-    private CombatReceiver  _receiver;
 
     // ── Unity lifecycle ───────────────────────────────────────────────────────
 
     private void Awake()
     {
-        _npc      = GetComponent<NpcController>();
-        _receiver = GetComponent<CombatReceiver>();
+        _npc = GetComponent<NpcController>();
     }
 
     private void Start()
     {
         // Pre-populate the NPC's inventory with the defined loot
-        if (_npc.Inventory != null)
+        InventoryModel inventory = _npc.EnsureInventory();
+        foreach (var entry in loot)
         {
-            foreach (var entry in loot)
-            {
-                if (entry?.item != null)
-                    _npc.Inventory.AddItem(entry.item, entry.quantity);
-            }
+            if (entry?.item != null)
+                inventory.AddItem(entry.item, entry.quantity);
         }
-        else
-        {
-            Debug.LogWarning(
-                $"[EnemyLootPresenter] NpcController on '{gameObject.name}' has no inventory. " +
-                "Enable 'Has Inventory' on NpcController.", this);
-        }
-
-        _receiver.OnDeath += OnDeath;
-    }
-
-    private void OnDestroy()
-    {
-        if (_receiver != null)
-            _receiver.OnDeath -= OnDeath;
-    }
-
-    // ── Internal ──────────────────────────────────────────────────────────────
-
-    private void OnDeath(CombatReceiver _)
-    {
-        if (_npc.Inventory == null || IsInventoryEmpty()) return;
-        LootContainerUI.Show(_npc.Inventory, _npc.DisplayName);
-    }
-
-    private bool IsInventoryEmpty()
-    {
-        var inv = _npc.Inventory;
-        for (int i = 0; i < inv.SlotCount; i++)
-            if (!inv.GetSlot(i).IsEmpty) return false;
-        return true;
     }
 }

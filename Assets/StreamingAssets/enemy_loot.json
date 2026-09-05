@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "enemyLoot": [
+    {
+      "npcId": "sword_guard",
+      "dropName": "Sword Guard Loot",
+      "items": [
+        {
+          "itemId": "gold_coin",
+          "minQuantity": 5,
+          "maxQuantity": 10
+        },
+        {
+          "itemId": "broken_sword",
+          "minQuantity": 1,
+          "maxQuantity": 1
+        }
+      ]
+    }
+  ]
+}

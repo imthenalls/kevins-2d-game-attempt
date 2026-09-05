@@ -6305,7 +6305,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatAttacker
   attackDamage: 10
-  attackRange: 2
+  attackRange: 1.5
   attackCooldown: 0.5
   attackWindup: 0.15
   attackDuration: 0.3
@@ -6479,7 +6479,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NpcWanderBehavior
   weight: 100
   wanderRadius: 3
-  moveSpeed: 1.9
+  moveSpeed: 1.4
   arrivalThreshold: 0.2
   wallLookAhead: 0.4
   wallLayers:
@@ -12567,7 +12567,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NpcWanderBehavior
   weight: 100
   wanderRadius: 3
-  moveSpeed: 1.9
+  moveSpeed: 1.4
   arrivalThreshold: 0.2
   wallLookAhead: 0.4
   wallLayers:
@@ -12626,7 +12626,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatAttacker
   attackDamage: 10
-  attackRange: 2
+  attackRange: 1.5
   attackCooldown: 0.5
   attackWindup: 0.15
   attackDuration: 0.3

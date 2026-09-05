@@ -24,6 +24,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
 | [Documents/WEAPON_SWING.md](Documents/WEAPON_SWING.md) | Equipped weapon swing animation, CombatAttacker timing, scene wiring, and tuning |
 | [Documents/NPC_MELEE_AI.md](Documents/NPC_MELEE_AI.md) | Wandering melee NPC behavior, proximity engagement, sword attacks, and scene wiring |
+| [Documents/NPC_HEALTH_BARS.md](Documents/NPC_HEALTH_BARS.md) | Automatic enemy HP bars, Inspector tuning, and combat behavior |
 | [Documents/CHARACTER_STATISTICS.md](Documents/CHARACTER_STATISTICS.md) | CharacterStatistics component: attack/kill/damage/item/money tracking, per-stat events, CombatAttacker integration |
 | [Documents/WALLET.md](Documents/WALLET.md) | Spendable currency balance, add/spend/subtract API, transaction history, and save integration |
 | [Documents/MARKET_ECONOMY.md](Documents/MARKET_ECONOMY.md) | Shared player/NPC trading architecture, atomic trades, market ledger, simulation, and persistence |
@@ -33,6 +34,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/ECONOMY_BALANCING_RULES.md](Documents/ECONOMY_BALANCING_RULES.md) | Soft economic resets, early difficulty, bounded RNG, economy workbook fields, and reward rules |
 | [Documents/TRADE_SYSTEM.md](Documents/TRADE_SYSTEM.md) | Atomic player/NPC item-for-mana trades, participants, validation, ledger, persistence, and quest events |
 | [Documents/WORLD_OBJECTS.md](Documents/WORLD_OBJECTS.md) | ItemPickup, WorldObject, IInteractable interface, InventoryHelper utility |
+| [Documents/ENEMY_LOOT_DROPS.md](Documents/ENEMY_LOOT_DROPS.md) | JSON-owned enemy loot, death cleanup, runtime loot piles, and pickup flow |
 | [Documents/WORLD_STATE.md](Documents/WORLD_STATE.md) | World State System: WorldStateDB, WorldStateKey, all WorldState components, quest integration |
 
 ---

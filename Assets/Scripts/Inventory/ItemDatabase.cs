@@ -122,6 +122,9 @@ public class ItemDatabase : MonoBehaviour
                 }
             }
 
+            if (data.icon == null)
+                data.icon = CreateBuiltInLootIcon(data.itemId);
+
             if (data.IsEquip)
             {
                 data.equipSlot   = Enum.TryParse(entry.equipSlot, out EquipSlotType es) ? es : EquipSlotType.Weapon;
@@ -135,6 +138,67 @@ public class ItemDatabase : MonoBehaviour
         }
 
         Debug.Log($"[ItemDatabase] Loaded {_items.Count} items from items.json.");
+    }
+
+    private static Sprite CreateBuiltInLootIcon(string itemId)
+    {
+        if (itemId != "gold_coin" && itemId != "broken_sword")
+            return null;
+
+        const int size = 32;
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            name = itemId + "_generated_icon",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp
+        };
+        var pixels = new Color32[size * size];
+
+        if (itemId == "gold_coin")
+        {
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int dx = x - 16;
+                int dy = y - 16;
+                int distance = dx * dx + dy * dy;
+                if (distance <= 121)
+                    pixels[y * size + x] = distance >= 90
+                        ? new Color32(151, 91, 10, 255)
+                        : new Color32(245, 193, 38, 255);
+            }
+
+            for (int y = 11; y <= 20; y++)
+                pixels[y * size + 16] = new Color32(255, 235, 116, 255);
+        }
+        else
+        {
+            DrawThickLine(pixels, size, 7, 6, 14, 13, new Color32(117, 76, 42, 255), 2);
+            DrawThickLine(pixels, size, 11, 10, 17, 16, new Color32(224, 229, 231, 255), 2);
+            DrawThickLine(pixels, size, 20, 19, 27, 26, new Color32(224, 229, 231, 255), 2);
+            DrawThickLine(pixels, size, 7, 13, 13, 7, new Color32(174, 125, 55, 255), 1);
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply(false, true);
+        return Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
+    }
+
+    private static void DrawThickLine(
+        Color32[] pixels, int size, int startX, int startY, int endX, int endY,
+        Color32 color, int radius)
+    {
+        int steps = Mathf.Max(Mathf.Abs(endX - startX), Mathf.Abs(endY - startY));
+        for (int step = 0; step <= steps; step++)
+        {
+            float t = steps == 0 ? 0f : step / (float)steps;
+            int centerX = Mathf.RoundToInt(Mathf.Lerp(startX, endX, t));
+            int centerY = Mathf.RoundToInt(Mathf.Lerp(startY, endY, t));
+            for (int y = centerY - radius; y <= centerY + radius; y++)
+            for (int x = centerX - radius; x <= centerX + radius; x++)
+                if (x >= 0 && x < size && y >= 0 && y < size)
+                    pixels[y * size + x] = color;
+        }
     }
 
     private static ItemFlags ParseFlags(string[] flags)

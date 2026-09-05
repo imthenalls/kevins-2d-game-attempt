@@ -33,6 +33,9 @@ The root identity component. Every NPC must have one.
 | Display Name | Shown in dialogue UI; falls back to `gameObject.name` if blank |
 | Npc Type | `Generic`, `QuestGiver`, `Vendor`, `Trainer`, or `Enemy` |
 | Enemy Max Hp | HP given to enemies on Awake (only used when `Npc Type = Enemy`) |
+| Show Enemy Health Bar | Displays current/max HP above enemy NPCs |
+| Health Bar World Offset | Vertical world-space placement of the enemy HP bar |
+| Health Bar Screen Size | Width and height of the enemy HP bar in screen pixels |
 | Interaction Range | Radius in world units within which interaction is allowed |
 | Interaction Point | Optional transform override for where the range is measured from |
 
@@ -59,6 +62,9 @@ receiver?.ReceiveHit(new DamageInfo(10, gameObject));
 ```
 
 Do not add `EntityStats` or `CombatReceiver` manually to enemy prefabs — `NpcController` owns them.
+
+Enemy NPCs also display their current and maximum HP above their world position by default.
+The bar requires no Canvas setup; see [NPC_HEALTH_BARS.md](NPC_HEALTH_BARS.md).
 
 ### Trading
 
@@ -127,7 +133,7 @@ Stands still for a random duration between `Min Duration` and `Max Duration` sec
 | Max Duration | 5s |
 
 #### NpcWanderBehavior
-Walks to a random point within `Wander Radius`. Raycasts ahead to detect walls and gives up rather than grinding into geometry. Tries up to 8 candidate directions on enter. Requires `Rigidbody2D` (Gravity Scale 0, Freeze Rotation Z).
+Walks to a random point within `Wander Radius`. It casts the NPC's actual collider shape along candidate paths and ahead while moving, so diagonal or edge contact with a wall is detected. If external physics still prevents measurable movement for 0.5 seconds, it abandons that target and the behavior manager selects another. Tries up to 8 candidate directions on enter. Requires `Rigidbody2D` (Gravity Scale 0, Freeze Rotation Z).
 
 | Field | Default | Notes |
 |---|---|---|

@@ -35,9 +35,9 @@ sword guard npc
   Rigidbody2D                    Gravity 0, frozen rotation
   CircleCollider2D
   NpcBehaviorManager
-  NpcWanderBehavior              Radius 3, speed 1.4
+  NpcWanderBehavior              Radius 3, speed 1.9
   NpcProximityMeleeController
-  CombatAttacker                 Range 1.5, input disabled
+  CombatAttacker                 Range 2.0, input disabled
   EquipmentManager              starts with iron_sword
   WeaponVisual
     SpriteRenderer
@@ -48,9 +48,9 @@ The NPC begins at `(3, -1.5)`. The player's scene object now includes `CombatRec
 
 ## Runtime Behavior
 
-1. Wander chooses and walks toward random nearby positions.
+1. Wander chooses and walks toward random nearby positions, using the NPC collider shape to reject blocked paths. If it cannot make progress for 0.5 seconds, it abandons that target and chooses another.
 2. When the living player is within `CombatAttacker.AttackRange`, normal behavior pauses.
-3. The NPC velocity becomes zero and the body sprite faces the player.
+3. The NPC velocity becomes zero; its body and equipped weapon both face the player.
 4. `TryAttack()` is requested each frame; its internal cooldown accepts only valid swings.
 5. The sword animates immediately and damage is resolved at the configured windup time.
 6. When the player leaves range, the NPC returns to `Idle` state and wandering resumes.

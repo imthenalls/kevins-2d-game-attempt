@@ -44,6 +44,11 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     [Tooltip("Radius at which this enemy detects the player. Scaled by SceneRulesManager.")]
     [SerializeField, Min(0.1f)] private float aggroRange = 3f;
 
+    [Header("Enemy Health Bar")]
+    [SerializeField] private bool showEnemyHealthBar = true;
+    [SerializeField, Min(0f)] private float healthBarWorldOffset = 0.8f;
+    [SerializeField] private Vector2 healthBarScreenSize = new Vector2(72f, 12f);
+
     [Header("Inventory")]
     [SerializeField] private bool hasInventory = false;
     [SerializeField, Min(1)] private int inventoryRows    = 3;
@@ -84,6 +89,7 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     public bool MovementEnabled => behaviorState != NpcBehaviorState.Disabled;
 
     private NpcBehaviorState _stateBeforeMovementLock = NpcBehaviorState.Idle;
+    private GUIStyle _healthTextStyle;
 
     private void Awake()
     {
@@ -99,12 +105,21 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
             EnsureInventory();
     }
 
+    private void Start()
+    {
+        if (npcType == NpcType.Enemy)
+            EnemyLootDrop.PrepareInventory(this);
+    }
+
     private void OnValidate()
     {
         inventoryRows = Mathf.Max(1, inventoryRows);
         inventoryColumns = Mathf.Max(1, inventoryColumns);
         traderManaCapacity = Mathf.Max(0, traderManaCapacity);
         traderStartingMana = Mathf.Clamp(traderStartingMana, 0, traderManaCapacity);
+        healthBarWorldOffset = Mathf.Max(0f, healthBarWorldOffset);
+        healthBarScreenSize.x = Mathf.Max(24f, healthBarScreenSize.x);
+        healthBarScreenSize.y = Mathf.Max(6f, healthBarScreenSize.y);
     }
 
     public bool CanInteract(Vector3 worldPosition)
@@ -120,6 +135,19 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     public void SetBehaviorState(NpcBehaviorState newState)
     {
         behaviorState = newState;
+    }
+
+    /// <summary>
+    /// Hides a defeated NPC's body, equipped weapon, and physics colliders while leaving
+    /// its controller alive for save state and death-event bookkeeping.
+    /// </summary>
+    public void HideDefeatedBody()
+    {
+        foreach (SpriteRenderer spriteRenderer in GetComponentsInChildren<SpriteRenderer>(true))
+            spriteRenderer.enabled = false;
+
+        foreach (Collider2D bodyCollider in GetComponentsInChildren<Collider2D>(true))
+            bodyCollider.enabled = false;
     }
 
     /// <summary>
@@ -175,6 +203,66 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(InteractionPosition, aggroRange);
         }
+    }
+
+    private void OnGUI()
+    {
+        if (!showEnemyHealthBar || npcType != NpcType.Enemy || Stats == null || !Stats.IsAlive)
+            return;
+
+        Camera worldCamera = Camera.main;
+        if (worldCamera == null)
+            return;
+
+        Vector3 screenPoint = worldCamera.WorldToScreenPoint(
+            transform.position + Vector3.up * healthBarWorldOffset);
+        if (screenPoint.z <= 0f)
+            return;
+
+        float width = healthBarScreenSize.x;
+        float height = healthBarScreenSize.y;
+        var outer = new Rect(
+            screenPoint.x - width * 0.5f,
+            Screen.height - screenPoint.y - height * 0.5f,
+            width,
+            height);
+        var inner = new Rect(outer.x + 2f, outer.y + 2f, outer.width - 4f, outer.height - 4f);
+        float hpRatio = Stats.MaxHp > 0 ? Mathf.Clamp01((float)Stats.Hp / Stats.MaxHp) : 0f;
+
+        Color previousColor = GUI.color;
+        int previousDepth = GUI.depth;
+        GUI.depth = -100;
+
+        GUI.color = Color.black;
+        GUI.DrawTexture(outer, Texture2D.whiteTexture);
+        GUI.color = new Color(0.25f, 0.04f, 0.04f, 1f);
+        GUI.DrawTexture(inner, Texture2D.whiteTexture);
+
+        if (hpRatio > 0f)
+        {
+            GUI.color = Color.Lerp(new Color(0.9f, 0.12f, 0.08f), new Color(0.2f, 0.85f, 0.2f), hpRatio);
+            GUI.DrawTexture(new Rect(inner.x, inner.y, inner.width * hpRatio, inner.height), Texture2D.whiteTexture);
+        }
+
+        GUI.color = Color.white;
+        GUI.Label(outer, $"{Stats.Hp} / {Stats.MaxHp}", GetHealthTextStyle());
+        GUI.color = previousColor;
+        GUI.depth = previousDepth;
+    }
+
+    private GUIStyle GetHealthTextStyle()
+    {
+        if (_healthTextStyle != null)
+            return _healthTextStyle;
+
+        _healthTextStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 9,
+            fontStyle = FontStyle.Bold
+        };
+        _healthTextStyle.normal.textColor = Color.white;
+        return _healthTextStyle;
     }
 }
 

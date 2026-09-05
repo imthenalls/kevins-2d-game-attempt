@@ -85,6 +85,8 @@ QuestEventBus.Raise("EnemyKilled", npcController.NpcId);
 ```
 
 This satisfies any quest objective with `"eventType": "EnemyKilled"` and the matching `targetId`.
+It also sets the defeated NPC's behavior state to `Disabled` and clears Rigidbody2D velocity,
+stopping wander and melee AI while leaving the object available for loot/death presentation.
 
 ---
 

@@ -4,7 +4,7 @@
 
 The equipped weapon swings as part of the existing melee attack. `CombatAttacker` owns
 input, cooldown, and damage timing. `EquippedWeaponVisual` listens for attack starts and
-rotates `WeaponVisual` through a configurable arc.
+rotates `WeaponVisual` through a configurable arc around a normalized grip point.
 
 Damage is delayed until the strike point instead of being applied when the button is first
 pressed. A swing still animates when no target is in range.
@@ -47,16 +47,24 @@ Assign these Inspector references:
 - **Swing Transform:** the `WeaponVisual` Transform.
 - **Start Angle Offset:** `-70` degrees.
 - **End Angle Offset:** `70` degrees.
+- **Grip Pivot Normalized:** hand position inside the sprite rect, measured from its
+  bottom-left corner. The iron sword uses `(0.16, 0.18)`.
 
-The Transform's normal local rotation is captured on `Awake` and restored after every
-swing. The arc is applied as an offset, so the held sword's authored resting angle remains
-editable in the scene.
+The Transform's normal local position and rotation are captured on `Awake` and restored
+after every swing. Position is compensated while rotating so the grip remains stationary
+even though the imported sprite itself has a centered pivot. The arc is applied as an
+offset, so the held sword's authored resting pose remains editable in the scene.
+
+The component auto-detects a parent body `SpriteRenderer`. When that renderer's **Flip X**
+changes, the weapon mirrors its resting position, sprite, grip point, and swing direction.
+Combat AI also applies this facing immediately before requesting an attack.
 
 ## Runtime Sequence
 
 1. Space or gamepad West calls `CombatAttacker.TryAttack()`.
 2. The cooldown starts and `OnAttackStarted` fires.
-3. `EquippedWeaponVisual` eases the sword from -70 to +70 degrees over 0.3 seconds.
+3. `EquippedWeaponVisual` eases through rest → backswing → strike → rest over 0.3 seconds,
+   rotating around the grip without snapping between poses.
 4. At 0.15 seconds, `CombatAttacker` scans for the nearest living `CombatReceiver`.
 5. A found target receives base damage plus `EntityStats.BonusAttack`.
 6. The sword returns to its stored rest rotation.
@@ -66,6 +74,7 @@ editable in the scene.
 ```csharp
 combatAttacker.TryAttack();       // starts animation, cooldown, and delayed impact
 weaponVisual.PlaySwing();         // visual-only swing; does not cause another hit
+weaponVisual.SetFacingLeft(true); // mirror held pose and swing to the left
 
 float duration = combatAttacker.AttackDuration;
 float impactAt = combatAttacker.AttackWindup;
