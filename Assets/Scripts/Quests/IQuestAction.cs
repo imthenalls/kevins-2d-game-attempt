@@ -72,14 +72,15 @@ public class GiveItemAction : IQuestAction
             return;
         }
 
-        var item = Resources.Load<ItemData>(_itemId);
+        var item = ItemDatabase.Instance?.Get(_itemId) ?? Resources.Load<ItemData>(_itemId);
         if (item == null)
         {
             Debug.LogWarning($"[GiveItemAction] ItemData not found at Resources/{_itemId}");
             return;
         }
 
-        int leftover = model.AddItem(item, _count);
+        int taken = InventoryHelper.GiveItem(item, _count);
+        int leftover = _count - taken;
         if (leftover > 0)
             Debug.LogWarning($"[GiveItemAction] Inventory full; {leftover}x {item.itemName} could not be added.");
     }
@@ -110,14 +111,17 @@ public class RemoveItemAction : IQuestAction
             return;
         }
 
-        var item = Resources.Load<ItemData>(_itemId);
+        var item = ItemDatabase.Instance?.Get(_itemId) ?? Resources.Load<ItemData>(_itemId);
         if (item == null)
         {
             Debug.LogWarning($"[RemoveItemAction] ItemData not found at Resources/{_itemId}");
             return;
         }
 
-        if (!model.RemoveItem(item, _count))
+        bool removed = (item.flags & ItemFlags.KeyItem) != 0
+            ? PlayerKeyring.GetOrCreate().RemoveKey(item.itemId, _count)
+            : model.RemoveItem(item, _count);
+        if (!removed)
             Debug.LogWarning($"[RemoveItemAction] Could not remove {_count}x {item.itemName}; not enough in inventory.");
     }
 }

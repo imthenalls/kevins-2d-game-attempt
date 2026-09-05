@@ -6,6 +6,10 @@ NPC gifts transfer items the NPC already owns. They do not generate new items. S
 
 `InventoryTransferService` moves the complete quantity atomically. If the NPC lacks the item or the player's inventory is full, neither inventory changes. Once transferred, the NPC no longer owns the item, and `SaveManager` persists that empty NPC inventory.
 
+`KeyItem` gifts are removed from the NPC and routed into `PlayerKeyring`; they never require
+or occupy a free player inventory slot. When a key gift opens the inventory, its Keyring panel
+opens too so the received key is immediately visible.
+
 ## JSON Setup
 
 The format is documented by `Assets/StreamingAssets/npc_inventories.schema.json`.
@@ -48,6 +52,13 @@ The configured NPC does not need **Has Inventory** enabled manually; the JSON lo
 6. Saving records the NPC without the sword, preventing regeneration after load.
 
 Cancelling dialogue or walking away gives nothing. If a transfer fails, completing the conversation again can retry it.
+
+## Current key giver
+
+In `NewScene`, the GameObject named `generic npc` owns the unique NPC id `npc_a`. Its
+`npc_a_key_gift` conversation transfers one `golden_key` from the NPC-owned inventory to
+the player when the final line completes. The other copied NPCs use their own unique ids so
+the JSON inventory loader cannot seed the key onto the wrong character.
 
 ## Runtime API
 

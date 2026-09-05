@@ -104,13 +104,15 @@ public class HasItemCondition : ICondition
         var model = InventoryUI.Model;
         if (model == null) return false;
 
-        var item = Resources.Load<ItemData>(_itemId);
+        var item = ItemDatabase.Instance?.Get(_itemId) ?? Resources.Load<ItemData>(_itemId);
         if (item == null)
         {
             Debug.LogWarning($"[HasItemCondition] ItemData not found at Resources/{_itemId}");
             return false;
         }
 
-        return model.CountItem(item) >= _count;
+        return (item.flags & ItemFlags.KeyItem) != 0
+            ? PlayerKeyring.GetOrCreate().HasKey(item.itemId, _count)
+            : model.CountItem(item) >= _count;
     }
 }

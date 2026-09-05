@@ -22,6 +22,7 @@ The save system serializes all meaningful game state to a single JSON file on di
 | World facts | `WorldStateDB` |
 | Active quest states (node + objective counts) | `QuestManager` |
 | Inventory slots (index, item, quantity) | `InventoryUI.Model` |
+| Player keyring entries | `PlayerKeyring` |
 | Player equipment slots | `EquipmentManager.Model` |
 
 The save file is written to `Application.persistentDataPath/save.json` (on Windows this is `%APPDATA%\..\LocalLow\<Company>\<Product>\save.json`).
@@ -120,6 +121,12 @@ Legacy `playerMp` and `playerMaxMp` fields remain in `SaveData` for this migrati
 Save version 3 stores the item id assigned to each player `EquipSlotType`. Equipped items
 are not duplicated in the inventory slot list. Loading restores equipment after base stats
 and inventory so equipment bonuses are applied exactly once.
+
+## Keyring Save Integration
+
+Save version 4 stores player-owned `KeyItem` entries separately from inventory slots. Loading
+an older save automatically moves any keys found in inventory slots into `PlayerKeyring`, so
+the migration preserves ownership while freeing those slots.
 
 ## Trade Save Integration
 

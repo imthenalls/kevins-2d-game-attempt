@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 /// Main inventory panel controller. Owns the InventoryModel and drives the slot grid UI.
 /// Handles drag-and-drop reordering, the I-key / gamepad toggle, and player movement lock
 /// while the inventory is open. Exposes InventoryUI.Model for global read/write access.
+/// Automatically creates the player keyring and its inventory-side viewer.
 ///
 /// Unity setup (recommended Canvas hierarchy):
 ///   Canvas (Screen Space \u2013 Overlay)
@@ -109,10 +110,12 @@ public class InventoryUI : MonoBehaviour
 
         model = new InventoryModel(rows, columns);
         model.OnChanged += RefreshAllSlots;
+        PlayerKeyring.GetOrCreate(gameObject);
 
         SetupGridLayout();
         BuildGrid();
         EquipmentUI.GetOrCreate(panelRoot);
+        KeyringUI.GetOrCreate(panelRoot);
         SetPanelVisible(false);
 
         if (dragGhostImage != null)
@@ -293,6 +296,7 @@ public class InventoryUI : MonoBehaviour
             panelRoot.gameObject.SetActive(visible);
 
         EquipmentUI.Instance?.SetVisible(visible);
+        KeyringUI.Instance?.SetInventoryVisible(visible);
 
         if (visible)
         {

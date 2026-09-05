@@ -10,8 +10,12 @@ The World Objects system covers all player-interactable objects placed in the sc
 | `WorldObject.cs` | `Assets/Scripts/World/` | Built-in implementation: text lines + optional item reward |
 | `ItemPickup.cs` | `Assets/Scripts/World/` | Auto-collected item on the ground (trigger-based) |
 | `InventoryHelper.cs` | `Assets/Scripts/Inventory/` | Static utility for giving items from any system |
+| `SlidingDoor.cs` | `Assets/Scripts/World/` | E-interactable single-panel sliding wall door with optional inventory-key locking |
 
 `PlayerInteractionController` was extended to discover and drive `IInteractable` objects automatically — no extra wiring needed on the player.
+
+The ready-made `Assets/Prefabs/SlidingDoor.prefab` uses the same interaction path. See
+`Documents/SLIDING_DOORS.md` for its hierarchy and tuning fields.
 
 ---
 

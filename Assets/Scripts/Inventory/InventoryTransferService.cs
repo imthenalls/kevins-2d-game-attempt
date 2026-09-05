@@ -31,6 +31,21 @@ public static class InventoryTransferService
             return GiftTransferResult.Failed("A valid item and positive quantity are required.");
         if (!source.HasItem(item, quantity))
             return GiftTransferResult.Failed("The NPC no longer owns the requested item.");
+
+        bool goesToPlayerKeyring = ReferenceEquals(destination, InventoryUI.Model) &&
+                                   (item.flags & ItemFlags.KeyItem) != 0;
+        if (goesToPlayerKeyring)
+        {
+            PlayerKeyring keyring = PlayerKeyring.GetOrCreate();
+            if (keyring == null || !keyring.CanAddKey(item, quantity))
+                return GiftTransferResult.Failed("The player's keyring already contains this unique key.");
+            if (!source.RemoveItem(item, quantity) || keyring.AddKey(item, quantity) != 0)
+                return GiftTransferResult.Failed("The key ownership changed before the gift could complete.");
+
+            RecordSuccessfulTransfer(item, quantity, recipient);
+            return GiftTransferResult.Succeeded(quantity);
+        }
+
         if (!destination.CanAddItem(item, quantity))
             return GiftTransferResult.Failed("The player's inventory is full.");
 
@@ -47,12 +62,16 @@ public static class InventoryTransferService
         source.NotifyChanged();
         destination.NotifyChanged();
 
+        RecordSuccessfulTransfer(item, quantity, recipient);
+        return GiftTransferResult.Succeeded(quantity);
+    }
+
+    private static void RecordSuccessfulTransfer(ItemData item, int quantity, GameObject recipient)
+    {
         if (recipient != null && recipient.TryGetComponent<CharacterStatistics>(out var stats))
             stats.RecordItemGathered(quantity);
-
         QuestEventBus.Raise("ItemCollected", item.itemId, quantity);
         QuestEventBus.Raise("ItemGifted", item.itemId, quantity);
-        return GiftTransferResult.Succeeded(quantity);
     }
 }
 

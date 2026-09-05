@@ -20,6 +20,7 @@ using UnityEngine.InputSystem;
 ///   5. Optionally add CombatReceiver to the same GameObject so the player can take damage.
 ///   6. Optionally add CombatAttacker if the player should be able to attack.
 ///   7. Set Move Speed in the Inspector (default 6 units/s).
+///   8. Configure Dash Distance In Player Lengths, Dash Speed Multiplier, and Dash Cooldown.
 ///
 /// Movement is locked at runtime by SetMovementEnabled(false) — called automatically
 /// by dialogue, inventory, and cutscene systems.
@@ -48,15 +49,40 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     [SerializeField, Min(0f)] private float facingTurnSpeed;
     [SerializeField, Min(0f)] private float facingInputDeadZone = 0.01f;
 
+    [Header("Dash")]
+    [SerializeField, Min(0.1f)] private float dashDistanceInPlayerLengths = 5f;
+    [SerializeField, Min(1f)] private float dashSpeedMultiplier = 6f;
+    [SerializeField, Min(0f)] private float dashCooldown = 0.4f;
+    [SerializeField, Min(1)] private int maxDashCharges = 3;
+    [SerializeField, Min(0.1f)] private float dashRechargeSeconds = 15f;
+    [SerializeField] private KeyCode legacyDashKey = KeyCode.LeftShift;
+
+    [Header("Dash Trail")]
+    [SerializeField] private Color dashTrailColor = new Color(0.2f, 0.75f, 1f, 0.75f);
+    [SerializeField, Min(0.05f)] private float dashTrailFadeTime = 0.3f;
+    [SerializeField, Min(0.05f)] private float dashTrailWidthInPlayerLengths = 0.8f;
+
     private Rigidbody2D rb;
     private Vector2 moveInput;
     private bool movementEnabled = true;
+    private Vector2 lastMovementDirection = Vector2.up;
+    private Vector2 dashDirection;
+    private float playerLength = 1f;
+    private float dashTimeRemaining;
+    private float dashCooldownRemaining;
+    private float dashRechargeRemaining;
+    private int currentDashCharges;
+    private bool isDashing;
+    private TrailRenderer dashTrail;
 
     public string     DisplayName     => gameObject.name;
     public EntityStats Stats          { get; private set; }
     public Wallet      ManaWallet     { get; private set; }
     public CombatReceiver CombatReceiver { get; private set; }
     public bool        MovementEnabled => movementEnabled;
+    public bool        IsDashing => isDashing;
+    public int         CurrentDashCharges => currentDashCharges;
+    public int         MaxDashCharges => maxDashCharges;
     public string TradeParticipantId => "player";
     public Wallet TradeWallet => ManaWallet;
     public InventoryModel TradeInventory => InventoryUI.Model;
@@ -87,10 +113,31 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
         {
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         }
+
+        Collider2D playerCollider = GetComponent<Collider2D>();
+        if (playerCollider != null)
+        {
+            Vector2 colliderSize = playerCollider.bounds.size;
+            playerLength = Mathf.Max(0.1f, colliderSize.x, colliderSize.y);
+        }
+
+        currentDashCharges = Mathf.Max(1, maxDashCharges);
+        EnsureDashTrail();
+    }
+
+    // Stops and clears the runtime trail if the player controller becomes disabled.
+    private void OnDisable()
+    {
+        StopAndClearDashTrail();
     }
 
     private void Update()
     {
+        if (dashCooldownRemaining > 0f)
+            dashCooldownRemaining = Mathf.Max(0f, dashCooldownRemaining - Time.deltaTime);
+
+        RechargeDashCharges();
+
         if (!movementEnabled)
         {
             moveInput = Vector2.zero;
@@ -133,11 +180,182 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
 #endif
 
         UpdateMovementFacing();
+
+        if (moveInput.sqrMagnitude > facingInputDeadZone * facingInputDeadZone)
+            lastMovementDirection = moveInput.normalized;
+
+        if (!isDashing && currentDashCharges > 0 &&
+            dashCooldownRemaining <= 0f && WasDashPressedThisFrame())
+            BeginDash();
     }
 
     private void FixedUpdate()
     {
+        if (movementEnabled && isDashing)
+        {
+            float dashSpeed = Mathf.Max(0.01f, moveSpeed * dashSpeedMultiplier);
+            float stepFraction = Mathf.Clamp01(dashTimeRemaining / Time.fixedDeltaTime);
+            rb.linearVelocity = dashDirection * dashSpeed * stepFraction;
+            dashTimeRemaining -= Time.fixedDeltaTime;
+            if (dashTimeRemaining <= 0f)
+            {
+                dashTimeRemaining = 0f;
+                isDashing = false;
+                EndDashTrailEmission();
+            }
+            return;
+        }
+
         rb.linearVelocity = movementEnabled ? moveInput * moveSpeed : Vector2.zero;
+    }
+
+    // Starts a fixed-distance dash in the direction the player visual currently faces.
+    private void BeginDash()
+    {
+        if (currentDashCharges <= 0)
+            return;
+
+        bool wasFullyCharged = currentDashCharges == maxDashCharges;
+        currentDashCharges--;
+        if (wasFullyCharged)
+            dashRechargeRemaining = dashRechargeSeconds;
+
+        dashDirection = GetFacingDirection();
+        float dashSpeed = Mathf.Max(0.01f, moveSpeed * dashSpeedMultiplier);
+        float dashDistance = playerLength * dashDistanceInPlayerLengths;
+        dashTimeRemaining = dashDistance / dashSpeed;
+        dashCooldownRemaining = dashCooldown;
+        isDashing = true;
+        BeginDashTrail();
+    }
+
+    // Restores one missing dash every configured recharge interval until all charges are full.
+    private void RechargeDashCharges()
+    {
+        if (currentDashCharges >= maxDashCharges)
+        {
+            currentDashCharges = maxDashCharges;
+            dashRechargeRemaining = 0f;
+            return;
+        }
+
+        dashRechargeRemaining -= Time.deltaTime;
+        while (dashRechargeRemaining <= 0f && currentDashCharges < maxDashCharges)
+        {
+            currentDashCharges++;
+            if (currentDashCharges < maxDashCharges)
+                dashRechargeRemaining += Mathf.Max(0.1f, dashRechargeSeconds);
+            else
+                dashRechargeRemaining = 0f;
+        }
+    }
+
+    // Creates the tapered runtime TrailRenderer used only by the dash.
+    private void EnsureDashTrail()
+    {
+        if (dashTrail != null)
+            return;
+
+        var trailObject = new GameObject("Player Dash Trail");
+        trailObject.transform.SetParent(transform, false);
+        dashTrail = trailObject.AddComponent<TrailRenderer>();
+        dashTrail.time = dashTrailFadeTime;
+        dashTrail.minVertexDistance = 0.04f;
+        dashTrail.emitting = false;
+        dashTrail.autodestruct = false;
+        dashTrail.alignment = LineAlignment.View;
+        dashTrail.textureMode = LineTextureMode.Stretch;
+        dashTrail.numCornerVertices = 3;
+        dashTrail.numCapVertices = 2;
+        dashTrail.widthMultiplier = playerLength * dashTrailWidthInPlayerLengths;
+        dashTrail.widthCurve = new AnimationCurve(
+            new Keyframe(0f, 1f),
+            new Keyframe(0.65f, 0.45f),
+            new Keyframe(1f, 0.02f));
+
+        var gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(dashTrailColor, 0f),
+                new GradientColorKey(dashTrailColor * 0.55f, 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(dashTrailColor.a, 0f),
+                new GradientAlphaKey(0f, 1f)
+            });
+        dashTrail.colorGradient = gradient;
+
+        Shader trailShader = Shader.Find("Sprites/Default");
+        if (trailShader != null)
+            dashTrail.material = new Material(trailShader) { name = "Runtime Player Dash Trail" };
+
+        SpriteRenderer playerRenderer = visualTransform != null
+            ? visualTransform.GetComponent<SpriteRenderer>()
+            : GetComponentInChildren<SpriteRenderer>();
+        if (playerRenderer != null)
+        {
+            dashTrail.sortingLayerID = playerRenderer.sortingLayerID;
+            dashTrail.sortingOrder = playerRenderer.sortingOrder - 1;
+        }
+    }
+
+    // Clears the previous trail and starts emitting from the player's current position.
+    private void BeginDashTrail()
+    {
+        EnsureDashTrail();
+        if (dashTrail == null)
+            return;
+
+        dashTrail.time = dashTrailFadeTime;
+        dashTrail.widthMultiplier = playerLength * dashTrailWidthInPlayerLengths;
+        dashTrail.Clear();
+        dashTrail.emitting = true;
+    }
+
+    // Stops adding points while allowing the completed dash trail to fade naturally.
+    private void EndDashTrailEmission()
+    {
+        if (dashTrail != null)
+            dashTrail.emitting = false;
+    }
+
+    // Removes all trail points immediately when a dash is cancelled or disabled.
+    private void StopAndClearDashTrail()
+    {
+        if (dashTrail == null)
+            return;
+
+        dashTrail.emitting = false;
+        dashTrail.Clear();
+    }
+
+    // Converts the visual's configured forward axis into a world-space dash direction.
+    private Vector2 GetFacingDirection()
+    {
+        if (visualTransform != null)
+        {
+            float radians = spriteForwardAngle * Mathf.Deg2Rad;
+            Vector3 localForward = new Vector3(Mathf.Cos(radians), Mathf.Sin(radians), 0f);
+            Vector2 worldForward = visualTransform.TransformDirection(localForward);
+            if (worldForward.sqrMagnitude > 0.0001f)
+                return worldForward.normalized;
+        }
+
+        return lastMovementDirection.sqrMagnitude > 0.0001f
+            ? lastMovementDirection.normalized
+            : Vector2.up;
+    }
+
+    // Reads a single Left Shift press for the dash; holding the key does not retrigger it.
+    private bool WasDashPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.leftShiftKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(legacyDashKey);
+#endif
     }
 
     private void UpdateMovementFacing()
@@ -168,6 +386,9 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
         if (!movementEnabled)
         {
             moveInput = Vector2.zero;
+            isDashing = false;
+            dashTimeRemaining = 0f;
+            StopAndClearDashTrail();
             rb.linearVelocity = Vector2.zero;
         }
     }

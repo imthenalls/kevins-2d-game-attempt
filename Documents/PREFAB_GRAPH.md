@@ -22,7 +22,7 @@ flowchart TB
         end
         subgraph PLAYER["Player Prefab"]
             direction TB
-            PC["PlayerController2D + EquipmentManager + CombatAttacker\nPlayerVisual > WeaponVisual (equipped sprite + swing)"]
+            PC["PlayerController2D + Left Shift dash\n3 charges, 15s recharge each, 5 lengths at 6x speed\nruntime fading dash TrailRenderer child\nEquipmentManager + CombatAttacker\nPlayerVisual > WeaponVisual (equipped sprite + swing)\nruntime tapered red TrailRenderer child\nruntime blade PolygonCollider2D hitbox"]
             PI[PlayerInteractionController]
             ES_P["EntityStats\nHP + mana facade"]
             MW_P["Wallet\ncanonical mana + capacity"]
@@ -42,7 +42,7 @@ flowchart TB
     subgraph ROW2[" "]
         subgraph NPC["Friendly NPC Prefab"]
             direction TB
-            NC2["Sword Guard Enemy\nWander + ProximityMelee + iron_sword swing"]
+            NC2["Sword Guard Enemy\nWander + ProximityMelee + iron_sword swing\nruntime tapered red TrailRenderer child\nruntime blade PolygonCollider2D hitbox"]
             ND["NpcDialogue\noptional owned-inventory gift"]
             DUI[DialogueUIController]
             INV_N["InventoryModel\nInspector or JSON-seeded ownership"]
@@ -60,6 +60,19 @@ flowchart TB
             EP["ExitPoint\nchild Transform"]
             PT --> PM
             PT --> EP
+        end
+        subgraph DOOR["Sliding Door Prefab"]
+            direction TB
+            SD["SlidingDoor\nIInteractable / E toggles\nrequiredKeyId: golden_key"]
+            IDB["ItemDatabase + InventoryModel\nresolves and checks key"]
+            DT["CircleCollider2D\nroot interaction trigger"]
+            DP["DoorPanel child\nSpriteRenderer"]
+            DB["BoxCollider2D\nsolid closed / disabled open"]
+            SD -->|slides| DP
+            SD -->|keeps available| DT
+            SD -->|toggles collision| DB
+            SD -->|checks before opening| IDB
+            DP --> DB
         end
     end
 

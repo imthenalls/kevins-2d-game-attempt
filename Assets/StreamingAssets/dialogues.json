@@ -65,6 +65,28 @@
       ]
     },
     {
+      "dialogueId": "npc_a_key_gift",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "NPC",
+          "text": "That hallway door is locked. Take this key—you'll need it to get through.",
+          "nextNodeId": "give_key",
+          "endConversation": false,
+          "choices": []
+        },
+        {
+          "id": "give_key",
+          "speakerName": "NPC",
+          "text": "Keep it safe. It should unlock the door between these rooms.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    },
+    {
       "dialogueId": "time_machine",
       "startNodeId": "start",
       "nodes": [

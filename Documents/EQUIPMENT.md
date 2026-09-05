@@ -160,9 +160,11 @@ places that item's icon sprite on the world SpriteRenderer; unequipping clears a
 The scene renderer uses sorting order 2 so the sword appears over the character. Its local
 position, rotation, and scale can be adjusted directly on `WeaponVisual` in the Inspector.
 
-The component also listens to `CombatAttacker.OnAttackStarted` and rotates `WeaponVisual`
-through its swing arc. `CombatAttacker` delays the hit scan to the midpoint of that arc. See
-[WEAPON_SWING.md](WEAPON_SWING.md) for scene wiring and tuning.
+The component also listens to `CombatAttacker.OnAttackStarted`, rotates `WeaponVisual`
+through its swing arc, and creates a runtime blade-shaped `PolygonCollider2D`. Player attacks
+are rejected when the Weapon slot is empty; equipped attacks damage only `CombatReceiver`
+hurtbox colliders physically touched by that blade. See [WEAPON_SWING.md](WEAPON_SWING.md)
+for scene wiring and tuning.
 
 ---
 

@@ -9,6 +9,15 @@
           "quantity": 1
         }
       ]
+    },
+    {
+      "npcId": "npc_a",
+      "items": [
+        {
+          "itemId": "golden_key",
+          "quantity": 1
+        }
+      ]
     }
   ]
 }

@@ -29,15 +29,24 @@ public static class InventoryHelper
             return 0;
         }
 
-        var inv = InventoryUI.Model;
-        if (inv == null) return 0;
-
-        int leftover = inv.AddItem(item, quantity);
+        bool isKey = (item.flags & ItemFlags.KeyItem) != 0;
+        int leftover;
+        if (isKey)
+        {
+            PlayerKeyring keyring = PlayerKeyring.GetOrCreate();
+            leftover = keyring != null ? keyring.AddKey(item, quantity) : quantity;
+        }
+        else
+        {
+            var inv = InventoryUI.Model;
+            if (inv == null) return 0;
+            leftover = inv.AddItem(item, quantity);
+        }
         int taken    = quantity - leftover;
 
         if (taken <= 0)
         {
-            Debug.Log($"[InventoryHelper] Inventory full — could not add '{item.itemName}'.");
+            Debug.Log($"[InventoryHelper] Could not store '{item.itemName}'.");
             return 0;
         }
 

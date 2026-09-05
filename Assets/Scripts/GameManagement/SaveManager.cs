@@ -29,7 +29,7 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 3;
+    private const int CurrentSaveVersion = 4;
     private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
@@ -127,6 +127,19 @@ public class SaveManager : MonoBehaviour
                         itemId = equippedItem.itemId,
                     });
                 }
+            }
+        }
+
+        // Keyring — key items never occupy inventory slots.
+        if (PlayerKeyring.Instance != null)
+        {
+            foreach (var entry in PlayerKeyring.Instance.GetEntries())
+            {
+                data.playerKeys.Add(new KeyringSaveEntry
+                {
+                    itemId = entry.Key,
+                    quantity = entry.Value,
+                });
             }
         }
 
@@ -242,6 +255,19 @@ public class SaveManager : MonoBehaviour
                 wallet.LoadSaveData(BuildWalletSaveDataForLoad(data));
         }
 
+        // Keyring
+        PlayerKeyring keyring = PlayerKeyring.GetOrCreate();
+        keyring.Clear();
+        if (data.playerKeys != null)
+        {
+            foreach (KeyringSaveEntry entry in data.playerKeys)
+            {
+                ItemData key = ItemDatabase.Instance?.Get(entry.itemId);
+                if (key != null && (key.flags & ItemFlags.KeyItem) != 0)
+                    keyring.AddKey(key, entry.quantity);
+            }
+        }
+
         // Inventory
         var inv = InventoryUI.Model;
         if (inv != null)
@@ -260,6 +286,14 @@ public class SaveManager : MonoBehaviour
                 if (item == null)
                 {
                     Debug.LogWarning($"[SaveManager] Item not found in ItemDatabase: '{entry.itemId}'");
+                    continue;
+                }
+
+                // Migration for saves created before version 4, when keys used normal slots.
+                if ((item.flags & ItemFlags.KeyItem) != 0)
+                {
+                    if (!keyring.HasKey(item.itemId))
+                        keyring.AddKey(item, entry.quantity);
                     continue;
                 }
                 inv.GetSlot(entry.slotIndex).Set(item, entry.quantity);

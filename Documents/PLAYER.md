@@ -34,6 +34,11 @@ Handles top-down movement via `Rigidbody2D.linearVelocity`. Supports both the ne
 | Sprite Forward Angle | 90 | Local direction of the triangle tip; 90 means up |
 | Facing Turn Speed | 0 | Degrees per second; 0 turns immediately |
 | Facing Input Dead Zone | 0.01 | Prevents tiny controller-stick input from changing facing |
+| Dash Distance In Player Lengths | 5 | Distance traveled relative to the root collider size |
+| Dash Speed Multiplier | 6 | Dash speed relative to the current Move Speed |
+| Dash Cooldown | 0.4 | Seconds before another dash can begin |
+| Max Dash Charges | 3 | Stored dashes available when fully recharged |
+| Dash Recharge Seconds | 15 | Time required to restore each missing dash |
 
 ### API
 
@@ -47,11 +52,15 @@ bool moving = playerController.MovementEnabled;
 | Action | New Input System | Legacy |
 |---|---|---|
 | Move | WASD / Arrow Keys / Left Stick | `Horizontal` + `Vertical` axes |
+| Dash | Left Shift | `legacyDashKey` (Left Shift) |
 
 Movement is clamped to magnitude 1 so diagonal speed is not faster than straight movement.
 Only the `PlayerVisual` child rotates, leaving the Rigidbody2D and collider fixed. Its
 `WeaponVisual` child uses `EquippedWeaponVisual` to show the currently equipped Weapon and
 inherits the same facing rotation.
+
+Pressing Left Shift dashes in the direction `PlayerVisual` currently faces. See
+[PLAYER_DASH.md](PLAYER_DASH.md) for distance, trail, and camera-framing tuning.
 
 ### RequireComponent
 

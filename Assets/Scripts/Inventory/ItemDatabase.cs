@@ -142,7 +142,7 @@ public class ItemDatabase : MonoBehaviour
 
     private static Sprite CreateBuiltInLootIcon(string itemId)
     {
-        if (itemId != "gold_coin" && itemId != "broken_sword")
+        if (itemId != "gold_coin" && itemId != "broken_sword" && itemId != "golden_key")
             return null;
 
         const int size = 32;
@@ -171,12 +171,29 @@ public class ItemDatabase : MonoBehaviour
             for (int y = 11; y <= 20; y++)
                 pixels[y * size + 16] = new Color32(255, 235, 116, 255);
         }
-        else
+        else if (itemId == "broken_sword")
         {
             DrawThickLine(pixels, size, 7, 6, 14, 13, new Color32(117, 76, 42, 255), 2);
             DrawThickLine(pixels, size, 11, 10, 17, 16, new Color32(224, 229, 231, 255), 2);
             DrawThickLine(pixels, size, 20, 19, 27, 26, new Color32(224, 229, 231, 255), 2);
             DrawThickLine(pixels, size, 7, 13, 13, 7, new Color32(174, 125, 55, 255), 1);
+        }
+        else
+        {
+            Color32 gold = new Color32(240, 185, 38, 255);
+            Color32 highlight = new Color32(255, 225, 102, 255);
+            DrawThickLine(pixels, size, 13, 16, 27, 16, gold, 2);
+            DrawThickLine(pixels, size, 22, 16, 22, 11, gold, 1);
+            DrawThickLine(pixels, size, 26, 16, 26, 12, gold, 1);
+            for (int y = 8; y <= 24; y++)
+            for (int x = 2; x <= 18; x++)
+            {
+                int dx = x - 10;
+                int dy = y - 16;
+                int distance = dx * dx + dy * dy;
+                if (distance <= 49 && distance >= 16)
+                    pixels[y * size + x] = distance >= 36 ? gold : highlight;
+            }
         }
 
         texture.SetPixels32(pixels);

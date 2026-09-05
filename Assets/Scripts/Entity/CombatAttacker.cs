@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -8,154 +9,202 @@ using UnityEngine.InputSystem;
 /// Melee attack component shared by the player and NPCs.
 ///
 /// Player: enable Use Player Input — Update reads keyboard/gamepad and calls TryAttack().
-/// NPC:    disable Use Player Input — an AI behavior script calls TryAttack() directly.
+/// NPC: disable Use Player Input — an AI behavior script calls TryAttack() directly.
 ///
-/// Set Target Layers to the layer(s) this entity is allowed to hit.
-/// By default the attacker's own GameObject is excluded from hits.
-/// Enable Can Hit Self to include the attacker in AOE overlap hits.
-/// Set Self Recoil Damage > 0 to deal a flat HP cost to the attacker on every swing.
-///
-/// The attack range is visualised as a red wire circle in Scene view.
-/// OnAttackStarted fires immediately for animation; the hit scan occurs after Attack Windup
-/// so weapon visuals can line up their strike with damage.
+/// Set Target Layers to the layer(s) this entity is allowed to hit. Attack Range remains the
+/// NPC AI engagement distance; actual damage requires the moving equipped-weapon hitbox to
+/// overlap a CombatReceiver collider while the swing is active. Player input is ignored when
+/// the Weapon equipment slot is empty. Player input can queue one follow-up during the
+/// configured final fraction of a swing.
 /// </summary>
 [DisallowMultipleComponent]
 public class CombatAttacker : MonoBehaviour
 {
     [Header("Attack")]
-    [SerializeField, Min(1)]    private int       attackDamage   = 10;
-    [SerializeField, Min(0.1f)] private float     attackRange    = 1.5f;
-    [SerializeField, Min(0f)]   private float     attackCooldown = 0.5f;
-    [Tooltip("Seconds from swing start until the melee hit scan.")]
-    [SerializeField, Min(0f)]   private float     attackWindup   = 0.15f;
-    [Tooltip("Visual swing length exposed to weapon animation components.")]
-    [SerializeField, Min(0.01f)] private float    attackDuration = 0.3f;
-    [SerializeField]            private LayerMask targetLayers   = Physics2D.DefaultRaycastLayers;
+    [SerializeField, Min(1)] private int attackDamage = 10;
+    [SerializeField, Min(0.1f)] private float attackRange = 1.5f;
+    [SerializeField, Min(0f)] private float attackCooldown = 0.5f;
+    [Tooltip("Legacy timing value retained for existing scenes and visual listeners.")]
+    [SerializeField, Min(0f)] private float attackWindup = 0.15f;
+    [Tooltip("Visual swing length and weapon-contact damage-window duration.")]
+    [SerializeField, Min(0.01f)] private float attackDuration = 0.3f;
+    [Tooltip("Final fraction of the swing during which another attack press queues a follow-up.")]
+    [SerializeField, Range(0.01f, 1f)] private float attackBufferWindow = 0.5f;
+    [SerializeField] private LayerMask targetLayers = Physics2D.DefaultRaycastLayers;
 
     [Header("Self Damage")]
-    [Tooltip("Allow this attacker to be caught by its own overlap hit (AOE self-hit).")]
-    [SerializeField] private bool canHitSelf = false;
-    [Tooltip("Flat HP cost applied to the attacker on every successful swing, regardless of target.")]
-    [SerializeField, Min(0)] private int selfRecoilDamage = 0;
+    [Tooltip("Allow this attacker's weapon hitbox to hit its own CombatReceiver hurtbox.")]
+    [SerializeField] private bool canHitSelf;
+    [Tooltip("Flat HP cost applied once when a swing successfully hits at least one target.")]
+    [SerializeField, Min(0)] private int selfRecoilDamage;
 
     [Header("Input")]
     [Tooltip("Enable for the player. Disable for NPCs driven by AI behavior scripts.")]
-    [SerializeField] private bool    usePlayerInput  = true;
+    [SerializeField] private bool usePlayerInput = true;
     [SerializeField] private KeyCode legacyAttackKey = KeyCode.Space;
-
-    // ── Output events ────────────────────────────────────────────────────────
 
     /// <summary>Fired immediately when a cooldown-ready attack begins.</summary>
     public event Action OnAttackStarted;
 
-    /// <summary>
-    /// Fired after a hit successfully lands. Argument is the raw (pre-multiplier) damage amount.
-    /// Subscribe from CharacterStatistics, VFX/SFX systems, or analytics.
-    /// </summary>
+    /// <summary>Fired after a weapon-contact hit lands. Argument is raw damage.</summary>
     public event Action<int> OnAttackLanded;
 
-    /// <summary>
-    /// Fired when the hit that just landed kills the target.
-    /// Guaranteed to fire in the same frame as OnAttackLanded for that swing.
-    /// </summary>
+    /// <summary>Fired when the weapon-contact hit that just landed kills its target.</summary>
     public event Action OnKillLanded;
 
-    private readonly Collider2D[] _overlapResults = new Collider2D[16];
+    private readonly HashSet<CombatReceiver> _hitTargetsThisSwing =
+        new HashSet<CombatReceiver>();
+    private EquipmentManager _equipmentManager;
+    private CombatReceiver _selfReceiver;
     private float _cooldownTimer;
-    private float _impactTimer = -1f;
+    private float _attackAnimationTimer;
+    private bool _hasBufferedAttack;
+    private bool _weaponHitWindowOpen;
+    private bool _recoilAppliedThisSwing;
 
     /// <summary>Configured visual duration for listeners animating this attack.</summary>
     public float AttackDuration => attackDuration;
 
-    /// <summary>Configured delay between swing start and damage impact.</summary>
+    /// <summary>Legacy delay retained for compatibility with existing visual listeners.</summary>
     public float AttackWindup => attackWindup;
 
-    /// <summary>World-space radius used by the melee impact scan.</summary>
+    /// <summary>World-space distance used by melee AI to decide when to attack.</summary>
     public float AttackRange => attackRange;
 
-    // ── Lifecycle ───────────────────────────────────────────────────────────
+    /// <summary>True while the current swing may deal weapon-contact damage.</summary>
+    public bool IsWeaponHitWindowOpen => _weaponHitWindowOpen;
+
+    private void Awake()
+    {
+        _equipmentManager = GetComponent<EquipmentManager>();
+        _selfReceiver = GetComponent<CombatReceiver>();
+    }
 
     private void Update()
     {
         if (_cooldownTimer > 0f)
             _cooldownTimer -= Time.deltaTime;
 
-        if (_impactTimer >= 0f)
+        if (_attackAnimationTimer > 0f)
         {
-            _impactTimer -= Time.deltaTime;
-            if (_impactTimer <= 0f)
-                ResolveAttackImpact();
-        }
-
-        if (usePlayerInput && WasAttackPressedThisFrame())
-            TryAttack();
-    }
-
-    // ── Public API ──────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Attempt an attack. Starts the cooldown and raises OnAttackStarted immediately,
-    /// then scans for the nearest living CombatReceiver after attackWindup seconds.
-    /// No-op while the cooldown is active or another impact is pending.
-    /// Called automatically by Update when usePlayerInput is true.
-    /// Call directly from AI behavior scripts when usePlayerInput is false.
-    /// </summary>
-    public void TryAttack()
-    {
-        if (!isActiveAndEnabled || _cooldownTimer > 0f || _impactTimer >= 0f) return;
-
-        _cooldownTimer = Mathf.Max(attackCooldown, attackDuration);
-        _impactTimer = attackWindup;
-        OnAttackStarted?.Invoke();
-
-        if (_impactTimer <= 0f)
-            ResolveAttackImpact();
-    }
-
-    private void ResolveAttackImpact()
-    {
-        _impactTimer = -1f;
-
-        int hitCount = Physics2D.OverlapCircleNonAlloc(
-            transform.position, attackRange, _overlapResults, targetLayers);
-
-        CombatReceiver nearest        = null;
-        float          nearestDistSqr = float.MaxValue;
-
-        for (int i = 0; i < hitCount; i++)
-        {
-            // Walk up to parent in case the collider is on a child object.
-            var combatant = _overlapResults[i].GetComponentInParent<CombatReceiver>();
-
-            if (combatant == null)                  continue;
-            if (!combatant.Stats.IsAlive)            continue;
-            if (!canHitSelf && combatant.gameObject == gameObject) continue; // exclude self unless AOE
-
-            float distSqr = (combatant.transform.position - transform.position).sqrMagnitude;
-            if (distSqr < nearestDistSqr)
+            _attackAnimationTimer -= Time.deltaTime;
+            if (_attackAnimationTimer <= 0f)
             {
-                nearestDistSqr = distSqr;
-                nearest        = combatant;
+                _attackAnimationTimer = 0f;
+                _weaponHitWindowOpen = false;
+
+                if (_hasBufferedAttack && HasRequiredPlayerWeapon())
+                    BeginAttack();
+                else
+                    _hasBufferedAttack = false;
             }
         }
 
-        if (nearest == null) return;
+        if (usePlayerInput && WasAttackPressedThisFrame())
+            HandlePlayerAttackInput();
+    }
+
+    private void OnDisable()
+    {
+        _weaponHitWindowOpen = false;
+        _hasBufferedAttack = false;
+    }
+
+    /// <summary>
+    /// Attempts an attack. Player-controlled attackers require an equipped Weapon item.
+    /// NPC callers are still controlled by their AI and equipment/visual setup.
+    /// </summary>
+    public void TryAttack()
+    {
+        if (!isActiveAndEnabled || _cooldownTimer > 0f || _attackAnimationTimer > 0f ||
+            !HasRequiredPlayerWeapon())
+            return;
+
+        BeginAttack();
+    }
+
+    /// <summary>
+    /// Attempts to damage a receiver touched by the active weapon hitbox. Each receiver can be
+    /// damaged at most once per swing. Called by EquippedWeaponVisual's blade overlap check.
+    /// </summary>
+    public bool TryApplyWeaponHit(CombatReceiver receiver)
+    {
+        if (!_weaponHitWindowOpen || receiver == null || !receiver.Stats.IsAlive)
+            return false;
+        if (!canHitSelf && receiver == _selfReceiver)
+            return false;
+        if ((targetLayers.value & (1 << receiver.gameObject.layer)) == 0)
+            return false;
+        if (!_hitTargetsThisSwing.Add(receiver))
+            return false;
 
         int totalDamage = attackDamage;
         if (TryGetComponent(out EntityStats attackerStats))
             totalDamage += attackerStats.BonusAttack;
 
-        nearest.ReceiveHit(new DamageInfo(totalDamage, gameObject));
+        receiver.ReceiveHit(new DamageInfo(totalDamage, gameObject));
         OnAttackLanded?.Invoke(totalDamage);
-        if (!nearest.Stats.IsAlive)
+        if (!receiver.Stats.IsAlive)
             OnKillLanded?.Invoke();
 
-        // Recoil — flat self-damage cost on every swing, independent of target
-        if (selfRecoilDamage > 0 && TryGetComponent<CombatReceiver>(out var selfReceiver))
-            selfReceiver.ReceiveHit(new DamageInfo(selfRecoilDamage, gameObject));
+        if (!_recoilAppliedThisSwing && selfRecoilDamage > 0 && _selfReceiver != null)
+        {
+            _recoilAppliedThisSwing = true;
+            _selfReceiver.ReceiveHit(new DamageInfo(selfRecoilDamage, gameObject));
+        }
+
+        return true;
     }
 
-    // ── Input ────────────────────────────────────────────────────────────────
+    // Starts one attack and resets the per-swing damage and input-buffer state.
+    private void BeginAttack()
+    {
+        _hasBufferedAttack = false;
+        _hitTargetsThisSwing.Clear();
+        _recoilAppliedThisSwing = false;
+        _cooldownTimer = Mathf.Max(attackCooldown, attackDuration);
+        _attackAnimationTimer = attackDuration;
+        _weaponHitWindowOpen = true;
+        OnAttackStarted?.Invoke();
+    }
+
+    // Starts immediately when ready, or queues one follow-up during the final buffer window.
+    private void HandlePlayerAttackInput()
+    {
+        if (!HasRequiredPlayerWeapon())
+        {
+            _hasBufferedAttack = false;
+            return;
+        }
+
+        if (_cooldownTimer <= 0f && _attackAnimationTimer <= 0f)
+        {
+            BeginAttack();
+            return;
+        }
+
+        if (_attackAnimationTimer <= 0f || _hasBufferedAttack)
+            return;
+
+        float duration = Mathf.Max(0.01f, attackDuration);
+        float normalizedProgress = 1f - Mathf.Clamp01(_attackAnimationTimer / duration);
+        float bufferStart = 1f - Mathf.Clamp01(attackBufferWindow);
+        if (normalizedProgress >= bufferStart)
+            _hasBufferedAttack = true;
+    }
+
+    // Player attack input is armed only by an actual item in the Weapon equipment slot.
+    private bool HasRequiredPlayerWeapon()
+    {
+        if (!usePlayerInput)
+            return true;
+
+        if (_equipmentManager == null)
+            _equipmentManager = GetComponent<EquipmentManager>();
+
+        return _equipmentManager != null && _equipmentManager.Model != null &&
+               _equipmentManager.Model.GetEquipped(EquipSlotType.Weapon) != null;
+    }
 
     private bool WasAttackPressedThisFrame()
     {
@@ -169,8 +218,6 @@ public class CombatAttacker : MonoBehaviour
         return Input.GetKeyDown(legacyAttackKey);
 #endif
     }
-
-    // ── Gizmos ───────────────────────────────────────────────────────────────
 
     private void OnDrawGizmosSelected()
     {

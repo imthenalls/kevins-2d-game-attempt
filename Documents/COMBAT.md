@@ -16,7 +16,7 @@ Attack types, elements, and status effects are not implemented yet. `DamageInfo`
 |---|---|
 | `Assets/Scripts/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
 | `Assets/Scripts/Entity/CombatReceiver.cs` | Hit-receiving component for any entity; wraps `EntityStats` |
-| `Assets/Scripts/Entity/CombatAttacker.cs` | Melee attack — shared by player and NPCs |
+| `Assets/Scripts/Entity/CombatAttacker.cs` | Melee timing, equipment gate, and contact damage — shared by player and NPCs |
 
 ---
 
@@ -102,10 +102,11 @@ The only difference between the two is the **Use Player Input** toggle.
 | Field | Default | Description |
 |---|---|---|
 | Attack Damage | 10 | Damage dealt per hit |
-| Attack Range | 1.5 | World-space radius scanned for target colliders |
+| Attack Range | 1.5 | NPC AI engagement distance; it does not deal damage by radius |
 | Attack Cooldown | 0.5 | Seconds between attacks |
-| Attack Windup | 0.15 | Delay from swing start until the hit scan |
-| Attack Duration | 0.3 | Duration exposed to weapon swing visuals |
+| Attack Windup | 0.15 | Legacy serialized timing retained for existing scenes/listeners |
+| Attack Duration | 0.3 | Visual swing and weapon-contact damage-window duration |
+| Attack Buffer Window | 0.5 | Final 50% of a player swing accepts one queued follow-up press |
 | Target Layers | DefaultRaycastLayers | Layer mask this entity is allowed to hit |
 | Use Player Input | true | **Player:** on. **NPC:** off — AI calls `TryAttack()` directly |
 | Legacy Attack Key | Space | Fallback input when Input System is off (player only) |
@@ -118,16 +119,24 @@ The only difference between the two is the **Use Player Input** toggle.
 
 ### How it works
 
-1. When **Use Player Input** is on, `Update` reads input and calls `TryAttack()`.
-2. The cooldown begins and `OnAttackStarted` triggers the equipped weapon animation.
-3. After **Attack Windup**, `OverlapCircleNonAlloc` scans `attackRange`.
-4. The nearest living `CombatReceiver` is found (always skips self).
-5. `nearest.ReceiveHit(new DamageInfo(attackDamage, gameObject))` is called.
-6. A cooldown timer blocks further attacks until both cooldown and swing are complete.
+1. When **Use Player Input** is on, `Update` reads input. If the Weapon equipment slot is
+   empty, the input is rejected and no attack animation starts.
+2. The cooldown and active damage window begin, and `OnAttackStarted` triggers the equipped
+   weapon animation.
+3. `EquippedWeaponVisual` enables a runtime `PolygonCollider2D` shaped from the sword grip
+   toward its blade tip and checks its overlaps as the visible sword moves.
+4. An overlapped collider is resolved to its parent `CombatReceiver`, which acts as the
+   entity's hurtbox. Target-layer and self-hit rules are then applied.
+5. Every valid receiver touched by the blade receives base damage plus
+   `EntityStats.BonusAttack`, at most once per swing.
+6. The hitbox disables when the swing ends. A cooldown timer blocks ordinary repeated
+   attacks. For player-controlled attackers, one
+   new press during the final buffer window queues a follow-up that begins when the current
+   animation ends.
 
-The swing begins even if no target is nearby; a miss simply finds no receiver at impact.
-`NewScene` uses a 0.15-second windup and 0.3-second duration, placing damage at the middle
-of the visible sword arc. See [WEAPON_SWING.md](WEAPON_SWING.md).
+An equipped weapon still swings if no target is nearby, but the miss deals no damage. Merely
+standing within `AttackRange` cannot be hit: the blade polygon must physically overlap the
+receiver's Collider2D during the visible arc. See [WEAPON_SWING.md](WEAPON_SWING.md).
 
 For **NPC attackers**, `NpcProximityMeleeController` calls `TryAttack()` while the player is
 inside `AttackRange`. The component's cooldown accepts only valid attack starts.
@@ -143,8 +152,10 @@ A red wire circle gizmo shows the attack range in Scene view when the GameObject
 ```
 Player (GameObject)
   ├── EntityStats      — HP/MP (already present)
-  ├── CombatReceiver   — add if the player can also take hits from enemies
-  └── CombatAttacker   — Use Player Input: ON  |  Target Layers: Enemy
+  ├── CombatReceiver   — add if the player can also take hits from enemies; Collider2D is its hurtbox
+  ├── EquipmentManager — Weapon slot must contain an item before player input can attack
+  ├── CombatAttacker   — Use Player Input: ON  |  Target Layers: Enemy
+  └── WeaponVisual     — EquippedWeaponVisual auto-creates the runtime blade hitbox
 ```
 
 ### Enemy NPC GameObject
@@ -153,7 +164,7 @@ Player (GameObject)
 Enemy NPC (GameObject)
   ├── NpcController    — set NpcType = Enemy (auto-adds EntityStats and CombatReceiver)
   ├── CombatAttacker   — Use Player Input: OFF  |  Target Layers: Player
-  └── Collider2D       — must be on the Enemy layer for the player's CombatAttacker to detect it
+  └── Collider2D       — enemy hurtbox; must be on a permitted target layer
 ```
 
 `NpcController.Awake` adds both `EntityStats` and `CombatReceiver` automatically when `NpcType = Enemy`. Do not add them manually — access them via `npcController.Stats` and `npcController.CombatReceiver`.
@@ -174,7 +185,7 @@ Enemy NPC (GameObject)
 |---|---|
 | **Attack types / elements** | Add an `AttackType` enum field to `DamageInfo`; read it in `CombatReceiver.ReceiveHit` for resistance/weakness logic |
 | **Defence / armor** | Add a `defense` field to `CombatReceiver`; subtract it from `info.Amount` before calling `TakeDamage` |
-| **Hit all targets in range** | In `CombatAttacker.TryAttack`, loop all found receivers instead of picking nearest |
+| **Limit cleave targets** | Add a maximum target count in `CombatAttacker.TryApplyWeaponHit` |
 | **Ranged attacks / projectiles** | Create `Projectile.cs`; carry a `DamageInfo`; call `ReceiveHit` on `OnTriggerEnter2D` |
 | **Enemy attacks player** | Add `NpcProximityMeleeController`; see [NPC_MELEE_AI.md](NPC_MELEE_AI.md) |
 | **On-hit VFX / SFX** | Subscribe to `CombatReceiver.OnHit` and spawn a particle or play a clip |

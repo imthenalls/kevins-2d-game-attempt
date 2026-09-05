@@ -4,6 +4,9 @@ The inventory Canvas includes an editable `EquipmentPanel` companion with three
 `EquipmentSlotUI` drop targets for Weapon, Armor, and Accessory items. It follows the
 inventory panel's open/close state automatically.
 
+Items flagged `KeyItem` are routed to `PlayerKeyring` instead of occupying grid slots.
+Open the inventory and press the generated **Keyring** button to view all owned keys.
+
 ## Overview
 
 The inventory is a grid-based system split cleanly into data and UI layers. The data model is pure C# with no Unity dependency — the UI layer subscribes to its `OnChanged` event and redraws.

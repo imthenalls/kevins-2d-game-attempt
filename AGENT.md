@@ -7,6 +7,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | Document | Contents |
 |---|---|
 | [Documents/PLAYER.md](Documents/PLAYER.md) | Player components, movement, interaction, stats UI |
+| [Documents/PLAYER_DASH.md](Documents/PLAYER_DASH.md) | Left Shift directional dash, distance/speed tuning, and movement-lock behavior |
 | [Documents/STATS.md](Documents/STATS.md) | EntityStats HP/MP system, events, and methods |
 | [Documents/ENTITY.md](Documents/ENTITY.md) | Entity folder: IEntityController, EntityStats, CombatReceiver, CombatAttacker |
 | [Documents/COMBAT.md](Documents/COMBAT.md) | Combat system: DamageInfo, CombatReceiver, CombatAttacker, scene setup |
@@ -34,6 +35,8 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/ECONOMY_BALANCING_RULES.md](Documents/ECONOMY_BALANCING_RULES.md) | Soft economic resets, early difficulty, bounded RNG, economy workbook fields, and reward rules |
 | [Documents/TRADE_SYSTEM.md](Documents/TRADE_SYSTEM.md) | Atomic player/NPC item-for-mana trades, participants, validation, ledger, persistence, and quest events |
 | [Documents/WORLD_OBJECTS.md](Documents/WORLD_OBJECTS.md) | ItemPickup, WorldObject, IInteractable interface, InventoryHelper utility |
+| [Documents/SLIDING_DOORS.md](Documents/SLIDING_DOORS.md) | Reusable E-interactable single-panel sliding door and prefab setup |
+| [Documents/KEYRING.md](Documents/KEYRING.md) | Slot-free player key storage, inventory viewer, door/quest routing, and save integration |
 | [Documents/ENEMY_LOOT_DROPS.md](Documents/ENEMY_LOOT_DROPS.md) | JSON-owned enemy loot, death cleanup, runtime loot piles, and pickup flow |
 | [Documents/WORLD_STATE.md](Documents/WORLD_STATE.md) | World State System: WorldStateDB, WorldStateKey, all WorldState components, quest integration |
 

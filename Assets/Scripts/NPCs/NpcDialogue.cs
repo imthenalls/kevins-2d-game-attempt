@@ -158,6 +158,8 @@ public class NpcDialogue : MonoBehaviour
         if (openInventoryAfterGift && InventoryUI.Instance != null)
         {
             InventoryUI.Instance.Open();
+            if ((giftItem.flags & ItemFlags.KeyItem) != 0)
+                KeyringUI.Instance?.Open();
         }
 
         return result.QuantityTransferred;
