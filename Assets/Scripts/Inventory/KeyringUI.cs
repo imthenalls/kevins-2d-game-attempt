@@ -84,13 +84,13 @@ public sealed class KeyringUI : MonoBehaviour
         keyring = PlayerKeyring.GetOrCreate();
         keyring.OnChanged += Refresh;
 
-        launcher = CreateButton(transform, "Keyring Button", "Keyring", Open);
+        Transform launcherParent = inventoryPanel != null ? inventoryPanel : transform;
+        launcher = CreateButton(launcherParent, "Keyring Button", "Keyring", Open);
         RectTransform launcherRect = launcher.GetComponent<RectTransform>();
-        launcherRect.anchorMin = launcherRect.anchorMax = new Vector2(0.5f, 0.5f);
+        launcherRect.anchorMin = launcherRect.anchorMax = new Vector2(1f, 0f);
+        launcherRect.pivot = new Vector2(1f, 0f);
         launcherRect.sizeDelta = new Vector2(150f, 42f);
-        launcherRect.anchoredPosition = inventoryPanel != null
-            ? new Vector2(inventoryPanel.anchoredPosition.x + 75f, inventoryPanel.anchoredPosition.y - 220f)
-            : new Vector2(-220f, -220f);
+        launcherRect.anchoredPosition = new Vector2(-16f, 16f);
 
         panel = new GameObject("Keyring Panel", typeof(RectTransform), typeof(Image), typeof(Outline));
         panel.transform.SetParent(transform, false);
@@ -102,9 +102,32 @@ public sealed class KeyringUI : MonoBehaviour
 
         CreateText(panelRect, "Keyring Title", "Keyring", 28f, FontStyles.Bold,
             new Vector2(20f, -16f), new Vector2(340f, 42f));
-        listText = CreateText(panelRect, "Key List", "No keys", 19f, FontStyles.Normal,
-            new Vector2(24f, -74f), new Vector2(332f, 210f));
+        GameObject viewportObject = new GameObject(
+            "Key List View", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+        viewportObject.transform.SetParent(panelRect, false);
+        RectTransform viewport = viewportObject.GetComponent<RectTransform>();
+        viewport.anchorMin = viewport.anchorMax = new Vector2(0f, 1f);
+        viewport.pivot = new Vector2(0f, 1f);
+        viewport.anchoredPosition = new Vector2(24f, -74f);
+        viewport.sizeDelta = new Vector2(332f, 210f);
+        viewportObject.GetComponent<Image>().color = new Color(0.94f, 0.94f, 0.94f, 1f);
+
+        listText = CreateText(viewport, "Key List", "No keys", 19f, FontStyles.Normal,
+            new Vector2(8f, -8f), new Vector2(-16f, 0f));
         listText.alignment = TextAlignmentOptions.TopLeft;
+        RectTransform listRect = listText.rectTransform;
+        listRect.anchorMin = new Vector2(0f, 1f);
+        listRect.anchorMax = new Vector2(1f, 1f);
+        listRect.pivot = new Vector2(0.5f, 1f);
+        ContentSizeFitter fitter = listText.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = viewportObject.GetComponent<ScrollRect>();
+        scroll.content = listRect;
+        scroll.viewport = viewport;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.scrollSensitivity = 24f;
 
         GameObject close = CreateButton(panelRect, "Close Button", "Close", Close);
         RectTransform closeRect = close.GetComponent<RectTransform>();

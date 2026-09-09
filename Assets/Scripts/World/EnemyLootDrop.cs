@@ -30,10 +30,10 @@ public static class EnemyLootDrop
             return;
 
         EnsureDefinitionsLoaded();
-        PreparedEnemies.Add(npc);
-
         if (!Definitions.TryGetValue(npc.NpcId, out EnemyLootDefinition definition))
             return;
+
+        PreparedEnemies.Add(npc);
 
         InventoryModel inventory = npc.EnsureInventory();
         if (definition.items == null || ItemDatabase.Instance == null)

@@ -39,6 +39,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/KEYRING.md](Documents/KEYRING.md) | Slot-free player key storage, inventory viewer, door/quest routing, and save integration |
 | [Documents/ENEMY_LOOT_DROPS.md](Documents/ENEMY_LOOT_DROPS.md) | JSON-owned enemy loot, death cleanup, runtime loot piles, and pickup flow |
 | [Documents/WORLD_STATE.md](Documents/WORLD_STATE.md) | World State System: WorldStateDB, WorldStateKey, all WorldState components, quest integration |
+| [Documents/TRAINING_ARENA.md](Documents/TRAINING_ARENA.md) | Portal-linked training wing, key keeper, locked door, repeatable enemy spawner, and telegraphed dash enemy |
 
 ---
 
@@ -47,6 +48,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.
 2. Default to script-only changes for gameplay updates.
 3. If a task would require scene edits, stop and ask for confirmation first.
+4. Do not use Unity UI automation or computer-use automation to control the Unity Editor. Make project changes through files and provide manual Unity verification steps when editor interaction is required.
 
 ## Documentation Rules
 
@@ -68,6 +70,8 @@ Changes that require a graph update include (but are not limited to):
 - Adding an entirely new prefab archetype that belongs in the graph.
 
 ## Scripting Rules
+
+1. Do not use `IReadOnlyList<T>` anywhere in the codebase. Use an appropriate concrete collection type or another API shape instead.
 
 Every new C# script file must begin with a `/// <summary>` XML doc comment block directly above the class (or above its `[Attribute]` lines). The comment must cover:
 

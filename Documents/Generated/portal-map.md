@@ -8,6 +8,8 @@
 | `portal_a_2` | NewScene | `NewScene/portal_b_2` | `NewScene/portal_b_2` | `NPC: time_machine` | Yes |
 | `portal_b` | NewScene | `NewScene/portal_a` | `NewScene/portal_a` | — | Yes |
 | `portal_b_2` | NewScene | `NewScene/portal_a_2` | `NewScene/portal_a_2` | — | Yes |
+| `training_entry` | NewScene | `NewScene/training_hub` | `NewScene/training_hub` | — | Yes |
+| `training_hub` | NewScene | `NewScene/training_entry` | `NewScene/training_entry` | — | Yes |
 
 ## Route List
 
@@ -15,6 +17,8 @@
 - `NewScene/portal_a_2` → `NewScene/portal_b_2`
 - `NewScene/portal_b` → `NewScene/portal_a`
 - `NewScene/portal_b_2` → `NewScene/portal_a_2`
+- `NewScene/training_entry` → `NewScene/training_hub`
+- `NewScene/training_hub` → `NewScene/training_entry`
 
 ## Validation
 

@@ -64,7 +64,7 @@ flowchart TB
         subgraph DOOR["Sliding Door Prefab"]
             direction TB
             SD["SlidingDoor\nIInteractable / E toggles\nrequiredKeyId: golden_key"]
-            IDB["ItemDatabase + InventoryModel\nresolves and checks key"]
+            IDB["ItemDatabase + PlayerKeyring\nresolves and checks key"]
             DT["CircleCollider2D\nroot interaction trigger"]
             DP["DoorPanel child\nSpriteRenderer"]
             DB["BoxCollider2D\nsolid closed / disabled open"]
@@ -77,15 +77,39 @@ flowchart TB
     end
 
     subgraph ROW3[" "]
+        subgraph TRAINING["Training Challenger Prefab"]
+            direction TB
+            TC["NpcController\nNpcType=Enemy / 60 HP"]
+            TCR[CombatReceiver]
+            TRB["Rigidbody2D\nContinuous / Gravity=0"]
+            TCOL[BoxCollider2D]
+            TEQ["EquipmentManager\nstartingWeaponItemId: iron_sword"]
+            TCA["CombatAttacker\nusePlayerInput=OFF"]
+            TAI["NpcDashMeleeController\n0.5s warning > dash > swing > recovery"]
+            TAIM["Aim Pivot\nplaceholder SpriteRenderer"]
+            TW["WeaponVisual\nEquippedWeaponVisual"]
+            TC --> TCR
+            TC --> TAI
+            TAI --> TRB
+            TAI --> TCOL
+            TAI --> TAIM
+            TEQ --> TW
+            TCA --> TW
+        end
         subgraph SLOT["Slot Prefab (UI)"]
             direction TB
-            IUI["InventoryUI + scene EquipmentPanel\n3 serialized EquipmentSlotUI drop targets"]
+            IUI["InventoryUI + scene EquipmentPanel\n3 serialized EquipmentSlotUI drop targets\nauto-creates keyring viewer"]
             IM[InventoryModel]
+            PK["PlayerKeyring\nslot-free KeyItem storage"]
+            KUI["KeyringUI\nbutton + owned-key panel"]
             ISU[InventorySlotUI]
             IS[InventorySlot]
             IC[InventoryContextMenu]
             IT["InventoryTooltip\nwhite box + non-blocking CanvasGroup"]
             IUI --> IM
+            IUI -->|adds at runtime| PK
+            IUI -->|creates at runtime| KUI
+            KUI --> PK
             IUI --> ISU
             ISU --> IS
             ISU --> IC
@@ -105,6 +129,25 @@ flowchart TB
         end
     end
 
+    subgraph ROW4[" "]
+        subgraph SPAWNER["Training Arena Scene Objects"]
+            direction TB
+            GB["Green Training Box\nTrainingEnemySpawner / IInteractable"]
+            SP["Challenger Spawn Point"]
+            TP["TrainingChallenger prefab"]
+            AK["Arena Key Keeper\nNpcDialogue gift: training_arena_key"]
+            KR[PlayerKeyring]
+            AD["SlidingDoor\nrequiredKeyId: training_arena_key"]
+            PH["PortalTrigger2D: training_hub"]
+            PE["PortalTrigger2D: training_entry"]
+            GB --> SP
+            GB -->|instantiates one living| TP
+            AK -->|transfers owned key| KR
+            AD -->|checks| KR
+            PH <-->|same-scene pair| PE
+        end
+    end
+
     CA_P -->|ReceiveHit| CR_E
     CA_E -->|ReceiveHit| CR_P
     PI -->|triggers| ND
@@ -114,4 +157,5 @@ flowchart TB
     style ROW1 fill:none,stroke:none
     style ROW2 fill:none,stroke:none
     style ROW3 fill:none,stroke:none
+    style ROW4 fill:none,stroke:none
 ```

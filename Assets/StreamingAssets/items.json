@@ -2,6 +2,17 @@
   "version": 1,
   "items": [
     {
+      "id": "training_arena_key",
+      "name": "Arena Key",
+      "description": "Opens the door beyond the training portal.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 1,
+      "sellValue": 0,
+      "flags": ["Unique", "KeyItem"],
+      "iconPath": ""
+    },
+    {
       "id": "health_potion",
       "name": "Health Potion",
       "description": "A red vial that restores 50 HP.",

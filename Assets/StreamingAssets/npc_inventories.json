@@ -2,6 +2,12 @@
   "version": 1,
   "npcInventories": [
     {
+      "npcId": "training_key_keeper",
+      "items": [
+        { "itemId": "training_arena_key", "quantity": 1 }
+      ]
+    },
+    {
       "npcId": "trainer_sword_giver",
       "items": [
         {

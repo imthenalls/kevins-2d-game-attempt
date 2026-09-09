@@ -2,6 +2,20 @@
   "version": 1,
   "dialogues": [
     {
+      "dialogueId": "training_arena_key_gift",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Arena Keeper",
+          "text": "The arena beyond the portal is locked. This key is yours.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    },
+    {
       "dialogueId": "trainer_sword_gift",
       "startNodeId": "start",
       "nodes": [
