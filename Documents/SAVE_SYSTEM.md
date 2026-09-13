@@ -24,6 +24,9 @@ The save system serializes all meaningful game state to a single JSON file on di
 | Inventory slots (index, item, quantity) | `InventoryUI.Model` |
 | Player keyring entries | `PlayerKeyring` |
 | Player equipment slots | `EquipmentManager.Model` |
+| Active world and remembered world positions | `WorldTravelState` |
+| World A and World B inventories | `InventoryUI` |
+| Per-world avatar ability unlocks | `WorldTravelState` |
 
 The save file is written to `Application.persistentDataPath/save.json` (on Windows this is `%APPDATA%\..\LocalLow\<Company>\<Product>\save.json`).
 
@@ -127,6 +130,15 @@ and inventory so equipment bonuses are applied exactly once.
 Save version 4 stores player-owned `KeyItem` entries separately from inventory slots. Loading
 an older save automatically moves any keys found in inventory slots into `PlayerKeyring`, so
 the migration preserves ownership while freeing those slots.
+
+## Two-World Save Integration
+
+Save version 5 records `activeWorld`, remembered scene positions for both worlds, and separate
+slot snapshots for the World A and World B inventories. Version 4 and older saves migrate their
+single inventory into World A. See [TWO_WORLD_SYSTEM.md](TWO_WORLD_SYSTEM.md).
+
+Save version 6 stores per-world avatar ability IDs. The shared HP and Wallet snapshot is loaded
+into `WorldTravelState` before the saved scene appears, then applied to that world's avatar.
 
 ## Trade Save Integration
 

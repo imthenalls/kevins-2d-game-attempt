@@ -22,6 +22,8 @@ public class PortalManager : MonoBehaviour
 
     private string pendingScene;
     private string pendingDestinationPortalId;
+    private bool pendingWorldChange;
+    private WorldLayer pendingDestinationWorld;
 
     private void Awake()
     {
@@ -60,10 +62,19 @@ public class PortalManager : MonoBehaviour
             return false;
         }
 
+        if (!sourcePortal.IsUnlocked())
+        {
+            Debug.Log($"Portal '{sourcePortal.PortalId}' is locked by world-state flag " +
+                      $"'{sourcePortal.RequiredUnlockFlag}'.", sourcePortal);
+            return false;
+        }
+
         return TryTeleportToPortal(
             sourcePortal.DestinationPortalId,
             traveler,
-            sourcePortal.DestinationScene);
+            sourcePortal.DestinationScene,
+            sourcePortal.ChangesWorld,
+            sourcePortal.DestinationWorld);
     }
 
     /// <summary>
@@ -87,7 +98,9 @@ public class PortalManager : MonoBehaviour
     public bool TryTeleportToPortal(
         string destinationPortalId,
         Transform traveler,
-        string destinationScene = null)
+        string destinationScene = null,
+        bool changesWorld = false,
+        WorldLayer destinationWorld = WorldLayer.WorldA)
     {
         if (traveler == null || string.IsNullOrWhiteSpace(destinationPortalId))
         {
@@ -113,11 +126,30 @@ public class PortalManager : MonoBehaviour
                 return false;
             }
 
+            if (destinationPortal.ExitPoint == null)
+            {
+                Debug.LogWarning(
+                    $"Destination portal '{destinationPortalId}' has no Exit Point.",
+                    destinationPortal);
+                return false;
+            }
+
+            if (changesWorld && WorldTravelState.Instance != null)
+            {
+                WorldTravelState.Instance.RememberTravelerPosition(traveler);
+                WorldTravelState.Instance.SetCurrentWorld(destinationWorld);
+                traveler = WorldTravelState.Instance.ResolveActiveTraveler(traveler);
+            }
+
             return TeleportTraveler(traveler, destinationPortal);
         }
 
         pendingScene = destinationScene.Trim();
         pendingDestinationPortalId = destinationPortalId.Trim();
+        pendingWorldChange = changesWorld;
+        pendingDestinationWorld = destinationWorld;
+        if (changesWorld && WorldTravelState.Instance != null)
+            WorldTravelState.Instance.RememberTravelerPosition(traveler);
         MarkTravelerCooldown(travelerId);
 
         if (SceneLoader.Instance != null)
@@ -201,10 +233,19 @@ public class PortalManager : MonoBehaviour
         }
 
         string destinationPortalId = pendingDestinationPortalId;
+        bool changesWorld = pendingWorldChange;
+        WorldLayer destinationWorld = pendingDestinationWorld;
         ClearPendingDestination();
 
+        if (changesWorld && WorldTravelState.Instance != null)
+            WorldTravelState.Instance.SetCurrentWorld(destinationWorld);
+
         GameObject travelerObject = GameObject.FindGameObjectWithTag(defaultTravelerTag);
-        if (travelerObject == null)
+        Transform traveler = travelerObject != null ? travelerObject.transform : null;
+        if (WorldTravelState.Instance != null)
+            traveler = WorldTravelState.Instance.ResolveActiveTraveler(traveler);
+
+        if (traveler == null)
         {
             Debug.LogWarning(
                 $"Scene '{scene.name}' loaded, but no traveler tagged '{defaultTravelerTag}' was found.");
@@ -218,7 +259,7 @@ public class PortalManager : MonoBehaviour
             return;
         }
 
-        TeleportTraveler(travelerObject.transform, destinationPortal);
+        TeleportTraveler(traveler, destinationPortal);
     }
 
     private bool IsTravelerReady(EntityId travelerId)
@@ -236,5 +277,6 @@ public class PortalManager : MonoBehaviour
     {
         pendingScene = null;
         pendingDestinationPortalId = null;
+        pendingWorldChange = false;
     }
 }

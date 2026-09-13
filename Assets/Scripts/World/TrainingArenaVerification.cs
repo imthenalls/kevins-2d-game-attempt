@@ -13,7 +13,7 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// Runs integration checks against the saved training scene in Play mode, then exits without
 /// saving runtime changes. Results are written to Temp/training-arena-verification.txt.
-/// Unity setup: none. Open NewScene and use Tools > Training Arena > Verify In Play Mode.
+/// Unity setup: none. Open Overworld and use Tools > Training Arena > Verify In Play Mode.
 /// A Temp/training-arena-verify.request file requests the same check after compilation.
 /// Do not interact with the game during verification; it temporarily moves and damages the player.
 /// Runtime API: none. This editor-only runner removes itself when Play mode ends.
@@ -73,9 +73,9 @@ public sealed class TrainingArenaVerification : MonoBehaviour
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             throw new InvalidOperationException("Exit Play mode before starting verification.");
-        EditorSceneManager.OpenScene("Assets/Scenes/NewScene.unity", OpenSceneMode.Single);
+        EditorSceneManager.OpenScene("Assets/Scenes/Overworld.unity", OpenSceneMode.Single);
         if (GameObject.Find(ArenaRoot) == null)
-            throw new InvalidOperationException("The saved NewScene does not contain the training arena.");
+            throw new InvalidOperationException("The saved Overworld does not contain the training arena.");
         File.WriteAllText(Report, "Training arena integration verification\n");
         SessionState.SetBool(SessionKey, true);
         SessionState.SetBool(SpawnedKey, false);

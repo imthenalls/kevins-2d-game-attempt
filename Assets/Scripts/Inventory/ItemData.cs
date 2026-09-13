@@ -23,6 +23,13 @@ using UnityEngine;
 [System.Flags]
 public enum ItemFlags { None = 0, Unique = 1, QuestItem = 2, KeyItem = 4 }
 
+public enum ItemScope
+{
+    Shared,
+    WorldA,
+    WorldB,
+}
+
 [CreateAssetMenu(fileName = "NewItem", menuName = "Inventory/Item")]
 public class ItemData : ScriptableObject
 {
@@ -35,6 +42,13 @@ public class ItemData : ScriptableObject
     [Header("Classification")]
     public ItemType type;
     public ItemFlags flags;
+    [Tooltip("Shared items travel between worlds. Other items stay in their world's inventory.")]
+    public ItemScope scope = ItemScope.Shared;
+
+    public bool IsAvailableInWorld(WorldLayer world) =>
+        scope == ItemScope.Shared ||
+        (scope == ItemScope.WorldA && world == WorldLayer.WorldA) ||
+        (scope == ItemScope.WorldB && world == WorldLayer.WorldB);
 
     [Header("Stacking")]
     [Min(1)] public int maxStackSize = 99;

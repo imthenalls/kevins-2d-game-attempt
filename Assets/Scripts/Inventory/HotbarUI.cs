@@ -30,6 +30,7 @@ public class HotbarUI : MonoBehaviour
     private static HotbarModel model;
     private HotbarSlotUI[]     slotUIs;
     private PlayerController2D player;
+    private InventoryModel subscribedInventory;
 
     // ── Static API ────────────────────────────────────────────────────────────
 
@@ -71,13 +72,40 @@ public class HotbarUI : MonoBehaviour
 
         // Keep quantity labels in sync whenever the player's inventory changes
         if (InventoryUI.Model != null)
-            InventoryUI.Model.OnChanged += RefreshAll;
+        {
+            subscribedInventory = InventoryUI.Model;
+            subscribedInventory.OnChanged += RefreshAll;
+        }
+        InventoryUI.OnModelChanged += HandleInventoryModelChanged;
     }
 
     private void OnDestroy()
     {
-        if (InventoryUI.Model != null)
-            InventoryUI.Model.OnChanged -= RefreshAll;
+        if (subscribedInventory != null)
+            subscribedInventory.OnChanged -= RefreshAll;
+        InventoryUI.OnModelChanged -= HandleInventoryModelChanged;
+    }
+
+    private void HandleInventoryModelChanged(InventoryModel activeInventory)
+    {
+        if (subscribedInventory != null)
+            subscribedInventory.OnChanged -= RefreshAll;
+        subscribedInventory = activeInventory;
+        if (activeInventory != null)
+            activeInventory.OnChanged += RefreshAll;
+
+        WorldLayer world = WorldTravelState.Instance != null
+            ? WorldTravelState.Instance.CurrentWorld
+            : WorldLayer.WorldA;
+        for (int i = 0; i < HotbarModel.SlotCount; i++)
+        {
+            ItemData item = model.GetSlot(i);
+            if (item != null && !item.IsAvailableInWorld(world))
+                model.Clear(i);
+        }
+
+        player = FindAnyObjectByType<PlayerController2D>();
+        RefreshAll();
     }
 
     private void Update()

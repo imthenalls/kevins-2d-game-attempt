@@ -3,119 +3,64 @@ using UnityEngine;
 /// <summary>
 /// NPC behavior that walks the NPC to a random position within a radius each activation.
 /// Uses Rigidbody2D velocity so physics colliders stop it naturally.
-/// Casts the NPC's collider shape ahead each frame and abandons targets when movement stalls,
-/// preventing the NPC from continually pushing into walls or corners.
-/// Tries up to 8 random target positions on enter to find an unobstructed path.
-/// Flips the SpriteRenderer horizontally to face the direction of travel.
+/// Casts the NPC's collider shape ahead each frame and abandons targets when the body hits a wall
+/// or stalls, preventing the NPC from continually pushing into corners.
 ///
 /// Unity setup:
 ///   1. Add to an NPC GameObject alongside NpcBehaviorManager.
-///   2. Requires a Rigidbody2D: set Gravity Scale = 0, freeze Z rotation.
-///   3. Set Wander Radius (world units), Move Speed, and Arrival Threshold.
-///   4. Set Wall Layers to your obstacles layer so the raycast detects walls.
+///   2. Requires a Rigidbody2D: Gravity Scale = 0, freeze Z rotation (shared with NpcBehaviorBase).
+///   3. Set Wander Radius, Move Speed, and Arrival Threshold on this component.
+///   4. Set Wall Layers to your obstacles layer so the cast detects walls.
 ///   5. Adjust Wall Look Ahead (~half the NPC's collider radius works well).
 ///   6. Set Weight (0–100) relative to other behaviors on the same NPC.
-///   7. Sprite Renderer is auto-detected (self then children); assign manually if needed.
-///      flipX = false → facing right (default). flipX = true → facing left.
 /// </summary>
-[RequireComponent(typeof(Rigidbody2D))]
-public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
+public class NpcWanderBehavior : NpcBehaviorBase
 {
-    [SerializeField, Range(0f, 100f)] private float weight = 50f;
     [SerializeField] private float wanderRadius = 3f;
-    [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float arrivalThreshold = 0.2f;
-    /// <summary>How far ahead to raycast for walls. ~half the NPC width works well.</summary>
+    /// <summary>How far ahead to cast for walls. ~half the NPC width works well.</summary>
     [SerializeField] private float wallLookAhead = 0.3f;
     [SerializeField] private LayerMask wallLayers = ~0; // set to your walls layer in Inspector
-    [SerializeField] private SpriteRenderer spriteRenderer;
 
-    public float Weight => weight;
+    private Collider2D[] ownColliders;
+    private Vector2 target;
 
-    private Rigidbody2D _rb;
-    private Collider2D[] _ownColliders;
-    private Vector2 _target;
-    private bool _done;
-    private Vector2 _lastProgressPosition;
-    private float _stalledTime;
+    private static readonly RaycastHit2D[] hitBuffer = new RaycastHit2D[16];
 
-    private static readonly RaycastHit2D[] _hitBuffer = new RaycastHit2D[16];
-    private const float ProgressDistance = 0.01f;
-    private const float StalledTimeout = 0.5f;
-
-    private void Awake()
+    protected override void Awake()
     {
-        _rb = GetComponent<Rigidbody2D>();
-        _ownColliders = GetComponentsInChildren<Collider2D>();
-        if (spriteRenderer == null)
-            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        base.Awake();
+        ownColliders = GetComponentsInChildren<Collider2D>();
     }
 
-    public void OnEnter()
+    protected override void Enter()
     {
-        _done = false;
-        _stalledTime = 0f;
-        _lastProgressPosition = _rb.position;
-        _target = PickTarget();
+        target = PickTarget();
     }
 
-    public void Tick()
+    protected override void TickBehavior()
     {
-        Vector2 pos = _rb.position;
-        Vector2 toTarget = _target - pos;
-        float distance = toTarget.magnitude;
+        Vector2 position = Body.position;
 
-        if (distance <= arrivalThreshold)
+        if (Vector2.Distance(position, target) <= arrivalThreshold)
         {
-            Stop();
+            StopMoving();
+            Complete();
             return;
         }
 
-        Vector2 direction = toTarget / distance;
+        Vector2 direction = (target - position).normalized;
 
         // Cast the full body shape rather than a zero-width ray from its center.
         // This catches diagonal and edge contacts before physics pins the body to a wall.
-        if (HitsWall(pos, direction, wallLookAhead))
+        if (HitsWall(position, direction, wallLookAhead))
         {
-            Stop();
+            StopMoving();
+            Complete();
             return;
         }
 
-        if (HasStalled(pos))
-        {
-            Stop();
-            return;
-        }
-
-        if (spriteRenderer != null)
-            spriteRenderer.flipX = direction.x < 0f;
-
-        _rb.linearVelocity = direction * moveSpeed;
-    }
-
-    public void OnExit() => Stop();
-
-    public bool IsComplete() => _done;
-
-    // ----------------------------------------------------------------
-
-    private void Stop()
-    {
-        _rb.linearVelocity = Vector2.zero;
-        _done = true;
-    }
-
-    private bool HasStalled(Vector2 position)
-    {
-        if ((position - _lastProgressPosition).sqrMagnitude >= ProgressDistance * ProgressDistance)
-        {
-            _lastProgressPosition = position;
-            _stalledTime = 0f;
-            return false;
-        }
-
-        _stalledTime += Time.deltaTime;
-        return _stalledTime >= StalledTimeout;
+        MoveToward(target, moveSpeed);
     }
 
     /// <summary>
@@ -124,27 +69,27 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
     /// </summary>
     private Vector2 PickTarget()
     {
-        Vector2 origin = _rb.position;
+        Vector2 origin = Body.position;
         for (int i = 0; i < 8; i++)
         {
             Vector2 candidate = origin + Random.insideUnitCircle * wanderRadius;
             Vector2 direction = candidate - origin;
-            float dist = direction.magnitude;
-            if (dist < 0.01f) continue;
+            float distance = direction.magnitude;
+            if (distance < 0.01f)
+                continue;
 
-            if (!HitsWall(origin, direction / dist, dist))
+            if (!HitsWall(origin, direction / distance, distance))
                 return candidate;
         }
 
-        // All directions blocked — stay put and complete immediately
-        _done = true;
+        // All directions blocked — stay put and complete immediately.
+        Complete();
         return origin;
     }
 
     /// <summary>
     /// Returns true if any collider OTHER than this NPC is hit along the path.
     /// Uses each enabled, solid collider's real shape so the test matches the body footprint.
-    /// Uses a shared buffer to avoid allocations.
     /// </summary>
     private bool HitsWall(Vector2 origin, Vector2 direction, float distance)
     {
@@ -156,16 +101,16 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
         };
 
         bool castAnyBodyCollider = false;
-        foreach (Collider2D own in _ownColliders)
+        foreach (Collider2D own in ownColliders)
         {
             if (own == null || !own.enabled || own.isTrigger)
                 continue;
 
             castAnyBodyCollider = true;
-            int count = own.Cast(direction, filter, _hitBuffer, distance);
+            int count = own.Cast(direction, filter, hitBuffer, distance);
             for (int i = 0; i < count; i++)
             {
-                Collider2D hit = _hitBuffer[i].collider;
+                Collider2D hit = hitBuffer[i].collider;
                 if (hit != null && !IsOwnCollider(hit))
                     return true;
             }
@@ -175,10 +120,10 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
         // that has no enabled solid collider.
         if (!castAnyBodyCollider)
         {
-            int count = Physics2D.RaycastNonAlloc(origin, direction, _hitBuffer, distance, wallLayers);
+            int count = Physics2D.RaycastNonAlloc(origin, direction, hitBuffer, distance, wallLayers);
             for (int i = 0; i < count; i++)
             {
-                Collider2D hit = _hitBuffer[i].collider;
+                Collider2D hit = hitBuffer[i].collider;
                 if (hit != null && !hit.isTrigger && !IsOwnCollider(hit))
                     return true;
             }
@@ -189,7 +134,7 @@ public class NpcWanderBehavior : MonoBehaviour, INpcBehavior
 
     private bool IsOwnCollider(Collider2D candidate)
     {
-        foreach (Collider2D own in _ownColliders)
+        foreach (Collider2D own in ownColliders)
         {
             if (candidate == own)
                 return true;

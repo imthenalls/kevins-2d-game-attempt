@@ -6,6 +6,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 
 | Document | Contents |
 |---|---|
+| [Documents/UNITY_DEVELOPER_SKILL.md](Documents/UNITY_DEVELOPER_SKILL.md) | Unity 6 LTS development skill: architecture, performance, rendering, testing, and deployment guidance |
 | [Documents/PLAYER.md](Documents/PLAYER.md) | Player components, movement, interaction, stats UI |
 | [Documents/PLAYER_DASH.md](Documents/PLAYER_DASH.md) | Left Shift directional dash, distance/speed tuning, and movement-lock behavior |
 | [Documents/STATS.md](Documents/STATS.md) | EntityStats HP/MP system, events, and methods |
@@ -21,8 +22,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/TODO.md](Documents/TODO.md) | Planned features and backlog |
 | [Documents/SAVE_SYSTEM.md](Documents/SAVE_SYSTEM.md) | Save/load system, setup steps, extending save data |
 | [Documents/UNITY_COMPONENTS.md](Documents/UNITY_COMPONENTS.md) | Reference guide for all built-in Unity components |
-| [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock |
-| [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
+| [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock || [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
 | [Documents/WEAPON_SWING.md](Documents/WEAPON_SWING.md) | Equipped weapon swing animation, CombatAttacker timing, scene wiring, and tuning |
 | [Documents/NPC_MELEE_AI.md](Documents/NPC_MELEE_AI.md) | Wandering melee NPC behavior, proximity engagement, sword attacks, and scene wiring |
 | [Documents/NPC_HEALTH_BARS.md](Documents/NPC_HEALTH_BARS.md) | Automatic enemy HP bars, Inspector tuning, and combat behavior |
@@ -35,11 +35,18 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/ECONOMY_BALANCING_RULES.md](Documents/ECONOMY_BALANCING_RULES.md) | Soft economic resets, early difficulty, bounded RNG, economy workbook fields, and reward rules |
 | [Documents/TRADE_SYSTEM.md](Documents/TRADE_SYSTEM.md) | Atomic player/NPC item-for-mana trades, participants, validation, ledger, persistence, and quest events |
 | [Documents/WORLD_OBJECTS.md](Documents/WORLD_OBJECTS.md) | ItemPickup, WorldObject, IInteractable interface, InventoryHelper utility |
-| [Documents/SLIDING_DOORS.md](Documents/SLIDING_DOORS.md) | Reusable E-interactable single-panel sliding door and prefab setup |
+| [Documents/SLIDING_DOORS.md](Documents/SLIDING_DOORS.md) | Reusable E-interactable two-panel retracting gate, lock-state colors, and prefab setup |
+| [Documents/KEY_HOLDER.md](Documents/KEY_HOLDER.md) | IKeyHolder contract, entity-based key resolution for doors, and door use results |
+| [Documents/NPC_AI.md](Documents/NPC_AI.md) | NPC AI: NpcBehaviorBase + NpcPerception foundation, NpcPathfinder, NpcKeyring, NpcMemory, NpcUseDoorBehavior, and persisted lock knowledge |
+| [Documents/DOOR_PLACEMENT_BRUSH.md](Documents/DOOR_PLACEMENT_BRUSH.md) | Tile Palette brush for painting aligned functional sliding-door prefabs |
 | [Documents/KEYRING.md](Documents/KEYRING.md) | Slot-free player key storage, inventory viewer, door/quest routing, and save integration |
 | [Documents/ENEMY_LOOT_DROPS.md](Documents/ENEMY_LOOT_DROPS.md) | JSON-owned enemy loot, death cleanup, runtime loot piles, and pickup flow |
 | [Documents/WORLD_STATE.md](Documents/WORLD_STATE.md) | World State System: WorldStateDB, WorldStateKey, all WorldState components, quest integration |
 | [Documents/TRAINING_ARENA.md](Documents/TRAINING_ARENA.md) | Portal-linked training wing, key keeper, locked door, repeatable enemy spawner, and telegraphed dash enemy |
+| [Documents/TWO_WORLD_SYSTEM.md](Documents/TWO_WORLD_SYSTEM.md) | Two world layers, portal character switching, remembered positions, scoped inventories, and save integration |
+| [Documents/PLAYER_AVATARS.md](Documents/PLAYER_AVATARS.md) | Separate World A/World B avatar profiles, shared stats, per-world abilities, and generated player prefabs |
+| [Documents/ISOMETRIC_CONVERSION.md](Documents/ISOMETRIC_CONVERSION.md) | MMBN-style isometric presentation: fixed camera, 2:1 diamond tilemaps, upright sprites, Y-sort, and the Overworld rename |
+| [Documents/TILEMAP_RULES.md](Documents/TILEMAP_RULES.md) | Grid/Tilemap alignment rules: transforms must be at origin, place content via cells, and use the alignment validator |
 
 ---
 
@@ -68,6 +75,39 @@ Changes that require a graph update include (but are not limited to):
 - Adding or removing a whole component from a prefab.
 - Changing a key label shown as node text (e.g. `usePlayerInput`, `NpcType`, `Gravity`).
 - Adding an entirely new prefab archetype that belongs in the graph.
+
+## Tilemap Rules
+
+1. Every `Grid` and `Tilemap` GameObject must have local position `(0, 0, 0)`, rotation
+   identity, and scale `(1, 1, 1)`. Express all placement through **cell coordinates**
+   (`Tilemap.SetTile`, `Grid.CellToWorld`), never through transform offsets or scaling.
+2. This applies to scene tilemaps **and** tilemap palette prefabs. An offset on one tilemap
+   shifts it out of alignment with every other tilemap and every painted prefab sharing the
+   same cells.
+3. Code that creates Grids/Tilemaps (for example `WorldBSceneBuilder`, `TrainingArenaBuilder`)
+   must leave the new transform at its default and paint tiles at cells only.
+4. Run **Tools > World > Tilemap Alignment > Validate Open Scene** before saving scene changes.
+   Use **Normalize Open Scene** to bake a stray offset into cell coordinates and zero the
+   transform. See [Documents/TILEMAP_RULES.md](Documents/TILEMAP_RULES.md).
+
+## Editor Preview Rules
+
+1. A component that generates, positions, or resizes its own visual children at runtime
+   (gates/doors, portals, spawners, markers, etc.) **must also build that preview in the
+   editor**. Never generate visuals in `Awake` only.
+2. Implement the preview with `[ExecuteAlways]` plus a guarded `OnEnable` / `OnValidate` build,
+   or an editor utility. Rebuild only when the relevant settings change so the preview does not
+   churn or mark the scene dirty every frame.
+3. A designer must be able to see the object in the Scene view and position it **without
+   entering Play mode**. If the object is invisible in the editor, the rule is not met.
+4. Guard the editor build so it is safe when runtime dependencies are missing (for example no
+   `Grid` yet) and skip prefab-asset stages where there is no scene context. At runtime the same
+   build code runs; editor and play mode must not diverge.
+5. Prefer keeping the generated children serialized in the scene/prefab so the preview persists
+   even before scripts run.
+
+Reference implementation: `SlidingDoor` builds its gate cells with `[ExecuteAlways]` in both
+edit and play mode. See [Documents/SLIDING_DOORS.md](Documents/SLIDING_DOORS.md).
 
 ## Scripting Rules
 

@@ -70,10 +70,12 @@ public class EquipmentUI : MonoBehaviour
             return;
         }
         instance = this;
+        InventoryUI.OnModelChanged += HandleActiveInventoryChanged;
     }
 
     private void OnDestroy()
     {
+        InventoryUI.OnModelChanged -= HandleActiveInventoryChanged;
         UnbindEquipment();
         if (instance == this)
             instance = null;
@@ -288,6 +290,13 @@ public class EquipmentUI : MonoBehaviour
     }
 
     private void HandleEquipmentChanged(EquipSlotType _, ItemData __, ItemData ___) => RefreshAll();
+
+    private void HandleActiveInventoryChanged(InventoryModel _)
+    {
+        UnbindEquipment();
+        EnsureEquipmentBound();
+        RefreshAll();
+    }
 
     private void RefreshAll()
     {

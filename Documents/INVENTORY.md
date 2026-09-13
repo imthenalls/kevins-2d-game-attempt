@@ -11,6 +11,11 @@ Open the inventory and press the generated **Keyring** button to view all owned 
 
 The inventory is a grid-based system split cleanly into data and UI layers. The data model is pure C# with no Unity dependency — the UI layer subscribes to its `OnChanged` event and redraws.
 
+`InventoryUI` owns a World A model and a World B model. `InventoryUI.Model` always returns the
+active world's model, so existing pickups, quests, trades, and UI calls follow world travel
+without needing separate code paths. Items define an `ItemScope`: `WorldA`, `WorldB`, or
+`Shared`. Shared items move between the two models when the active world changes.
+
 ```
 InventoryUI (MonoBehaviour, singleton)
   └── InventoryModel (plain C#)       — grid of InventorySlots
@@ -78,6 +83,7 @@ bool hasKey = InventoryUI.Model.HasItem(goldenKeyData);
 | Description | Tooltip body text |
 | Type | `ItemType` enum — used for sorting and filtering |
 | Flags | `ItemFlags` bitmask: `None`, `Unique`, `Quest`, `Consumable` |
+| Scope | `Shared`, `WorldA`, or `WorldB`; controls which player inventory accepts the item |
 | Is Stackable | Enables stack merging |
 | Max Stack Size | Maximum per slot (ignored if not stackable) |
 

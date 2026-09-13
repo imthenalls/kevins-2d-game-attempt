@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
@@ -39,6 +41,9 @@ public class InventoryUI : MonoBehaviour
     /// <summary>Global access to the inventory data model.</summary>
     public static InventoryModel Model => instance != null ? instance.model : null;
 
+    /// <summary>Raised after world travel changes which inventory model the UI exposes.</summary>
+    public static event Action<InventoryModel> OnModelChanged;
+
     [Header("Grid Layout")]
     [SerializeField] private int rows    = 5;
     [SerializeField] private int columns = 6;
@@ -60,6 +65,8 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private KeyCode legacyToggleKey = KeyCode.I;
 
     private InventoryModel model;
+    private InventoryModel worldAModel;
+    private InventoryModel worldBModel;
     private InventorySlotUI[] slotUIs;
     private int dragFromIndex = -1;
     private int selectedSlotIndex = -1;
@@ -108,8 +115,12 @@ public class InventoryUI : MonoBehaviour
         if (playerController == null)
             playerController = FindAnyObjectByType<PlayerController2D>();
 
-        model = new InventoryModel(rows, columns);
+        worldAModel = new InventoryModel(rows, columns, ItemScope.WorldA);
+        worldBModel = new InventoryModel(rows, columns, ItemScope.WorldB);
+        model = GetModelForWorld(CurrentWorld);
         model.OnChanged += RefreshAllSlots;
+        if (WorldTravelState.Instance != null)
+            WorldTravelState.Instance.OnWorldChanged += HandleWorldChanged;
         PlayerKeyring.GetOrCreate(gameObject);
 
         SetupGridLayout();
@@ -158,6 +169,87 @@ public class InventoryUI : MonoBehaviour
     private void OnDisable()
     {
         SetPlayerMovementLocked(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (instance != this) return;
+        if (model != null)
+            model.OnChanged -= RefreshAllSlots;
+        if (WorldTravelState.Instance != null)
+            WorldTravelState.Instance.OnWorldChanged -= HandleWorldChanged;
+        instance = null;
+    }
+
+    public InventoryModel GetInventoryForWorld(WorldLayer world) => GetModelForWorld(world);
+
+    private WorldLayer CurrentWorld => WorldTravelState.Instance != null
+        ? WorldTravelState.Instance.CurrentWorld
+        : WorldLayer.WorldA;
+
+    private InventoryModel GetModelForWorld(WorldLayer world) =>
+        world == WorldLayer.WorldB ? worldBModel : worldAModel;
+
+    private void HandleWorldChanged(WorldLayer world)
+    {
+        InventoryModel nextModel = GetModelForWorld(world);
+        if (nextModel == null || nextModel == model) return;
+
+        MoveSharedItems(model, nextModel);
+        model.OnChanged -= RefreshAllSlots;
+        model = nextModel;
+        model.OnChanged += RefreshAllSlots;
+        playerController = FindAnyObjectByType<PlayerController2D>();
+        SetPlayerMovementLocked(IsOpen);
+
+        selectedSlotIndex = -1;
+        RebindSlotViews();
+        RefreshAllSlots();
+        OnModelChanged?.Invoke(model);
+    }
+
+    private static void MoveSharedItems(InventoryModel source, InventoryModel destination)
+    {
+        if (source == null || destination == null) return;
+
+        var sharedItems = new List<ItemData>();
+        for (int i = 0; i < source.SlotCount; i++)
+        {
+            InventorySlot slot = source.GetSlot(i);
+            if (!slot.IsEmpty && slot.item.scope == ItemScope.Shared &&
+                !sharedItems.Contains(slot.item))
+                sharedItems.Add(slot.item);
+        }
+
+        bool movedAny = false;
+        for (int i = 0; i < sharedItems.Count; i++)
+        {
+            ItemData item = sharedItems[i];
+            int quantity = source.CountItem(item);
+            if (source.TryTransferItemTo(destination, item, quantity, out _, out _))
+            {
+                movedAny = true;
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"[InventoryUI] Shared item '{item.itemId}' could not move because the " +
+                    "destination world's inventory is full.");
+            }
+        }
+
+        if (movedAny)
+        {
+            source.NotifyChanged();
+            destination.NotifyChanged();
+        }
+    }
+
+    private void RebindSlotViews()
+    {
+        if (slotUIs == null || model == null) return;
+        for (int i = 0; i < slotUIs.Length && i < model.SlotCount; i++)
+            slotUIs[i].Setup(i, model.GetSlot(i));
     }
 
     // -------------------------------------------------------------------------
@@ -319,6 +411,8 @@ public class InventoryUI : MonoBehaviour
 
     private void SetPlayerMovementLocked(bool locked)
     {
+        if (playerController == null || !playerController.gameObject.scene.IsValid())
+            playerController = FindAnyObjectByType<PlayerController2D>();
         if (playerController != null)
             playerController.SetMovementEnabled(!locked);
     }

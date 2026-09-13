@@ -31,6 +31,8 @@ public class SaveData
     // Version 2 unifies the former wallet balance and EntityStats MP into Wallet mana.
     // Version 3 adds persistent player equipment slots.
     // Version 4 adds the persistent slot-free player keyring.
+    // Version 5 adds two-world travel state and separate world inventories.
+    // Version 6 adds per-world avatar ability unlocks.
     // Missing fields deserialize as 0, so pre-unification saves are version 0.
     public int saveVersion;
 
@@ -40,6 +42,11 @@ public class SaveData
     // ── Player transform ─────────────────────────────────────────────────────
     public float playerX;
     public float playerY;
+
+    // ── Two-world state ──────────────────────────────────────────────────────
+    public string activeWorld = "WorldA";
+    public List<WorldPositionSaveEntry> worldPositions = new();
+    public List<WorldAbilitySaveEntry> worldAbilities = new();
 
     // ── Player stats ──────────────────────────────────────────────────────────
     public int playerHp;
@@ -64,6 +71,8 @@ public class SaveData
     // so they can be reloaded via Resources.Load<ItemData>("Items/<name>").
     // Place all ItemData ScriptableObjects inside Assets/Resources/Items/.
     public List<InventorySlotEntry> inventorySlots = new();
+    public List<InventorySlotEntry> worldAInventorySlots = new();
+    public List<InventorySlotEntry> worldBInventorySlots = new();
 
     // KeyItem ownership is stored outside the slot grid.
     public List<KeyringSaveEntry> playerKeys = new();
@@ -98,6 +107,27 @@ public class InventorySlotEntry
     public int    slotIndex;
     public string itemId;    // matches ItemData.itemId (registered in ItemDatabase)
     public int    quantity;
+}
+
+[Serializable]
+public class WorldPositionSaveEntry
+{
+    public string world;
+    public string scene;
+    public float x;
+    public float y;
+    public float z;
+}
+
+/// <summary>
+/// Serializable pairing of one world layer and one unlocked avatar ability ID.
+/// Unity setup: none; WorldTravelState creates and consumes these entries for save data.
+/// </summary>
+[Serializable]
+public class WorldAbilitySaveEntry
+{
+    public string world;
+    public string abilityId;
 }
 
 [Serializable]

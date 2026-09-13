@@ -20,7 +20,7 @@ flowchart TB
             BM --> WB
             BM --> IB
         end
-        subgraph PLAYER["Player Prefab"]
+        subgraph PLAYER["World A / World B Player Prefabs"]
             direction TB
             PC["PlayerController2D + Left Shift dash\n3 charges, 15s recharge each, 5 lengths at 6x speed\nruntime fading dash TrailRenderer child\nEquipmentManager + CombatAttacker\nPlayerVisual > WeaponVisual (equipped sprite + swing)\nruntime tapered red TrailRenderer child\nruntime blade PolygonCollider2D hitbox"]
             PI[PlayerInteractionController]
@@ -31,11 +31,15 @@ flowchart TB
             UI_P[EntityStatsUI]
             RB_P["Rigidbody2D / Gravity=0"]
             COL_P["Collider2D / Layer: Player"]
+            WC_P["WorldCharacter\nWorld-specific PlayerAvatarProfile"]
+            PAP["PlayerAvatarProfile\nspeed + dash + starting ability IDs"]
             PC -->|RequireComponent| ES_P
             PC -->|Awake finds/adds| MW_P
             ES_P -->|delegates MP API| MW_P
             CR_P -->|RequireComponent| ES_P
             ES_P --> UI_P
+            WC_P -->|applies| PAP
+            PAP -->|configures| PC
         end
     end
 
@@ -55,24 +59,36 @@ flowchart TB
         end
         subgraph PORTAL["Portal Prefab"]
             direction TB
-            PT[PortalTrigger2D]
+            PT["PortalTrigger2D\ndestination scene + portal ID\noptional world switch + unlock flag"]
             PM["PortalManager\nsingleton"]
+            WTS["WorldTravelState\nactive world + positions\nshared HP/mana + per-world abilities"]
+            WSI["WorldSceneIdentity\nsets layer when scene starts directly"]
+            WC["WorldCharacter\nWorldA or WorldB + avatar profile"]
             EP["ExitPoint\nchild Transform"]
             PT --> PM
             PT --> EP
+            PM --> WTS
+            WSI --> WTS
+            WTS -->|activates matching| WC
         end
-        subgraph DOOR["Sliding Door Prefab"]
+        subgraph DOOR["Grid Gate Prefabs"]
             direction TB
-            SD["SlidingDoor\nIInteractable / E toggles\nrequiredKeyId: golden_key"]
+            SD["SlidingDoor\nIInteractable / E toggles\nrequiredKeyId: golden_key\ngateId + Grid + DoorAxis + CellLength"]
+            DV["Cell variants\n1 / 2 / 3 / 4 cells\nroot on first cell, snaps via Grid.GetCellCenterWorld"]
+            DBR["Door Placement Brush\npaints cell-aligned prefab instances\nsets Grid + axis + length"]
             IDB["ItemDatabase + PlayerKeyring\nresolves and checks key"]
             DT["CircleCollider2D\nroot interaction trigger"]
-            DP["DoorPanel child\nSpriteRenderer"]
-            DB["BoxCollider2D\nsolid closed / disabled open"]
-            SD -->|slides| DP
+            GH["GateHalfA / GateHalfB\nretract by whole-cell vectors"]
+            GC["GateCell_N child\nSpriteRenderer (diamond sprite)"]
+            DC["PolygonCollider2D\nper-cell blocker, disabled when open"]
+            SD -->|retracts| GH
+            GH --> GC
+            DV --> SD
+            DBR --> DV
             SD -->|keeps available| DT
-            SD -->|toggles collision| DB
+            SD -->|toggles collision| DC
             SD -->|checks before opening| IDB
-            DP --> DB
+            GC --> DC
         end
     end
 
@@ -98,8 +114,9 @@ flowchart TB
         end
         subgraph SLOT["Slot Prefab (UI)"]
             direction TB
-            IUI["InventoryUI + scene EquipmentPanel\n3 serialized EquipmentSlotUI drop targets\nauto-creates keyring viewer"]
-            IM[InventoryModel]
+            IUI["InventoryUI + scene EquipmentPanel\nactive-world inventory view\nauto-creates keyring viewer"]
+            IM["WorldA InventoryModel\nWorldA + Shared items"]
+            IMB["WorldB InventoryModel\nWorldB + Shared items"]
             PK["PlayerKeyring\nslot-free KeyItem storage"]
             KUI["KeyringUI\nbutton + owned-key panel"]
             ISU[InventorySlotUI]
@@ -107,6 +124,7 @@ flowchart TB
             IC[InventoryContextMenu]
             IT["InventoryTooltip\nwhite box + non-blocking CanvasGroup"]
             IUI --> IM
+            IUI --> IMB
             IUI -->|adds at runtime| PK
             IUI -->|creates at runtime| KUI
             KUI --> PK

@@ -29,7 +29,7 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 4;
+    private const int CurrentSaveVersion = 6;
     private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
@@ -84,6 +84,15 @@ public class SaveManager : MonoBehaviour
                 data.wallet = wallet.GetSaveData();
         }
 
+        if (WorldTravelState.Instance != null)
+        {
+            if (player != null)
+                WorldTravelState.Instance.RememberTravelerPosition(player.transform);
+            data.activeWorld = WorldTravelState.Instance.CurrentWorld.ToString();
+            WorldTravelState.Instance.WritePositions(data.worldPositions);
+            WorldTravelState.Instance.WriteAbilities(data.worldAbilities);
+        }
+
         // World facts
         if (WorldStateManager.Instance != null)
         {
@@ -97,19 +106,19 @@ public class SaveManager : MonoBehaviour
 
         // Inventory — only occupied slots, keyed by itemId
         var inv = InventoryUI.Model;
+        if (InventoryUI.Instance != null)
+        {
+            WriteInventory(
+                InventoryUI.Instance.GetInventoryForWorld(WorldLayer.WorldA),
+                data.worldAInventorySlots);
+            WriteInventory(
+                InventoryUI.Instance.GetInventoryForWorld(WorldLayer.WorldB),
+                data.worldBInventorySlots);
+        }
         if (inv != null)
         {
-            for (int i = 0; i < inv.SlotCount; i++)
-            {
-                var slot = inv.GetSlot(i);
-                if (!slot.IsEmpty)
-                    data.inventorySlots.Add(new InventorySlotEntry
-                    {
-                        slotIndex = i,
-                        itemId    = slot.item.itemId,
-                        quantity  = slot.quantity,
-                    });
-            }
+            // Retained as an active-inventory compatibility snapshot for older builds.
+            WriteInventory(inv, data.inventorySlots);
         }
 
         // NPCs — position, stats (enemies), and inventory (vendors/loot)
@@ -211,6 +220,16 @@ public class SaveManager : MonoBehaviour
         var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
         TradeService.LoadSaveData(data.marketTransactions);
 
+        if (WorldTravelState.Instance != null)
+        {
+            WorldTravelState.Instance.LoadSharedPlayerState(
+                data.playerHp,
+                data.playerMaxHp,
+                BuildWalletSaveDataForLoad(data));
+            WorldTravelState.Instance.LoadAbilities(data.worldAbilities);
+            WorldTravelState.Instance.LoadState(data.activeWorld, data.worldPositions);
+        }
+
         // Restore world facts before the scene loads so quest conditions are
         // already correct when newly-placed triggers evaluate on Awake/Start.
         if (WorldStateManager.Instance != null)
@@ -253,6 +272,8 @@ public class SaveManager : MonoBehaviour
 
             if (player.TryGetComponent<Wallet>(out var wallet))
                 wallet.LoadSaveData(BuildWalletSaveDataForLoad(data));
+
+            WorldTravelState.Instance?.CaptureSharedPlayerState(player.transform);
         }
 
         // Keyring
@@ -270,36 +291,25 @@ public class SaveManager : MonoBehaviour
 
         // Inventory
         var inv = InventoryUI.Model;
-        if (inv != null)
+        if (InventoryUI.Instance != null)
         {
-            // Clear all slots first
-            for (int i = 0; i < inv.SlotCount; i++)
-                inv.GetSlot(i).Clear();
+            InventoryModel worldA = InventoryUI.Instance.GetInventoryForWorld(WorldLayer.WorldA);
+            InventoryModel worldB = InventoryUI.Instance.GetInventoryForWorld(WorldLayer.WorldB);
+            ClearInventory(worldA);
+            ClearInventory(worldB);
 
-            // Restore occupied slots via ItemDatabase
-            foreach (var entry in data.inventorySlots)
+            if (data.saveVersion >= 5)
             {
-                var item = ItemDatabase.Instance != null
-                    ? ItemDatabase.Instance.Get(entry.itemId)
-                    : null;
-
-                if (item == null)
-                {
-                    Debug.LogWarning($"[SaveManager] Item not found in ItemDatabase: '{entry.itemId}'");
-                    continue;
-                }
-
-                // Migration for saves created before version 4, when keys used normal slots.
-                if ((item.flags & ItemFlags.KeyItem) != 0)
-                {
-                    if (!keyring.HasKey(item.itemId))
-                        keyring.AddKey(item, entry.quantity);
-                    continue;
-                }
-                inv.GetSlot(entry.slotIndex).Set(item, entry.quantity);
+                RestoreInventory(worldA, data.worldAInventorySlots, keyring, data.saveVersion);
+                RestoreInventory(worldB, data.worldBInventorySlots, keyring, data.saveVersion);
+            }
+            else
+            {
+                RestoreInventory(inv, data.inventorySlots, keyring, data.saveVersion);
             }
 
-            inv.ForceRefresh();
+            worldA.ForceRefresh();
+            worldB.ForceRefresh();
         }
 
         // NPCs — restore position, stats, and inventory
@@ -317,7 +327,11 @@ public class SaveManager : MonoBehaviour
                         continue;
 
                     ItemData item = ItemDatabase.Instance?.Get(entry.itemId);
-                    if (item == null || !item.IsEquip || item.equipSlot != slotType)
+                    WorldLayer activeWorld = WorldTravelState.Instance != null
+                        ? WorldTravelState.Instance.CurrentWorld
+                        : WorldLayer.WorldA;
+                    if (item == null || !item.IsEquip || item.equipSlot != slotType ||
+                        !item.IsAvailableInWorld(activeWorld))
                     {
                         Debug.LogWarning($"[SaveManager] Invalid equipped item '{entry.itemId}' for slot '{entry.slot}'.");
                         continue;
@@ -387,12 +401,86 @@ public class SaveManager : MonoBehaviour
             foreach (var entry in data.hotbarSlots)
             {
                 var item = ItemDatabase.Instance?.Get(entry.itemId);
-                if (item != null)
+                WorldLayer activeWorld = WorldTravelState.Instance != null
+                    ? WorldTravelState.Instance.CurrentWorld
+                    : WorldLayer.WorldA;
+                if (item != null && item.IsAvailableInWorld(activeWorld))
                     HotbarUI.AssignSlot(entry.slotIndex, item);
             }
         }
 
         Debug.Log("[SaveManager] Scene state restored.");
+    }
+
+    private static void WriteInventory(
+        InventoryModel inventory,
+        List<InventorySlotEntry> destination)
+    {
+        if (inventory == null || destination == null) return;
+        destination.Clear();
+        for (int i = 0; i < inventory.SlotCount; i++)
+        {
+            InventorySlot slot = inventory.GetSlot(i);
+            if (!slot.IsEmpty)
+            {
+                destination.Add(new InventorySlotEntry
+                {
+                    slotIndex = i,
+                    itemId = slot.item.itemId,
+                    quantity = slot.quantity,
+                });
+            }
+        }
+    }
+
+    private static void ClearInventory(InventoryModel inventory)
+    {
+        if (inventory == null) return;
+        for (int i = 0; i < inventory.SlotCount; i++)
+            inventory.GetSlot(i).Clear();
+    }
+
+    private static void RestoreInventory(
+        InventoryModel inventory,
+        List<InventorySlotEntry> entries,
+        PlayerKeyring keyring,
+        int saveVersion)
+    {
+        if (inventory == null || entries == null) return;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            InventorySlotEntry entry = entries[i];
+            ItemData item = ItemDatabase.Instance != null
+                ? ItemDatabase.Instance.Get(entry.itemId)
+                : null;
+
+            if (item == null)
+            {
+                Debug.LogWarning($"[SaveManager] Item not found in ItemDatabase: '{entry.itemId}'");
+                continue;
+            }
+
+            if ((item.flags & ItemFlags.KeyItem) != 0)
+            {
+                if (saveVersion < 4 && !keyring.HasKey(item.itemId))
+                    keyring.AddKey(item, entry.quantity);
+                continue;
+            }
+
+            if (entry.slotIndex < 0 || entry.slotIndex >= inventory.SlotCount)
+            {
+                Debug.LogWarning($"[SaveManager] Invalid inventory slot {entry.slotIndex} for '{entry.itemId}'.");
+                continue;
+            }
+
+            if (!inventory.Accepts(item))
+            {
+                Debug.LogWarning($"[SaveManager] Item '{entry.itemId}' does not belong in this world inventory.");
+                continue;
+            }
+
+            inventory.GetSlot(entry.slotIndex).Set(item, entry.quantity);
+        }
     }
 
     // ── Serialization helpers ─────────────────────────────────────────────────

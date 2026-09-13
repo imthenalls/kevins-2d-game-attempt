@@ -6,6 +6,10 @@
 the direction their visual is currently facing. Movement input is ignored during the short
 dash, and normal movement resumes immediately afterward.
 
+When the player has a `WorldCharacter` profile, the active world's profile supplies all dash
+values and may disable dashing completely. This allows the two player avatars to behave
+differently while using the same tested movement code.
+
 The player begins with three dash charges. Each dash consumes one charge, and one missing
 charge returns every 15 seconds until all three are restored. The default dash travels five
 player lengths at six times the current movement speed. The player length is measured at

@@ -108,6 +108,9 @@ public class ItemDatabase : MonoBehaviour
             data.maxStackSize = entry.maxStackSize > 0 ? entry.maxStackSize : 1;
             data.sellValue    = entry.sellValue;
             data.flags        = ParseFlags(entry.flags);
+            data.scope        = Enum.TryParse(entry.worldScope, true, out ItemScope scope)
+                ? scope
+                : ItemScope.Shared;
 
             if (!string.IsNullOrEmpty(entry.iconPath))
             {
@@ -249,6 +252,7 @@ internal class ItemEntry
     public int      maxStackSize;
     public int      sellValue;
     public string[] flags;        // Unique | QuestItem | KeyItem
+    public string   worldScope;   // Shared | WorldA | WorldB; missing defaults to Shared
     public string   iconPath;     // optional Resources path for the icon sprite
     // equipment fields (only read when type == Equipment)
     public string   equipSlot;    // Weapon | Armor | Accessory

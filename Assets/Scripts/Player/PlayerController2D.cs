@@ -50,6 +50,7 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     [SerializeField, Min(0f)] private float facingInputDeadZone = 0.01f;
 
     [Header("Dash")]
+    [SerializeField] private bool dashEnabled = true;
     [SerializeField, Min(0.1f)] private float dashDistanceInPlayerLengths = 5f;
     [SerializeField, Min(1f)] private float dashSpeedMultiplier = 6f;
     [SerializeField, Min(0f)] private float dashCooldown = 0.4f;
@@ -86,6 +87,22 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     public string TradeParticipantId => "player";
     public Wallet TradeWallet => ManaWallet;
     public InventoryModel TradeInventory => InventoryUI.Model;
+
+    /// <summary>Applies movement and dash tuning from the active world's avatar profile.</summary>
+    public void ApplyAvatarProfile(PlayerAvatarProfile profile)
+    {
+        if (profile == null) return;
+
+        moveSpeed = Mathf.Max(0f, profile.MoveSpeed);
+        dashEnabled = profile.DashEnabled;
+        dashDistanceInPlayerLengths = Mathf.Max(0.1f, profile.DashDistanceInPlayerLengths);
+        dashSpeedMultiplier = Mathf.Max(1f, profile.DashSpeedMultiplier);
+        dashCooldown = Mathf.Max(0f, profile.DashCooldown);
+        maxDashCharges = Mathf.Max(1, profile.MaxDashCharges);
+        dashRechargeSeconds = Mathf.Max(0.1f, profile.DashRechargeSeconds);
+        currentDashCharges = maxDashCharges;
+        dashRechargeRemaining = 0f;
+    }
 
     /// <summary>Movement speed in units/s. Can be read or overridden at runtime (e.g. by SceneRulesManager).</summary>
     public float MoveSpeed
@@ -184,7 +201,7 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
         if (moveInput.sqrMagnitude > facingInputDeadZone * facingInputDeadZone)
             lastMovementDirection = moveInput.normalized;
 
-        if (!isDashing && currentDashCharges > 0 &&
+        if (dashEnabled && !isDashing && currentDashCharges > 0 &&
             dashCooldownRemaining <= 0f && WasDashPressedThisFrame())
             BeginDash();
     }

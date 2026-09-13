@@ -7,6 +7,7 @@ JSON database and no separate local portal implementation.
 
 ```text
 PortalTrigger2D detects a traveler
+  -> world-changing routes wait for G while the traveler remains in the trigger
   -> PortalManager reads the component's destination
   -> destination scene loads when necessary
   -> destination PortalTrigger2D is found by its stable ID
@@ -29,6 +30,13 @@ forced to be a trigger.
 | Additional Incoming Sources | Optional notes for NPCs, quests, or scripted events that send travelers here |
 | Required Tag | Traveler tag, normally `Player` |
 | Travel Cooldown | Prevents immediate reuse |
+| Changes World | Switches the active world, character, and inventory after travel |
+| Destination World | World A or World B when Changes World is enabled |
+| Required Unlock Flag | Optional true WorldStateManager flag required for travel |
+
+Portals with **Changes World** enabled require the player to stand inside the trigger and
+press **G**. Leaving the trigger cancels the pending interaction. Portals with **Changes
+World** disabled continue to activate immediately on contact.
 
 Portal IDs should describe their location rather than their order. Prefer
 `east_marsh_south_gate` over `portal_a`.
@@ -74,6 +82,11 @@ is used by NPC dialogue and scripted travel.
 
 Cross-scene object references are not required. The scene name and stable portal
 ID are resolved after the destination scene loads.
+
+For a two-world route, enable **Changes World** and select **Destination World** on each side.
+`WorldTravelState` remembers the departing world's position, activates the destination world's
+`WorldCharacter`, and causes `InventoryUI` to expose that world's inventory. See
+[TWO_WORLD_SYSTEM.md](TWO_WORLD_SYSTEM.md).
 
 ## Dialogue travel
 

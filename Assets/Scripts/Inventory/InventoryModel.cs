@@ -21,6 +21,8 @@ public class InventoryModel
     public int SlotCount => Rows * Columns;
 
     private readonly InventorySlot[] slots;
+    private readonly bool restrictItemScope;
+    private readonly ItemScope acceptedScope;
 
     public event Action OnChanged;
 
@@ -31,6 +33,13 @@ public class InventoryModel
         slots = new InventorySlot[rows * columns];
         for (int i = 0; i < slots.Length; i++)
             slots[i] = new InventorySlot();
+    }
+
+    public InventoryModel(int rows, int columns, ItemScope worldScope)
+        : this(rows, columns)
+    {
+        restrictItemScope = true;
+        acceptedScope = worldScope;
     }
 
     public InventorySlot GetSlot(int index) => slots[index];
@@ -47,6 +56,7 @@ public class InventoryModel
     public int AddItem(ItemData item, int amount = 1)
     {
         if (item == null || amount <= 0) return amount;
+        if (!Accepts(item)) return amount;
         int leftover = AddItemWithoutNotification(item, amount);
         OnChanged?.Invoke();
         return leftover;
@@ -59,6 +69,7 @@ public class InventoryModel
     public bool CanAddItem(ItemData item, int amount = 1)
     {
         if (item == null || amount <= 0) return false;
+        if (!Accepts(item)) return false;
         if ((item.flags & ItemFlags.Unique) != 0 &&
             (amount > 1 || CountItem(item) > 0))
         {
@@ -90,6 +101,13 @@ public class InventoryModel
         }
 
         return false;
+    }
+
+    public bool Accepts(ItemData item)
+    {
+        return item != null && (!restrictItemScope ||
+               item.scope == ItemScope.Shared ||
+               item.scope == acceptedScope);
     }
 
     private int AddItemWithoutNotification(ItemData item, int amount)

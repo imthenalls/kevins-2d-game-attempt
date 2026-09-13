@@ -4,6 +4,10 @@
 
 The player is built from three independent components that live on the same GameObject. Each has a single responsibility and communicates through direct references, not events.
 
+World A and World B player roots also use `WorldCharacter` with different
+`PlayerAvatarProfile` assets. The profile overrides movement and dash tuning at startup. See
+[PLAYER_AVATARS.md](PLAYER_AVATARS.md).
+
 ```
 Player (GameObject)
   ├── Rigidbody2D             (Body Type: Dynamic, Gravity Scale: 0, Freeze Rotation Z)
@@ -39,6 +43,9 @@ Handles top-down movement via `Rigidbody2D.linearVelocity`. Supports both the ne
 | Dash Cooldown | 0.4 | Seconds before another dash can begin |
 | Max Dash Charges | 3 | Stored dashes available when fully recharged |
 | Dash Recharge Seconds | 15 | Time required to restore each missing dash |
+
+These values are fallback Inspector values. A `WorldCharacter` profile overrides them for that
+avatar when play begins.
 
 ### API
 

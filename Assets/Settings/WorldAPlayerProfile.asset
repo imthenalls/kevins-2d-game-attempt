@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb27a6f705e34885921652e1373897a1, type: 3}
+  m_Name: WorldAPlayerProfile
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerAvatarProfile
+  avatarId: world_a_player
+  world: 0
+  moveSpeed: 6
+  dashEnabled: 1
+  dashDistanceInPlayerLengths: 5
+  dashSpeedMultiplier: 6
+  dashCooldown: 0.4
+  maxDashCharges: 3
+  dashRechargeSeconds: 15
+  startingAbilityIds:
+  - interact
+  - physical_attack
+  - dash

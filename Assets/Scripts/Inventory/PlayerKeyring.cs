@@ -15,13 +15,20 @@ using UnityEngine;
 ///   Clear(), GetEntries(), and OnChanged.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class PlayerKeyring : MonoBehaviour
+public sealed class PlayerKeyring : MonoBehaviour, IKeyHolder
 {
     private static PlayerKeyring instance;
     private readonly Dictionary<string, int> keys = new(StringComparer.OrdinalIgnoreCase);
 
     public static PlayerKeyring Instance => instance;
     public event Action OnChanged;
+
+    // IKeyHolder forwards to the existing OnChanged event so keyring UI keeps working.
+    event Action IKeyHolder.OnKeysChanged
+    {
+        add => OnChanged += value;
+        remove => OnChanged -= value;
+    }
 
     /// <summary>Finds or adds the persistent player keyring to the supplied owner.</summary>
     public static PlayerKeyring GetOrCreate(GameObject owner = null)

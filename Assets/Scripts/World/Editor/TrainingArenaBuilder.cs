@@ -8,9 +8,9 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Authors the training wing in NewScene using the existing square tile and Unity's default
+/// Authors the training wing in Overworld using the existing square tile and Unity's default
 /// square sprite. Creates ordinary editable scene objects and a reusable enemy prefab.
-/// Unity setup: none. Use Tools > Training Arena > Build Missing Arena in the open NewScene.
+/// Unity setup: none. Use Tools > Training Arena > Build Missing Arena in the open Overworld.
 /// It refuses to duplicate an existing wing. A Temp/training-arena-build.request file also
 /// requests this command after script compilation. It never runs without an explicit request.
 /// Runtime API: none; this class is editor-only. Build saves the scene and prefab.
@@ -48,8 +48,8 @@ public static class TrainingArenaBuilder
     public static void Build()
     {
         Scene scene = SceneManager.GetActiveScene();
-        if (EditorApplication.isPlayingOrWillChangePlaymode || scene.path != "Assets/Scenes/NewScene.unity")
-            throw new InvalidOperationException("Open NewScene outside Play mode first.");
+        if (EditorApplication.isPlayingOrWillChangePlaymode || scene.path != "Assets/Scenes/Overworld.unity")
+            throw new InvalidOperationException("Open Overworld outside Play mode first.");
         if (GameObject.Find(ArenaRoot) != null) throw new InvalidOperationException("Training arena already exists.");
         square = AssetDatabase.LoadAssetAtPath<Sprite>("Packages/com.unity.2d.sprite/Editor/ObjectMenuCreation/DefaultAssets/Textures/Square.png");
         material = AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
@@ -93,19 +93,15 @@ public static class TrainingArenaBuilder
         var doorObject = (GameObject)PrefabUtility.InstantiatePrefab(doorPrefab, scene);
         doorObject.name = "Training Arena Locked Door";
         doorObject.transform.SetParent(root.transform);
-        doorObject.transform.position = new Vector3(56.5f, 0.5f, 0);
-        doorObject.transform.rotation = Quaternion.Euler(0, 0, 90);
+        Grid trainingGrid = grid.GetComponent<Grid>();
+        doorObject.transform.position = trainingGrid.GetCellCenterWorld(trainingGrid.WorldToCell(doorObject.transform.position));
+        doorObject.transform.rotation = Quaternion.identity;
         var door = doorObject.GetComponent<SlidingDoor>();
         Set(door, "requiredKeyId", "training_arena_key"); Set(door, "displayName", "Arena Door");
-        Set(door, "openOffset", new Vector2(3.3f, 0));
-        var panel = doorObject.transform.GetChild(0);
-        panel.localScale = new Vector3(3.05f, 0.7f, 1);
-        var panelRenderer = panel.GetComponent<SpriteRenderer>();
-        panelRenderer.sprite = square; panelRenderer.sharedMaterial = material;
-        panelRenderer.color = new Color(0.6f, 0.45f, 0.2f); panelRenderer.sortingOrder = 3;
+        Set(door, "grid", trainingGrid);
+        Set(door, "cellLength", 3);
+        Set(door, "gateSprite", AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Isometric/GateDiamond.png"));
         PrefabUtility.RecordPrefabInstancePropertyModifications(door);
-        PrefabUtility.RecordPrefabInstancePropertyModifications(panel);
-        PrefabUtility.RecordPrefabInstancePropertyModifications(panelRenderer);
 
         NpcController enemyPrefab = CreateEnemyPrefab();
         var box = Box("Green Training Box", new Vector2(64, 4), Vector2.one, Color.green, root.transform);
