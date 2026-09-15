@@ -136,7 +136,11 @@ public static class TilemapAlignmentTool
         return new Vector2Int(Mathf.RoundToInt(a), Mathf.RoundToInt(b));
     }
 
-    private static void ShiftTiles(Tilemap tilemap, Vector2Int shift)
+    /// <summary>
+    /// Shifts every painted tile in the tilemap by a whole-cell vector, preserving the tiles and
+    /// leaving the transform at the origin. Used by Normalize and the Tilemap Offset window.
+    /// </summary>
+    public static void ShiftTiles(Tilemap tilemap, Vector2Int shift)
     {
         var snapshot = new System.Collections.Generic.List<(Vector3Int cell, TileBase tile)>();
         foreach (Vector3Int c in tilemap.cellBounds.allPositionsWithin)

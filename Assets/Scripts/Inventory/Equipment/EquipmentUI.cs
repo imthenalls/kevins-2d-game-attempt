@@ -43,7 +43,7 @@ public class EquipmentUI : MonoBehaviour
     {
         if (instance == null)
         {
-            instance = FindAnyObjectByType<EquipmentUI>();
+            instance = FindFirstObjectByType<EquipmentUI>(FindObjectsInactive.Include);
             if (instance == null)
             {
                 Canvas canvas = InventoryUI.Instance != null
@@ -71,6 +71,10 @@ public class EquipmentUI : MonoBehaviour
         }
         instance = this;
         InventoryUI.OnModelChanged += HandleActiveInventoryChanged;
+
+        // Start hidden so the panel never covers the scene before the inventory opens.
+        if (panel != null)
+            panel.gameObject.SetActive(false);
     }
 
     private void OnDestroy()

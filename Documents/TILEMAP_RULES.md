@@ -49,8 +49,25 @@ map.SetTile(new Vector3Int(x, y, 0), tile);           // placement via cells onl
 - **Normalize Open Scene** bakes a tilemap's local offset into its tile cell coordinates
   (rounding to whole cells), then zeroes the transform. The visual position is preserved to
   within half a cell.
+- **Offset Selected Tilemaps** opens a window that shifts the selected tilemap(s)' painted cells
+  by a whole-cell offset. Tiles move; transforms stay at origin; scene objects do not move.
 
-See `Assets/Scripts/World/Editor/TilemapAlignmentTool.cs`.
+See `Assets/Scripts/World/Editor/TilemapAlignmentTool.cs` and
+`Assets/Scripts/World/Editor/TilemapOffsetWindow.cs`.
+
+## Moving A Tilemap / Room
+
+To relocate painted tiles, shift their **cells** — never the transform:
+
+1. Select one or more Tilemaps (or a Grid) in the Hierarchy.
+2. **Tools > World > Tilemap Alignment > Offset Selected Tilemaps**, enter `X`/`Y`, click
+   **Offset Selected** (Ctrl+Z undoes it).
+3. Shift every tilemap that shares the cells together, or they drift apart.
+4. Scene objects placed by world position (NPCs, doors, portals, spawners) are **not** moved by
+   this — move them separately (e.g. by the same world offset).
+
+Programmatically, `TilemapAlignmentTool.ShiftTiles(tilemap, new Vector2Int(dx, dy))` performs
+the same shift.
 
 ## History
 
