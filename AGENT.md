@@ -38,6 +38,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/SLIDING_DOORS.md](Documents/SLIDING_DOORS.md) | Reusable E-interactable two-panel retracting gate, lock-state colors, and prefab setup |
 | [Documents/KEY_HOLDER.md](Documents/KEY_HOLDER.md) | IKeyHolder contract, entity-based key resolution for doors, and door use results |
 | [Documents/NPC_AI.md](Documents/NPC_AI.md) | NPC AI: NpcBehaviorBase + NpcPerception foundation, NpcPathfinder, NpcKeyring, NpcMemory, NpcUseDoorBehavior, and persisted lock knowledge |
+| [Documents/MODEL_VIEW_SLICE.md](Documents/MODEL_VIEW_SLICE.md) | Model/view architecture: pure-C# Game.Core models (no UnityEngine), GameSession, Unity adapters, and the NPC health + logical-cell slice |
 | [Documents/DOOR_PLACEMENT_BRUSH.md](Documents/DOOR_PLACEMENT_BRUSH.md) | Tile Palette brush for painting aligned functional sliding-door prefabs |
 | [Documents/KEYRING.md](Documents/KEYRING.md) | Slot-free player key storage, inventory viewer, door/quest routing, and save integration |
 | [Documents/ENEMY_LOOT_DROPS.md](Documents/ENEMY_LOOT_DROPS.md) | JSON-owned enemy loot, death cleanup, runtime loot piles, and pickup flow |
@@ -50,12 +51,58 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 
 ---
 
+## Repository Layout
+
+`Assets/Scripts` is split into a **data** layer and a **presentation** layer, each with its own
+assembly definition:
+
+| Folder | Assembly | Contains |
+|---|---|---|
+| `Assets/Scripts/GameData/` | `Game.Data` (`noEngineReferences: true`) | Pure C# domain: models, value types, interfaces, services, and save DTOs. **No UnityEngine.** |
+| `Assets/Scripts/GamePresentation/` | `Game.Presentation` | All MonoBehaviours, UI, adapters, controllers, views, and content definitions (ScriptableObjects). |
+| `Assets/Scripts/GamePresentation/Editor/` | `Game.Presentation.Editor` (Editor-only) | Editor tools and scene/prefab builders. |
+
+Rules:
+
+1. If it uses UnityEngine (MonoBehaviour, ScriptableObject, Vector2, etc.), it belongs in
+   `GamePresentation`.
+2. Authoritative saveable state belongs in `GameData` as a plain C# model. See
+   [Documents/MODEL_VIEW_SLICE.md](Documents/MODEL_VIEW_SLICE.md).
+3. `GameData` must never reference `Game.Presentation` or UnityEngine — the compiler enforces this
+   via `noEngineReferences`.
+4. Data models keep the `Game.Core` C# namespace even though the assembly is `Game.Data`.
+5. Move scripts with their `.meta` files so Unity GUID references (scenes, prefabs) survive.
+6. Gameplay **tuning/stat values** belong in a `[Serializable]` config class in `GameData`
+   (e.g. `PlayerMovementConfig`, `CombatAttackerConfig`). The MonoBehaviour holds a
+   `[SerializeField]` config field and reads it; it may keep only Unity-only references
+   (Transform, LayerMask, SpriteRenderer). Unity-native value types are stored in pure form
+   (KeyCode as int, Color as RGBA floats).
+
 ## Safety Rules
 
 1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.
 2. Default to script-only changes for gameplay updates.
 3. If a task would require scene edits, stop and ask for confirmation first.
-4. Do not use Unity UI automation or computer-use automation to control the Unity Editor. Make project changes through files and provide manual Unity verification steps when editor interaction is required.
+4. Do not use Unity **UI or computer-use automation** to drive the Editor. Use the API-based automation in **Unity Editor Automation** below instead.
+
+## Unity Editor Automation
+
+Primary channel: the official **Unity CLI + Pipeline package** (`com.unity.pipeline`).
+
+- Binary: `C:\Users\Kevin\AppData\Local\Unity\bin\unity.exe` (winget/PATH on install; call by full path until a terminal restart).
+- Verify the connection: `unity pipeline list` (expect a Server Port and Server Reachable = true).
+- List commands: `unity command` (built-ins plus project custom commands).
+- Common calls:
+  - `unity command editor_status`
+  - `unity command capture_scene_view --width 1280 --height 720 --save_path Assets/LLM/Bridge/Screenshots/sceneview.png`
+  - `unity command capture_game_view --source screen --save_path Assets/.../gameview.png` (includes overlay UI; Play Mode only)
+  - `unity command console --tail 50`
+  - `unity command <name> --non-interactive`
+- Capture `save_path` values must be inside the project root.
+- `eval` / `eval_file` execute arbitrary C# against the live Editor — treat like remote code execution and keep it local.
+- The Pipeline package is local-development tooling; it is not shipped with the game.
+- Bridge fallback: the file-based Unity Bridge (`unity-cmd.ps1`, `Assets/LLM/Bridge/`) remains available if the CLI server is down.
+- Scene and prefab edits still require an explicit request (see Safety Rules above).
 
 ## Documentation Rules
 
@@ -153,7 +200,7 @@ This project is a **2D top-down** game.
   - Gravity Scale: 0
   - Freeze Rotation Z: enabled
 - Add a collider (`BoxCollider2D` or `CapsuleCollider2D`)
-- Add `Assets/Scripts/Player/PlayerController2D.cs`.
+- Add `Assets/Scripts/GamePresentation/Player/PlayerController2D.cs`.
 
 ### Input
 - Movement: `WASD` or Arrow Keys

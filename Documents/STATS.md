@@ -1,5 +1,9 @@
 # Stats System (HP / MP)
 
+> **Game.Data config:** HP/MP tuning lives in the pure-C# `Game.Core.EntityStatsConfig`
+> (`Game.Data` assembly) and appears under **Settings** in the Inspector. `EntityStats` keeps only
+> its runtime flags and Unity references.
+
 ## Overview
 
 `EntityStats` tracks HP and exposes a compatible MP API for players and NPCs. When a Wallet exists on the same entity, MP delegates to that canonical mana account. Entities without a Wallet retain a local MP pool. It fires C# events on every change so UI and gameplay systems do not need to poll.
@@ -8,7 +12,7 @@
 
 ## EntityStats
 
-**File:** `Assets/Scripts/Entity/EntityStats.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/EntityStats.cs`
 
 ### Inspector fields
 
@@ -84,7 +88,7 @@ bool stats.IsAlive // Hp > 0
 
 ## EntityStatsUI
 
-**File:** `Assets/Scripts/Entity/EntityStatsUI.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/EntityStatsUI.cs`
 
 Subscribes to `EntityStats` events and drives two `Image` fill amounts (0–1).
 

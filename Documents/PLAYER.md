@@ -22,11 +22,17 @@ Player (GameObject)
 
 ## PlayerController2D
 
-**File:** `Assets/Scripts/Player/PlayerController2D.cs`
+**File:** `Assets/Scripts/GamePresentation/Player/PlayerController2D.cs`
 
 Handles top-down movement via `Rigidbody2D.linearVelocity`. Supports both the new Input System and legacy `Input` API via compile-time guards.
 
-### Inspector fields
+> Movement, facing, and dash tuning lives in the pure-C# `Game.Core.PlayerMovementConfig` (the
+> `Game.Data` assembly — no UnityEngine). In the Inspector these values appear under **Settings**.
+> The only Unity-only field kept on the component is **Visual Transform** (a scene reference).
+> Because `Game.Data` cannot reference UnityEngine types, the legacy dash key is stored as an
+> `int` KeyCode and the trail color as RGBA floats.
+
+### Settings fields (`PlayerMovementConfig`)
 
 | Field | Default | Description |
 |---|---|---|
@@ -79,7 +85,7 @@ Pressing Left Shift dashes in the direction `PlayerVisual` currently faces. See
 
 ## PlayerInteractionController
 
-**File:** `Assets/Scripts/Player/PlayerInteractionController.cs`
+**File:** `Assets/Scripts/GamePresentation/Player/PlayerInteractionController.cs`
 
 Runs an `OverlapCircleNonAlloc` search each frame the player presses E. Finds the nearest `NpcDialogue` within range, then drives the dialogue loop until the conversation ends or the player walks away.
 
@@ -113,7 +119,7 @@ Runs an `OverlapCircleNonAlloc` search each frame the player presses E. Finds th
 
 ## EntityStats (Player)
 
-**File:** `Assets/Scripts/Entity/EntityStats.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/EntityStats.cs`
 
 See [STATS.md](STATS.md) for full documentation. On the player, configure `Max Hp`, `Starting Hp`, `Max Mp`, `Starting Mp` from the Inspector. `Awake()` initialises from those values automatically.
 
@@ -121,7 +127,7 @@ See [STATS.md](STATS.md) for full documentation. On the player, configure `Max H
 
 ## EntityStatsUI
 
-**File:** `Assets/Scripts/Entity/EntityStatsUI.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/EntityStatsUI.cs`
 
 Attach to a UI GameObject in your Canvas. Subscribes to `EntityStats.OnHpChanged` / `OnMpChanged` and updates two `Image` fills.
 

@@ -11,7 +11,7 @@ never actually own or use a key — the door would check the player's keys inste
 
 ## The Interface
 
-`Assets/Scripts/Inventory/IKeyHolder.cs`
+`Assets/Scripts/GamePresentation/Inventory/IKeyHolder.cs`
 
 ```csharp
 public interface IKeyHolder

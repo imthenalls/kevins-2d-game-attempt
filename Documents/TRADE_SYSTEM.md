@@ -19,12 +19,12 @@ No shop UI is included yet. UI and market AI should both construct `TradeRequest
 
 | File | Purpose |
 |---|---|
-| `Assets/Scripts/Economy/ITradeParticipant.cs` | Shared participant identity, Wallet, and Inventory contract |
-| `Assets/Scripts/Economy/TradeService.cs` | Validation, commit, result types, and market ledger |
-| `Assets/Scripts/Economy/Wallet.cs` | Atomic Wallet-to-Wallet mana transfer |
-| `Assets/Scripts/Inventory/InventoryModel.cs` | Capacity preflight and transaction-safe item transfer |
-| `Assets/Scripts/Player/PlayerController2D.cs` | Built-in player participant |
-| `Assets/Scripts/NPCs/NpcController.cs` | Built-in NPC participant |
+| `Assets/Scripts/GamePresentation/Economy/ITradeParticipant.cs` | Shared participant identity, Wallet, and Inventory contract |
+| `Assets/Scripts/GamePresentation/Economy/TradeService.cs` | Validation, commit, result types, and market ledger |
+| `Assets/Scripts/GamePresentation/Economy/Wallet.cs` | Atomic Wallet-to-Wallet mana transfer |
+| `Assets/Scripts/GamePresentation/Inventory/InventoryModel.cs` | Capacity preflight and transaction-safe item transfer |
+| `Assets/Scripts/GamePresentation/Player/PlayerController2D.cs` | Built-in player participant |
+| `Assets/Scripts/GamePresentation/NPCs/NpcController.cs` | Built-in NPC participant |
 
 ## Unity Setup
 

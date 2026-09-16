@@ -4,107 +4,109 @@
         {
             "id": "portal_a",
             "objectName": "PortalA",
-            "scene": "NewScene",
-            "destinationScene": "NewScene",
+            "scene": "Overworld",
+            "destinationScene": "Overworld",
             "destinationPortalId": "portal_b",
             "incomingPortals": [
-                "NewScene/portal_b"
+                "Overworld/portal_b"
             ],
             "additionalIncomingSources": [],
             "hasExitPoint": true,
             "exitPosition": {
-                "x": -7.220000267028809,
-                "y": 6.019999980926514,
+                "x": -6.619999885559082,
+                "y": -0.30000007152557375,
                 "z": 0.0
             }
         },
         {
             "id": "portal_a_2",
             "objectName": "PortalA_2",
-            "scene": "NewScene",
-            "destinationScene": "NewScene",
+            "scene": "Overworld",
+            "destinationScene": "Overworld",
             "destinationPortalId": "portal_b_2",
             "incomingPortals": [
-                "NewScene/portal_b_2"
+                "Overworld/portal_b_2"
             ],
             "additionalIncomingSources": [
                 "NPC: time_machine"
             ],
             "hasExitPoint": true,
             "exitPosition": {
-                "x": -7.220000267028809,
-                "y": -14.470000267028809,
+                "x": 3.625,
+                "y": -5.422500133514404,
                 "z": 0.0
             }
         },
         {
             "id": "portal_b",
             "objectName": "PortalB",
-            "scene": "NewScene",
-            "destinationScene": "NewScene",
+            "scene": "Overworld",
+            "destinationScene": "Overworld",
             "destinationPortalId": "portal_a",
             "incomingPortals": [
-                "NewScene/portal_a"
+                "Overworld/portal_a"
             ],
             "additionalIncomingSources": [],
             "hasExitPoint": true,
             "exitPosition": {
-                "x": 21.34000015258789,
-                "y": -3.6739399433135988,
+                "x": 12.506970405578614,
+                "y": 4.416514873504639,
                 "z": 0.0
             }
         },
         {
             "id": "portal_b_2",
             "objectName": "PortalB_2",
-            "scene": "NewScene",
-            "destinationScene": "NewScene",
+            "scene": "Overworld",
+            "destinationScene": "Overworld",
             "destinationPortalId": "portal_a_2",
             "incomingPortals": [
-                "NewScene/portal_a_2"
+                "Overworld/portal_a_2"
             ],
             "additionalIncomingSources": [],
             "hasExitPoint": true,
             "exitPosition": {
-                "x": 23.740001678466798,
-                "y": -13.960000038146973,
+                "x": 18.850000381469728,
+                "y": -1.054999589920044,
                 "z": 0.0
             }
         },
         {
-            "id": "training_entry",
-            "objectName": "Small Room Return Portal",
-            "scene": "NewScene",
-            "destinationScene": "NewScene",
-            "destinationPortalId": "training_hub",
+            "id": "world_b_portal",
+            "objectName": "portal_to_worldb",
+            "scene": "Overworld",
+            "destinationScene": "WorldB",
+            "destinationPortalId": "world_b_entry",
             "incomingPortals": [
-                "NewScene/training_hub"
+                "WorldB/world_b_entry"
             ],
             "additionalIncomingSources": [],
-            "hasExitPoint": true,
+            "hasExitPoint": false,
             "exitPosition": {
-                "x": 47.91999816894531,
-                "y": 0.0,
+                "x": -1.315000057220459,
+                "y": -0.4325000047683716,
                 "z": 0.0
             }
         },
         {
-            "id": "training_hub",
-            "objectName": "Hub Training Portal",
-            "scene": "NewScene",
-            "destinationScene": "NewScene",
-            "destinationPortalId": "training_entry",
+            "id": "world_b_entry",
+            "objectName": "World B Entry and Return Portal",
+            "scene": "WorldB",
+            "destinationScene": "Overworld",
+            "destinationPortalId": "world_b_portal",
             "incomingPortals": [
-                "NewScene/training_entry"
+                "Overworld/world_b_portal"
             ],
             "additionalIncomingSources": [],
             "hasExitPoint": true,
             "exitPosition": {
-                "x": 7.920000076293945,
-                "y": 4.0,
+                "x": 22.780000686645509,
+                "y": 12.720000267028809,
                 "z": 0.0
             }
         }
     ],
-    "validationErrors": []
+    "validationErrors": [
+        "Portal 'world_b_portal' in scene 'Overworld' has no Exit Point."
+    ]
 }

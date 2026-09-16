@@ -83,10 +83,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c22d0b86ebac4ab598b2dbc75888169a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlidingDoor
+  config:
+    Axis: 0
+    CellLength: 2
+    ReverseSlideDirection: 0
+    SlideDuration: 0.45
+    CloseAfterPassing: 1
+    CloseDelay: 0.25
+    DisplayName: 2-Cell Gate
+    InteractionRange: 2
+    StartsOpen: 0
+    CanClose: 1
+    RequiredKeyId: golden_key
+    ConsumeKeyOnUnlock: 0
+    RemainUnlocked: 1
+    LockedMessage: It's locked. You need the {0}.
+    LockedR: 0.95
+    LockedG: 0.28
+    LockedB: 0.16
+    LockedA: 1
+    UnlockedR: 0.22
+    UnlockedG: 0.9
+    UnlockedB: 0.82
+    UnlockedA: 1
   grid: {fileID: 0}
   axis: 0
   cellLength: 2
   gateSprite: {fileID: 21300000, guid: 9019ceb28a3c32645aaffaa89017452e, type: 3}
+  gateId: 
   reverseSlideDirection: 0
   slideDuration: 0.45
   closeAfterPassing: 1
@@ -101,6 +125,7 @@ MonoBehaviour:
   requiredKeyId: golden_key
   consumeKeyOnUnlock: 0
   remainUnlocked: 1
+  lockedMessage: It's locked. You need the {0}.
   lockedColor: {r: 0.95, g: 0.28, b: 0.16, a: 1}
   unlockedColor: {r: 0.22, g: 0.9, b: 0.82, a: 1}
 --- !u!1 &2135545980422139519

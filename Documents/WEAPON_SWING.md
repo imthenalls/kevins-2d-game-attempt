@@ -1,5 +1,9 @@
 # Equipped Weapon Swing
 
+> **Game.Data config:** swing arc, after-swing trail, and grip pivot tuning live in the pure-C#
+> `Game.Core.WeaponVisualConfig` (`Game.Data` assembly) and appear under **Settings** in the
+> Inspector. `EquippedWeaponVisual` keeps only its Unity references (`Transform`, `SpriteRenderer`).
+
 ## Overview
 
 The equipped weapon swings as part of the existing melee attack. `CombatAttacker` owns

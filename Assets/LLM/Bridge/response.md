@@ -1,10 +1,13 @@
-﻿<!-- Request: refresh -->
-<!-- Time: 2026-09-14 18:48:50 -->
+﻿<!-- Request: errors -->
+<!-- Time: 2026-09-15 17:22:01 -->
 
-# Compilation Result
+# Compilation Status
 
-**Duration:** 2.9s
+**Status:** 1 error(s)
 
-**Status:** Success
+### :0
+```
+Access is denied.
+```
+**Path:** ``
 
-All scripts compiled successfully.

@@ -1,5 +1,10 @@
 # Sliding Doors (Grid Gates)
 
+> **Game.Data config:** gate tuning and lock configuration live in the pure-C#
+> `Game.Core.SlidingDoorConfig` (`Game.Data` assembly) and appear under **Settings** in the
+> Inspector. The `DoorAxis` and `GateUseResult` enums also live in `Game.Data`. `SlidingDoor` keeps
+> only its Unity references (`Grid`, gate `Sprite`, traveler `LayerMask`) and the stable `gateId`.
+
 ## Overview
 
 `SlidingDoor` is a reusable, E-interactable gate that is **built from whole grid cells** rather

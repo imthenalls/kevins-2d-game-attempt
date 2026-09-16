@@ -1,5 +1,10 @@
 # Portal System
 
+> **Game.Data config:** transfer tuning lives in the pure-C# `Game.Core.PortalTriggerConfig`
+> (travel cooldown, required tag) and `Game.Core.PortalManagerConfig` (traveler tag/cooldown, reset
+> velocity, exit velocity), in the `Game.Data` assembly. Routing fields (scene/portal ids, world
+> layer) and the exit `Transform` stay on the components.
+
 Portals are authored entirely in the Unity Inspector. There is no runtime portal
 JSON database and no separate local portal implementation.
 
@@ -16,7 +21,7 @@ PortalTrigger2D detects a traveler
 
 ## PortalTrigger2D
 
-**File:** `Assets/Scripts/Portals/PortalTrigger2D.cs`
+**File:** `Assets/Scripts/GamePresentation/Portals/PortalTrigger2D.cs`
 
 Add `PortalTrigger2D` to a scene object with a `Collider2D`. The collider is
 forced to be a trigger.
@@ -43,7 +48,7 @@ Portal IDs should describe their location rather than their order. Prefer
 
 ## PortalManager
 
-**File:** `Assets/Scripts/Portals/PortalManager.cs`
+**File:** `Assets/Scripts/GamePresentation/Portals/PortalManager.cs`
 
 `PortalManager` is a persistent singleton that handles both same-scene and
 cross-scene travel.

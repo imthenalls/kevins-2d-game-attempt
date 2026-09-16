@@ -10,7 +10,7 @@
 
 | Script | Location |
 |---|---|
-| `CharacterStatistics.cs` | `Assets/Scripts/Entity/` |
+| `CharacterStatistics.cs` | `Assets/Scripts/GamePresentation/Entity/` |
 
 ---
 

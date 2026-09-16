@@ -12,9 +12,9 @@
 
 | File | Purpose |
 |---|---|
-| `Assets/Scripts/Economy/Wallet.cs` | Balance operations, events, transaction records, and serializable wallet snapshot |
-| `Assets/Scripts/GameManagement/SaveData.cs` | Stores `WalletSaveData` inside the main save |
-| `Assets/Scripts/GameManagement/SaveManager.cs` | Captures and restores the player's wallet |
+| `Assets/Scripts/GamePresentation/Economy/Wallet.cs` | Balance operations, events, transaction records, and serializable wallet snapshot |
+| `Assets/Scripts/GamePresentation/GameManagement/SaveData.cs` | Stores `WalletSaveData` inside the main save |
+| `Assets/Scripts/GamePresentation/GameManagement/SaveManager.cs` | Captures and restores the player's wallet |
 
 ## Unity Setup
 

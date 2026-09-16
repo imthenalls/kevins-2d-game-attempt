@@ -16,9 +16,9 @@ Rules are layered in priority order (highest first):
 
 | File | Description |
 |---|---|
-| `Assets/Scripts/GameManagement/SceneRules.cs` | ScriptableObject with all rule fields |
-| `Assets/Scripts/GameManagement/SceneRulesManager.cs` | MonoBehaviour that applies, restores, and exposes a runtime API |
-| `Assets/Scripts/GameManagement/RuleZone2D.cs` | Trigger zone that pushes/pops an override onto the rule stack |
+| `Assets/Scripts/GamePresentation/GameManagement/SceneRules.cs` | ScriptableObject with all rule fields |
+| `Assets/Scripts/GamePresentation/GameManagement/SceneRulesManager.cs` | MonoBehaviour that applies, restores, and exposes a runtime API |
+| `Assets/Scripts/GamePresentation/GameManagement/RuleZone2D.cs` | Trigger zone that pushes/pops an override onto the rule stack |
 
 ---
 

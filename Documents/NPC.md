@@ -1,5 +1,11 @@
 # NPC System
 
+> **Game.Data config:** NPC stat/tuning values live in pure-C# configs (`Game.Data` assembly) and
+> appear under **Settings** in the Inspector: `NpcControllerConfig` (stats, health bar, inventory,
+> trade, interaction), plus the behavior configs `NpcBehaviorConfig`, `NpcWanderConfig`,
+> `NpcIdleConfig`, `NpcUseDoorConfig`, and `NpcDashMeleeConfig`. Components keep Unity references
+> and identity strings only.
+
 ## Overview
 
 NPCs are composed from a core identity component plus optional behavior and dialogue components. Each concern is a separate script, assembled on the same GameObject.
@@ -21,7 +27,7 @@ NPC (GameObject)
 
 ## NpcController
 
-**File:** `Assets/Scripts/NPCs/NpcController.cs`
+**File:** `Assets/Scripts/GamePresentation/NPCs/NpcController.cs`
 
 The root identity component. Every NPC must have one.
 
@@ -86,7 +92,7 @@ NPCs listed in `StreamingAssets/npc_inventories.json` also receive an inventory 
 
 ## NpcBehaviorManager
 
-**File:** `Assets/Scripts/NPCs/NpcBehaviorManager.cs`
+**File:** `Assets/Scripts/GamePresentation/NPCs/NpcBehaviorManager.cs`
 
 Auto-discovers all `INpcBehavior` components on the same GameObject. Uses weighted random selection to pick the next behavior when the current one completes. Behaviors pause automatically when `NpcBehaviorState` is not `Idle`.
 
@@ -106,7 +112,7 @@ No configuration needed beyond adding behavior components to the same GameObject
 
 ## INpcBehavior Interface
 
-**File:** `Assets/Scripts/NPCs/INpcBehavior.cs`
+**File:** `Assets/Scripts/GamePresentation/NPCs/INpcBehavior.cs`
 
 Implement on a `MonoBehaviour` to create custom behaviors:
 
@@ -148,7 +154,7 @@ Walks to a random point within `Wander Radius`. It casts the NPC's actual collid
 
 ## Dialogue
 
-**File:** `Assets/Scripts/NPCs/NpcDialogue.cs`
+**File:** `Assets/Scripts/GamePresentation/NPCs/NpcDialogue.cs`
 
 Attach alongside `NpcController`. Links to a `DialogueGraphAsset` (a ScriptableObject wrapping a `DialogueGraphDefinition`). Can also look up graphs by `dialogueId` from `DialogueDatabase`, which loads `StreamingAssets/dialogues.json` on first access.
 
@@ -212,7 +218,7 @@ The quest edge must use `"automatic": false`, be reachable from the active sourc
 
 ### DialogueUIController
 
-**File:** `Assets/Scripts/NPCs/DialogueUIController.cs`
+**File:** `Assets/Scripts/GamePresentation/NPCs/DialogueUIController.cs`
 
 Static-access singleton (`DialogueUIController.GetOrCreate()`). Called by `PlayerInteractionController` to show/hide dialogue panels. Does not need to be manually assigned — it is auto-found or created.
 

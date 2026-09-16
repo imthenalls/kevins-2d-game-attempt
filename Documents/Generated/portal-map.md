@@ -4,22 +4,22 @@
 
 | Portal | Scene | Destination | Incoming portals | Additional incoming sources | Exit point |
 |---|---|---|---|---|---|
-| `portal_a` | NewScene | `NewScene/portal_b` | `NewScene/portal_b` | — | Yes |
-| `portal_a_2` | NewScene | `NewScene/portal_b_2` | `NewScene/portal_b_2` | `NPC: time_machine` | Yes |
-| `portal_b` | NewScene | `NewScene/portal_a` | `NewScene/portal_a` | — | Yes |
-| `portal_b_2` | NewScene | `NewScene/portal_a_2` | `NewScene/portal_a_2` | — | Yes |
-| `training_entry` | NewScene | `NewScene/training_hub` | `NewScene/training_hub` | — | Yes |
-| `training_hub` | NewScene | `NewScene/training_entry` | `NewScene/training_entry` | — | Yes |
+| `portal_a` | Overworld | `Overworld/portal_b` | `Overworld/portal_b` | — | Yes |
+| `portal_a_2` | Overworld | `Overworld/portal_b_2` | `Overworld/portal_b_2` | `NPC: time_machine` | Yes |
+| `portal_b` | Overworld | `Overworld/portal_a` | `Overworld/portal_a` | — | Yes |
+| `portal_b_2` | Overworld | `Overworld/portal_a_2` | `Overworld/portal_a_2` | — | Yes |
+| `world_b_portal` | Overworld | `WorldB/world_b_entry` | `WorldB/world_b_entry` | — | Missing |
+| `world_b_entry` | WorldB | `Overworld/world_b_portal` | `Overworld/world_b_portal` | — | Yes |
 
 ## Route List
 
-- `NewScene/portal_a` → `NewScene/portal_b`
-- `NewScene/portal_a_2` → `NewScene/portal_b_2`
-- `NewScene/portal_b` → `NewScene/portal_a`
-- `NewScene/portal_b_2` → `NewScene/portal_a_2`
-- `NewScene/training_entry` → `NewScene/training_hub`
-- `NewScene/training_hub` → `NewScene/training_entry`
+- `Overworld/portal_a` → `Overworld/portal_b`
+- `Overworld/portal_a_2` → `Overworld/portal_b_2`
+- `Overworld/portal_b` → `Overworld/portal_a`
+- `Overworld/portal_b_2` → `Overworld/portal_a_2`
+- `Overworld/world_b_portal` → `WorldB/world_b_entry`
+- `WorldB/world_b_entry` → `Overworld/world_b_portal`
 
 ## Validation
 
-- No portal configuration errors found.
+- Portal 'world_b_portal' in scene 'Overworld' has no Exit Point.

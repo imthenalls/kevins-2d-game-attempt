@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Standalone .NET host for the pure-C# Game.Core model. Links the model sources directly,
+       so it builds and runs without Unity. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>ModelHarness.Net</AssemblyName>
+    <RootNamespace>ModelHarness</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Shared entry point (also used by the Unity-toolchain harness). -->
+    <Compile Include="..\ModelHarness\Program.cs" />
+
+    <!-- The engine-free model itself. -->
+    <Compile Include="..\..\Assets\Scripts\GameData\**\*.cs" />
+  </ItemGroup>
+
+</Project>

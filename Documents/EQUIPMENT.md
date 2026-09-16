@@ -1,5 +1,9 @@
 # Equipment System
 
+> **Game.Data config:** the starting loadout item ids live in the pure-C#
+> `Game.Core.EquipmentLoadoutConfig` (`Game.Data` assembly) and appear under **Settings** in the
+> Inspector. See [WEAPON_SWING.md](WEAPON_SWING.md) for the weapon-visual config.
+
 ## Overview
 
 The equipment system lets any entity (player or NPC) wear up to three items — one per slot — and automatically applies their stat bonuses to `EntityStats`.
@@ -18,10 +22,10 @@ Stat bonuses defined on `ItemData` (`bonusMaxHp`, `bonusMaxMp`, `bonusAttack`, `
 
 | File | Description |
 |---|---|
-| `Assets/Scripts/Inventory/Equipment/EquipSlotType.cs` | Enum: `Weapon`, `Armor`, `Accessory` |
-| `Assets/Scripts/Inventory/Equipment/EquipmentModel.cs` | Pure C# data container; enforces slot-type matching |
-| `Assets/Scripts/Inventory/Equipment/EquipmentManager.cs` | MonoBehaviour; owns the model, applies bonuses to EntityStats |
-| `Assets/Scripts/Inventory/Equipment/EquippedWeaponVisual.cs` | Shows the equipped Weapon sprite on an entity visual child |
+| `Assets/Scripts/GamePresentation/Inventory/Equipment/EquipSlotType.cs` | Enum: `Weapon`, `Armor`, `Accessory` |
+| `Assets/Scripts/GamePresentation/Inventory/Equipment/EquipmentModel.cs` | Pure C# data container; enforces slot-type matching |
+| `Assets/Scripts/GamePresentation/Inventory/Equipment/EquipmentManager.cs` | MonoBehaviour; owns the model, applies bonuses to EntityStats |
+| `Assets/Scripts/GamePresentation/Inventory/Equipment/EquippedWeaponVisual.cs` | Shows the equipped Weapon sprite on an entity visual child |
 
 ---
 

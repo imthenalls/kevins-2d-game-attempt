@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 239027354}
   - component: {fileID: 239027353}
   m_Layer: 0
-  m_Name: World B Player
+  m_Name: WorldBPlayer
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -39,89 +39,33 @@ Transform:
   - {fileID: 1529844856}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &239027353
-MonoBehaviour:
+--- !u!50 &239027358
+Rigidbody2D:
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 239027351}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7fb5cbe59e82442d85e50f54d5f861d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldCharacter
-  world: 1
-  profile: {fileID: 11400000, guid: fe96e569c6994ad6a51f04e46398f146, type: 2}
---- !u!114 &239027354
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 239027351}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4c86a7c996db7e49babcf90174c2045, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractionController
-  interactionSearchRadius: 2
-  npcLayers:
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
     serializedVersion: 2
-    m_Bits: 51
-  interactableLayers:
+    m_Bits: 0
+  m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 51
-  dialogueUI: {fileID: 0}
-  playerController: {fileID: 0}
-  legacyInteractKey: 101
-  legacyAdvanceKey: 32
-  legacyInteractButton: Submit
---- !u!114 &239027355
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 239027351}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5db6571cfd227a4c8ca83a551239b13, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController2D
-  moveSpeed: 6
-  lockRotation: 1
-  forceNoGravity: 1
-  visualTransform: {fileID: 515261441}
-  faceMovementDirection: 1
-  spriteForwardAngle: 90
-  facingTurnSpeed: 0
-  facingInputDeadZone: 0.01
-  dashDistanceInPlayerLengths: 5
-  dashSpeedMultiplier: 6
-  dashCooldown: 0.4
-  maxDashCharges: 3
-  dashRechargeSeconds: 15
-  legacyDashKey: 304
-  dashTrailColor: {r: 0.2, g: 0.75, b: 1, a: 0.75}
-  dashTrailFadeTime: 0.3
-  dashTrailWidthInPlayerLengths: 0.8
---- !u!114 &239027356
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 239027351}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bfcfade1576b6cf48832764883c57087, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EntityStats
-  maxHp: 100
-  startingHp: 100
-  maxMp: 50
-  startingMp: 50
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 1
+  m_Constraints: 4
 --- !u!70 &239027357
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -159,33 +103,116 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 0.8, y: 0.9}
   m_Direction: 0
---- !u!50 &239027358
-Rigidbody2D:
-  serializedVersion: 5
+--- !u!114 &239027356
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 239027351}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 0
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfcfade1576b6cf48832764883c57087, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EntityStats
+  config:
+    MaxHp: 100
+    StartingHp: 100
+    MaxMp: 50
+    StartingMp: 50
+--- !u!114 &239027355
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239027351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5db6571cfd227a4c8ca83a551239b13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController2D
+  settings:
+    MoveSpeed: 6
+    LockRotation: 1
+    ForceNoGravity: 1
+    FaceMovementDirection: 1
+    SpriteForwardAngle: 90
+    FacingTurnSpeed: 0
+    FacingInputDeadZone: 0.01
+    DashEnabled: 1
+    DashDistanceInPlayerLengths: 5
+    DashSpeedMultiplier: 6
+    DashCooldown: 0.4
+    MaxDashCharges: 3
+    DashRechargeSeconds: 15
+    LegacyDashKeyCode: 304
+    DashTrailR: 0.2
+    DashTrailG: 0.75
+    DashTrailB: 1
+    DashTrailA: 0.75
+    DashTrailFadeTime: 0.3
+    DashTrailWidthInPlayerLengths: 0.8
+    DashTrailMinVertexDistance: 0.04
+    DashTrailCornerVertices: 3
+    DashTrailCapVertices: 2
+    DashTrailEndColorMultiplier: 0.55
+    DashTrailWidthStartTime: 0
+    DashTrailWidthStart: 1
+    DashTrailWidthMidTime: 0.65
+    DashTrailWidthMid: 0.45
+    DashTrailWidthEndTime: 1
+    DashTrailWidthEnd: 0.02
+    DefaultPlayerLength: 1
+    MinPlayerLength: 0.1
+    MinMoveSpeed: 0
+    MinDashDistanceInPlayerLengths: 0.1
+    MinDashSpeedMultiplier: 1
+    MinDashCooldown: 0
+    MinDashCharges: 1
+    MinDashRechargeSeconds: 0.1
+    MinDashSpeed: 0.01
+    MinDashRechargeInterval: 0.1
+  visualTransform: {fileID: 515261441}
+--- !u!114 &239027354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239027351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4c86a7c996db7e49babcf90174c2045, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractionController
+  config:
+    InteractionSearchRadius: 2
+    LegacyInteractKeyCode: 101
+    LegacyAdvanceKeyCode: 32
+    LegacyInteractButton: Submit
+  npcLayers:
     serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
+    m_Bits: 51
+  interactableLayers:
     serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 1
-  m_Constraints: 4
+    m_Bits: 51
+  dialogueUI: {fileID: 0}
+  playerController: {fileID: 0}
+--- !u!114 &239027353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239027351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fb5cbe59e82442d85e50f54d5f861d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldCharacter
+  world: 1
+  profile: {fileID: 11400000, guid: fe96e569c6994ad6a51f04e46398f146, type: 2}
 --- !u!1 &515261440
 GameObject:
   m_ObjectHideFlags: 0
@@ -311,14 +338,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 239027352}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!81 &1529844857
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1529844855}
-  m_Enabled: 1
 --- !u!20 &1529844858
 Camera:
   m_ObjectHideFlags: 0
@@ -370,6 +389,14 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!81 &1529844857
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1529844855}
+  m_Enabled: 1
 --- !u!114 &1529844859
 MonoBehaviour:
   m_ObjectHideFlags: 0

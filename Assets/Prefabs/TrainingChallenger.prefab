@@ -128,18 +128,20 @@ MonoBehaviour:
   npcId: training_challenger
   displayName: Challenger
   npcType: 4
-  enemyMaxHp: 60
-  aggroRange: 30
-  showEnemyHealthBar: 1
-  healthBarWorldOffset: 0.8
-  healthBarScreenSize: {x: 72, y: 12}
+  config:
+    EnemyMaxHp: 60
+    AggroRange: 30
+    ShowEnemyHealthBar: 1
+    HealthBarWorldOffset: 0.8
+    HealthBarScreenWidth: 72
+    HealthBarScreenHeight: 12
+    InventoryRows: 3
+    InventoryColumns: 4
+    TraderStartingMana: 50
+    TraderManaCapacity: 500
+    InteractionRange: 1.5
   hasInventory: 0
-  inventoryRows: 3
-  inventoryColumns: 4
-  traderStartingMana: 50
-  traderManaCapacity: 500
   behaviorState: 0
-  interactionRange: 1.5
   interactionPoint: {fileID: 0}
 --- !u!114 &3351689766384235437
 MonoBehaviour:
@@ -153,10 +155,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfcfade1576b6cf48832764883c57087, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityStats
-  maxHp: 100
-  startingHp: 100
-  maxMp: 50
-  startingMp: 50
+  config:
+    MaxHp: 100
+    StartingHp: 100
+    MaxMp: 50
+    StartingMp: 50
 --- !u!114 &2506073653966919000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -183,6 +186,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc0f389fce47ae24498710a0c7e0bf54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentManager
+  config:
+    StartingWeaponItemId: iron_sword
+    StartingArmorItemId: 
+    StartingAccessoryItemId: 
   startingWeaponItemId: iron_sword
   startingArmorItemId: 
   startingAccessoryItemId: 
@@ -198,19 +205,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4077f4baa1138fb4c9f2f58e0118ee49, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatAttacker
-  attackDamage: 5
-  attackRange: 4
-  attackCooldown: 0.05
-  attackWindup: 0.1
-  attackDuration: 0.1
-  attackBufferWindow: 0.5
+  config:
+    AttackDamage: 5
+    AttackRange: 1.5
+    AttackCooldown: 0.6
+    AttackWindup: 0.15
+    AttackDuration: 0.35
+    AttackBufferWindow: 0.5
+    CanHitSelf: 0
+    SelfRecoilDamage: 0
+    UsePlayerInput: 0
+    LegacyAttackKeyCode: 32
   targetLayers:
     serializedVersion: 2
     m_Bits: 51
-  canHitSelf: 0
-  selfRecoilDamage: 0
-  usePlayerInput: 0
-  legacyAttackKey: 32
 --- !u!114 &8352674287138400720
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -227,22 +235,24 @@ MonoBehaviour:
   bodyCollider: {fileID: 3689287598146239805}
   bodyRenderer: {fileID: 7019392739945475342}
   aimPivot: {fileID: 5499765523070833961}
-  warningDuration: 0.5
-  warningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  approachSpeed: 4
-  dashRange: 6
-  dashSpeed: 14
-  stoppingDistance: 1.1
-  recoveryDuration: 0.1
+  config:
+    WarningDuration: 0.5
+    WarningR: 1
+    WarningG: 0.92
+    WarningB: 0.016
+    WarningA: 1
+    ApproachSpeed: 2.8
+    DashRange: 6
+    DashSpeed: 14
+    StoppingDistance: 1.1
+    RecoveryDuration: 1.1
+    ArenaX: 61
+    ArenaY: -7
+    ArenaWidth: 18
+    ArenaHeight: 14
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  arenaBounds:
-    serializedVersion: 2
-    x: 61
-    y: -7
-    width: 18
-    height: 14
 --- !u!1 &4431059809081950587
 GameObject:
   m_ObjectHideFlags: 0
@@ -439,6 +449,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c6aafc40f4d47a884b25c718652e3c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquippedWeaponVisual
+  config:
+    StartAngleOffset: -20
+    EndAngleOffset: 200
+    AttackRadiusMultiplier: 1.25
+    TrailR: 1
+    TrailG: 0.05
+    TrailB: 0.03
+    TrailA: 0.85
+    TrailFadeTime: 0.28
+    GripPivotX: 0.16
+    GripPivotY: 0.18
   equipmentManager: {fileID: 6293985850944655893}
   combatAttacker: {fileID: 5358964736349618446}
   weaponRenderer: {fileID: 8427007793189576054}

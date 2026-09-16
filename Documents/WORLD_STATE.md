@@ -115,7 +115,7 @@ All components also have a **Raw Key** string fallback for rapid prototyping wit
 
 ### WorldStateActivator
 
-**File:** `Assets/Scripts/WorldState/WorldStateActivator.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/WorldStateActivator.cs`
 
 Enables or disables a target GameObject whenever a world state flag changes.
 
@@ -136,7 +136,7 @@ Enables or disables a target GameObject whenever a world state flag changes.
 
 ### WorldStateDestroyer
 
-**File:** `Assets/Scripts/WorldState/WorldStateDestroyer.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/WorldStateDestroyer.cs`
 
 Permanently destroys this GameObject when a flag is set. On the next scene load the object destroys itself immediately (before the player sees it) if the flag is already set.
 
@@ -156,7 +156,7 @@ Permanently destroys this GameObject when a flag is set. On the next scene load 
 
 ### WorldStateSpawner
 
-**File:** `Assets/Scripts/WorldState/WorldStateSpawner.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/WorldStateSpawner.cs`
 
 Instantiates a prefab when a world state condition is met. Spawns once and tracks the instance.
 
@@ -178,7 +178,7 @@ Instantiates a prefab when a world state condition is met. Spawns once and track
 
 ### WorldStateInteractable
 
-**File:** `Assets/Scripts/WorldState/WorldStateInteractable.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/WorldStateInteractable.cs`
 
 Gates `IInteractable` MonoBehaviour components by enabling/disabling them. Since `WorldObject.CanInteract()` checks `component.enabled`, a disabled WorldObject is invisible to the player.
 
@@ -203,7 +203,7 @@ For a "locked" message: add a second WorldObject with locked text + WorldStateAc
 
 ### WorldStateDialogueSelector
 
-**File:** `Assets/Scripts/WorldState/WorldStateDialogueSelector.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/WorldStateDialogueSelector.cs`
 
 Selects which `DialogueGraphAsset` an `NpcDialogue` uses based on world state flags. Entries are checked top-to-bottom; the first matching entry wins.
 
@@ -239,7 +239,7 @@ Default:                               → "Things have been troubled lately."
 
 ### WorldStateNpcReactor
 
-**File:** `Assets/Scripts/WorldState/WorldStateNpcReactor.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/WorldStateNpcReactor.cs`
 
 Moves an NPC to a new position and/or changes its behavior state in response to flags. Reactions are one-way (applied when condition becomes true) unless an Invert Condition entry provides the reverse.
 
@@ -271,7 +271,7 @@ Each reaction has:
 
 ### EnemyDeathFlagSetter
 
-**File:** `Assets/Scripts/WorldState/EnemyDeathFlagSetter.cs`
+**File:** `Assets/Scripts/GamePresentation/WorldState/EnemyDeathFlagSetter.cs`
 
 Sets a world state flag automatically when an enemy is killed. Requires `CombatReceiver` on the same object.
 

@@ -1,5 +1,9 @@
 # Inventory System
 
+> **Game.Data config:** player interaction tuning (search radius, legacy keys) lives in the pure-C#
+> `Game.Core.PlayerInteractionConfig` (`Game.Data` assembly). The inventory UI's grid dimensions and
+> slot pixel sizing remain view layout on `InventoryUI` and are intentionally not in `Game.Data`.
+
 The inventory Canvas includes an editable `EquipmentPanel` companion with three
 `EquipmentSlotUI` drop targets for Weapon, Armor, and Accessory items. It follows the
 inventory panel's open/close state automatically.
@@ -32,7 +36,7 @@ Canvas
 
 ## InventoryModel
 
-**File:** `Assets/Scripts/Inventory/InventoryModel.cs`
+**File:** `Assets/Scripts/GamePresentation/Inventory/InventoryModel.cs`
 
 Pure C# class. Owns the slot array and all mutation logic. Fires `OnChanged` after every mutation — the UI subscribes and redraws.
 
@@ -70,7 +74,7 @@ bool hasKey = InventoryUI.Model.HasItem(goldenKeyData);
 
 ## ItemData
 
-**File:** `Assets/Scripts/Inventory/ItemData.cs`
+**File:** `Assets/Scripts/GamePresentation/Inventory/ItemData.cs`
 
 `ScriptableObject`. Create via **Assets → Create → Inventory → Item Data**.
 
@@ -95,7 +99,7 @@ bool hasKey = InventoryUI.Model.HasItem(goldenKeyData);
 
 ## InventoryUI
 
-**File:** `Assets/Scripts/Inventory/InventoryUI.cs`
+**File:** `Assets/Scripts/GamePresentation/Inventory/InventoryUI.cs`
 
 Singleton MonoBehaviour (`DontDestroyOnLoad`). Manages the panel visibility, builds the slot grid on `Awake`, and wires up drag-and-drop.
 
@@ -126,7 +130,7 @@ Opening locks player movement via `PlayerController2D.SetMovementEnabled(false)`
 
 ## InventorySlotUI
 
-**File:** `Assets/Scripts/Inventory/InventorySlotUI.cs`
+**File:** `Assets/Scripts/GamePresentation/Inventory/InventorySlotUI.cs`
 
 One per grid cell. Implements Unity's drag-and-drop event interfaces. Raises events that `InventoryUI` handles:
 
@@ -143,7 +147,7 @@ Hover triggers `InventoryTooltip.Show` / `.Hide` automatically.
 
 ## InventoryTooltip
 
-**File:** `Assets/Scripts/Inventory/InventoryTooltip.cs`
+**File:** `Assets/Scripts/GamePresentation/Inventory/InventoryTooltip.cs`
 
 Static show/hide calls. Place one instance under the Canvas.
 
@@ -160,7 +164,7 @@ InventoryTooltip.Hide();
 
 ## InventoryContextMenu
 
-**File:** `Assets/Scripts/Inventory/InventoryContextMenu.cs`
+**File:** `Assets/Scripts/GamePresentation/Inventory/InventoryContextMenu.cs`
 
 Static show/hide calls. Appears on right-click. Place one instance under the Canvas.
 

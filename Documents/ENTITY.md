@@ -10,17 +10,17 @@ The `Entity/` folder holds the foundational scripts shared by every living thing
 
 | File | Description |
 |---|---|
-| `Assets/Scripts/Entity/IEntityController.cs` | Shared interface — implemented by both `PlayerController2D` and `NpcController` |
-| `Assets/Scripts/Entity/EntityStats.cs` | HP and MP tracking with events |
-| `Assets/Scripts/Entity/CombatReceiver.cs` | Marks an entity as hittable; wraps `EntityStats` for combat |
-| `Assets/Scripts/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
-| `Assets/Scripts/Entity/CombatAttacker.cs` | Melee attack — shared by player and NPCs |
+| `Assets/Scripts/GamePresentation/Entity/IEntityController.cs` | Shared interface — implemented by both `PlayerController2D` and `NpcController` |
+| `Assets/Scripts/GamePresentation/Entity/EntityStats.cs` | HP and MP tracking with events |
+| `Assets/Scripts/GamePresentation/Entity/CombatReceiver.cs` | Marks an entity as hittable; wraps `EntityStats` for combat |
+| `Assets/Scripts/GamePresentation/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
+| `Assets/Scripts/GamePresentation/Entity/CombatAttacker.cs` | Melee attack — shared by player and NPCs |
 
 ---
 
 ## IEntityController
 
-**File:** `Assets/Scripts/Entity/IEntityController.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/IEntityController.cs`
 
 Implemented by `PlayerController2D` and `NpcController`. Use this interface when a script needs to work with either without caring which one it is — useful for shared prefabs, combat, cutscenes, and AI.
 
@@ -61,7 +61,7 @@ _controller.CombatReceiver?.ReceiveHit(new DamageInfo(10, gameObject));
 
 ## EntityStats
 
-**File:** `Assets/Scripts/Entity/EntityStats.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/EntityStats.cs`
 
 See [STATS.md](STATS.md) for full API documentation and UI setup.
 

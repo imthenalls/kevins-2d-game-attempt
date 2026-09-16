@@ -1,16 +1,20 @@
 # World Objects System
 
+> **Game.Data config:** tuning lives in pure-C# configs (`Game.Data` assembly) under **Settings** in
+> the Inspector: `ItemPickupConfig`, `LootContainerConfig`, and `WorldObjectConfig`. Item references,
+> drop tables, dialogue lines, and layer masks stay on the components.
+
 ## Overview
 
 The World Objects system covers all player-interactable objects placed in the scene that are **not** NPCs: chests, signs, shrines, notice boards, loot drops, etc. It consists of four parts:
 
 | Script | Location | Purpose |
 |---|---|---|
-| `IInteractable.cs` | `Assets/Scripts/World/` | Interface — contract for all interactable world objects |
-| `WorldObject.cs` | `Assets/Scripts/World/` | Built-in implementation: text lines + optional item reward |
-| `ItemPickup.cs` | `Assets/Scripts/World/` | Auto-collected item on the ground (trigger-based) |
-| `InventoryHelper.cs` | `Assets/Scripts/Inventory/` | Static utility for giving items from any system |
-| `SlidingDoor.cs` | `Assets/Scripts/World/` | E-interactable single-panel sliding wall door with optional inventory-key locking |
+| `IInteractable.cs` | `Assets/Scripts/GamePresentation/World/` | Interface — contract for all interactable world objects |
+| `WorldObject.cs` | `Assets/Scripts/GamePresentation/World/` | Built-in implementation: text lines + optional item reward |
+| `ItemPickup.cs` | `Assets/Scripts/GamePresentation/World/` | Auto-collected item on the ground (trigger-based) |
+| `InventoryHelper.cs` | `Assets/Scripts/GamePresentation/Inventory/` | Static utility for giving items from any system |
+| `SlidingDoor.cs` | `Assets/Scripts/GamePresentation/World/` | E-interactable single-panel sliding wall door with optional inventory-key locking |
 
 `PlayerInteractionController` was extended to discover and drive `IInteractable` objects automatically — no extra wiring needed on the player.
 

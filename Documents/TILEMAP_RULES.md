@@ -52,8 +52,8 @@ map.SetTile(new Vector3Int(x, y, 0), tile);           // placement via cells onl
 - **Offset Selected Tilemaps** opens a window that shifts the selected tilemap(s)' painted cells
   by a whole-cell offset. Tiles move; transforms stay at origin; scene objects do not move.
 
-See `Assets/Scripts/World/Editor/TilemapAlignmentTool.cs` and
-`Assets/Scripts/World/Editor/TilemapOffsetWindow.cs`.
+See `Assets/Scripts/GamePresentation/World/Editor/TilemapAlignmentTool.cs` and
+`Assets/Scripts/GamePresentation/World/Editor/TilemapOffsetWindow.cs`.
 
 ## Moving A Tilemap / Room
 

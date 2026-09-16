@@ -19,14 +19,21 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &817938294
-AudioListener:
+--- !u!4 &817938296
+Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 817938293}
-  m_Enabled: 1
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 997259775}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &817938295
 Camera:
   m_ObjectHideFlags: 0
@@ -78,21 +85,14 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &817938296
-Transform:
+--- !u!81 &817938294
+AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 817938293}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -10}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 997259775}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Enabled: 1
 --- !u!114 &817938297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -241,6 +241,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c6aafc40f4d47a884b25c718652e3c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquippedWeaponVisual
+  config:
+    StartAngleOffset: -20
+    EndAngleOffset: 200
+    AttackRadiusMultiplier: 1.25
+    TrailR: 1
+    TrailG: 0.05
+    TrailB: 0.03
+    TrailA: 0.85
+    TrailFadeTime: 0.28
+    GripPivotX: 0.16
+    GripPivotY: 0.18
   equipmentManager: {fileID: 997259778}
   combatAttacker: {fileID: 997259779}
   weaponRenderer: {fileID: 910200002}
@@ -285,133 +296,6 @@ Transform:
   - {fileID: 910200001}
   m_Father: {fileID: 997259775}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &997259770
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 997259775}
-  - component: {fileID: 997259773}
-  - component: {fileID: 997259772}
-  - component: {fileID: 997259771}
-  - component: {fileID: 997259776}
-  - component: {fileID: 997259777}
-  - component: {fileID: 997259778}
-  - component: {fileID: 997259779}
-  - component: {fileID: 997259780}
-  - component: {fileID: 997259781}
-  m_Layer: 0
-  m_Name: World A Player
-  m_TagString: Player
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &997259771
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 997259770}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5db6571cfd227a4c8ca83a551239b13, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController2D
-  moveSpeed: 6
-  lockRotation: 1
-  forceNoGravity: 1
-  visualTransform: {fileID: 920000002}
-  faceMovementDirection: 1
-  spriteForwardAngle: 90
-  facingTurnSpeed: 0
-  facingInputDeadZone: 0.01
-  dashDistanceInPlayerLengths: 5
-  dashSpeedMultiplier: 6
-  dashCooldown: 0.4
-  maxDashCharges: 3
-  dashRechargeSeconds: 15
-  legacyDashKey: 304
-  dashTrailColor: {r: 0.2, g: 0.75, b: 1, a: 0.75}
-  dashTrailFadeTime: 0.3
-  dashTrailWidthInPlayerLengths: 0.8
---- !u!50 &997259772
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 997259770}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 0
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 1
-  m_Constraints: 4
---- !u!61 &997259773
-BoxCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 997259770}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.21133333}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.28866667}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 1, y: 1}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
 --- !u!212 &997259774
 SpriteRenderer:
   serializedVersion: 2
@@ -471,6 +355,31 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &997259770
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 997259775}
+  - component: {fileID: 997259773}
+  - component: {fileID: 997259772}
+  - component: {fileID: 997259771}
+  - component: {fileID: 997259776}
+  - component: {fileID: 997259777}
+  - component: {fileID: 997259778}
+  - component: {fileID: 997259779}
+  - component: {fileID: 997259780}
+  - component: {fileID: 997259781}
+  m_Layer: 0
+  m_Name: WorldAPlayer
+  m_TagString: Player
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
 --- !u!4 &997259775
 Transform:
   m_ObjectHideFlags: 0
@@ -488,6 +397,133 @@ Transform:
   - {fileID: 920000002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &997259773
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 997259770}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0.21133333}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.28866667}
+    oldSize: {x: 1, y: 1}
+    newSize: {x: 1, y: 1}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!50 &997259772
+Rigidbody2D:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 997259770}
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 1
+  m_Constraints: 4
+--- !u!114 &997259771
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 997259770}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5db6571cfd227a4c8ca83a551239b13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController2D
+  settings:
+    MoveSpeed: 6
+    LockRotation: 1
+    ForceNoGravity: 1
+    FaceMovementDirection: 1
+    SpriteForwardAngle: 90
+    FacingTurnSpeed: 0
+    FacingInputDeadZone: 0.01
+    DashEnabled: 1
+    DashDistanceInPlayerLengths: 5
+    DashSpeedMultiplier: 6
+    DashCooldown: 0.4
+    MaxDashCharges: 3
+    DashRechargeSeconds: 15
+    LegacyDashKeyCode: 304
+    DashTrailR: 0.2
+    DashTrailG: 0.75
+    DashTrailB: 1
+    DashTrailA: 0.75
+    DashTrailFadeTime: 0.3
+    DashTrailWidthInPlayerLengths: 0.8
+    DashTrailMinVertexDistance: 0.04
+    DashTrailCornerVertices: 3
+    DashTrailCapVertices: 2
+    DashTrailEndColorMultiplier: 0.55
+    DashTrailWidthStartTime: 0
+    DashTrailWidthStart: 1
+    DashTrailWidthMidTime: 0.65
+    DashTrailWidthMid: 0.45
+    DashTrailWidthEndTime: 1
+    DashTrailWidthEnd: 0.02
+    DefaultPlayerLength: 1
+    MinPlayerLength: 0.1
+    MinMoveSpeed: 0
+    MinDashDistanceInPlayerLengths: 0.1
+    MinDashSpeedMultiplier: 1
+    MinDashCooldown: 0
+    MinDashCharges: 1
+    MinDashRechargeSeconds: 0.1
+    MinDashSpeed: 0.01
+    MinDashRechargeInterval: 0.1
+  visualTransform: {fileID: 920000002}
 --- !u!114 &997259776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -500,7 +536,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4c86a7c996db7e49babcf90174c2045, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractionController
-  interactionSearchRadius: 2
+  config:
+    InteractionSearchRadius: 2
+    LegacyInteractKeyCode: 101
+    LegacyAdvanceKeyCode: 32
+    LegacyInteractButton: Submit
   npcLayers:
     serializedVersion: 2
     m_Bits: 51
@@ -509,9 +549,6 @@ MonoBehaviour:
     m_Bits: 51
   dialogueUI: {fileID: 0}
   playerController: {fileID: 0}
-  legacyInteractKey: 101
-  legacyAdvanceKey: 32
-  legacyInteractButton: Submit
 --- !u!114 &997259777
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -524,10 +561,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfcfade1576b6cf48832764883c57087, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityStats
-  maxHp: 100
-  startingHp: 100
-  maxMp: 50
-  startingMp: 50
+  config:
+    MaxHp: 100
+    StartingHp: 100
+    MaxMp: 50
+    StartingMp: 50
 --- !u!114 &997259778
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -540,9 +578,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc0f389fce47ae24498710a0c7e0bf54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentManager
+  config:
+    StartingWeaponItemId: 
+    StartingArmorItemId: 
+    StartingAccessoryItemId: 
   startingWeaponItemId: 
   startingArmorItemId: 
-  startingAccessoryItemId:
+  startingAccessoryItemId: 
 --- !u!114 &997259779
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -555,19 +597,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4077f4baa1138fb4c9f2f58e0118ee49, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatAttacker
-  attackDamage: 10
-  attackRange: 1.5
-  attackCooldown: 0.5
-  attackWindup: 0.15
-  attackDuration: 0.3
-  attackBufferWindow: 0.5
+  config:
+    AttackDamage: 10
+    AttackRange: 1.5
+    AttackCooldown: 0.5
+    AttackWindup: 0.15
+    AttackDuration: 0.3
+    AttackBufferWindow: 0.5
+    CanHitSelf: 0
+    SelfRecoilDamage: 0
+    UsePlayerInput: 1
+    LegacyAttackKeyCode: 32
   targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  canHitSelf: 0
-  selfRecoilDamage: 0
-  usePlayerInput: 1
-  legacyAttackKey: 32
 --- !u!114 &997259780
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -592,7 +635,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fb5cbe59e82442d85e50f54d5f861d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldCharacter
   world: 0
   profile: {fileID: 11400000, guid: d0e0733ae31a49189f51c73d586dc59f, type: 2}

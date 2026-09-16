@@ -1,5 +1,9 @@
 # Combat System
 
+> **Game.Data config:** melee-attack tuning lives in the pure-C# `Game.Core.CombatAttackerConfig`
+> (`Game.Data` assembly) and appears under **Settings** in the Inspector. `CombatAttacker` keeps
+> only its hit-mask `LayerMask`. (`CombatReceiver` holds no tuning, only runtime flags.)
+
 ## Overview
 
 The combat system adds hit-taking and attack logic on top of `EntityStats`. HP and MP flow is handled entirely by `EntityStats`; the combat layer adds the _interaction_ between entities — who hit whom, how hard, and what happens on death.
@@ -14,15 +18,15 @@ Attack types, elements, and status effects are not implemented yet. `DamageInfo`
 
 | File | Description |
 |---|---|
-| `Assets/Scripts/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
-| `Assets/Scripts/Entity/CombatReceiver.cs` | Hit-receiving component for any entity; wraps `EntityStats` |
-| `Assets/Scripts/Entity/CombatAttacker.cs` | Melee timing, equipment gate, and contact damage — shared by player and NPCs |
+| `Assets/Scripts/GamePresentation/Entity/DamageInfo.cs` | Struct describing one hit (amount + source) |
+| `Assets/Scripts/GamePresentation/Entity/CombatReceiver.cs` | Hit-receiving component for any entity; wraps `EntityStats` |
+| `Assets/Scripts/GamePresentation/Entity/CombatAttacker.cs` | Melee timing, equipment gate, and contact damage — shared by player and NPCs |
 
 ---
 
 ## DamageInfo
 
-**File:** `Assets/Scripts/Entity/DamageInfo.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/DamageInfo.cs`
 
 Plain struct — no MonoBehaviour. Passed into `CombatReceiver.ReceiveHit()`.
 
@@ -40,7 +44,7 @@ receiver.ReceiveHit(new DamageInfo(25, gameObject));
 
 ## CombatReceiver
 
-**File:** `Assets/Scripts/Entity/CombatReceiver.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/CombatReceiver.cs`
 
 Add to any entity (player or enemy) that should participate in combat.
 `RequireComponent` automatically adds `EntityStats` if it isn't already present.
@@ -92,7 +96,7 @@ stopping wander and melee AI while leaving the object available for loot/death p
 
 ## CombatAttacker
 
-**File:** `Assets/Scripts/Entity/CombatAttacker.cs`
+**File:** `Assets/Scripts/GamePresentation/Entity/CombatAttacker.cs`
 
 Shared melee attack component used by both the player and NPCs.
 The only difference between the two is the **Use Player Input** toggle.

@@ -1,5 +1,9 @@
 # NPC AI
 
+> **Game.Data config:** behavior tuning lives in pure-C# configs (`Game.Data` assembly) and appears
+> under **Settings** in the Inspector: `NpcBehaviorConfig` (base weight/speed/stall),
+> `NpcWanderConfig`, `NpcIdleConfig`, `NpcUseDoorConfig`, and `NpcDashMeleeConfig`.
+
 Phased NPC AI work. It started with doors, then grew a shared foundation.
 
 - **Phase 1:** entity-based key resolution ([KEY_HOLDER.md](KEY_HOLDER.md)).
@@ -9,7 +13,7 @@ Phased NPC AI work. It started with doors, then grew a shared foundation.
 
 ## Phase 3: Shared Foundation
 
-### NpcBehaviorBase (`Assets/Scripts/NPCs/NpcBehaviorBase.cs`)
+### NpcBehaviorBase (`Assets/Scripts/GamePresentation/NPCs/NpcBehaviorBase.cs`)
 
 An abstract base implementing `INpcBehavior` that all behaviors should derive from. It caches
 `Rigidbody2D`, `NpcController`, `NpcPerception`, `NpcMemory`, the `IKeyHolder`, and the facing
@@ -28,7 +32,7 @@ An abstract base implementing `INpcBehavior` that all behaviors should derive fr
 Derived behaviors override `Enter`, `TickBehavior`, and `Exit`. `NpcWanderBehavior` and
 `NpcUseDoorBehavior` were refactored onto this base.
 
-### NpcPerception (`Assets/Scripts/NPCs/NpcPerception.cs`)
+### NpcPerception (`Assets/Scripts/GamePresentation/NPCs/NpcPerception.cs`)
 
 One shared scan per NPC instead of every behavior running its own physics query. On a fixed
 cadence it collects nearby colliders and exposes:
@@ -67,7 +71,7 @@ props, and closed gates are avoided automatically.
 
 ## Component Summary
 
-### NpcKeyring (`Assets/Scripts/NPCs/NpcKeyring.cs`)
+### NpcKeyring (`Assets/Scripts/GamePresentation/NPCs/NpcKeyring.cs`)
 
 An NPC-owned key inventory implementing `IKeyHolder`. Independent of the NPC's trade inventory.
 
@@ -76,7 +80,7 @@ An NPC-owned key inventory implementing `IKeyHolder`. Independent of the NPC's t
 - Place it on the NPC root so `SlidingDoor.ResolveKeyHolder` finds it via
   `GetComponentInParent<IKeyHolder>()`.
 
-### NpcMemory (`Assets/Scripts/NPCs/NpcMemory.cs`)
+### NpcMemory (`Assets/Scripts/GamePresentation/NPCs/NpcMemory.cs`)
 
 A small per-NPC blackboard. `NpcUseDoorBehavior` adds one automatically if missing.
 
@@ -85,7 +89,7 @@ A small per-NPC blackboard. `NpcUseDoorBehavior` adds one automatically if missi
   the key; automatically forgets it once the key is held.
 - `HasLockedMemory`, `ForgetGate`, `Clear`.
 
-### NpcUseDoorBehavior (`Assets/Scripts/NPCs/NpcUseDoorBehavior.cs`)
+### NpcUseDoorBehavior (`Assets/Scripts/GamePresentation/NPCs/NpcUseDoorBehavior.cs`)
 
 An `INpcBehavior` for `NpcBehaviorManager` (weighted random selection).
 

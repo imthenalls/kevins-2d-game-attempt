@@ -120,16 +120,19 @@ InventoryModel worldA = InventoryUI.Instance.GetInventoryForWorld(WorldLayer.Wor
 InventoryModel activeInventory = InventoryUI.Model;
 ```
 
-## Included World B starter scene
+## Included World B scene
 
-`Assets/Scenes/WorldB.unity` is an editable starter map containing:
+`Assets/Scenes/WorldB.unity` contains:
 
-- A bounded 21 x 15 square tile room.
+- A bounded 21 x 15 square tile starter room.
 - A cyan placeholder World B player with its own camera.
 - `WorldSceneIdentity` set to World B, so direct Play mode testing activates the right layer.
-- A `world_b_entry` arrival/return portal that returns to `training_hub` in `NewScene`.
+- The **isometric training wing** (entrance room, hallway with a locked gate, and arena). See
+  [TRAINING_ARENA.md](TRAINING_ARENA.md).
+- A `world_b_entry` arrival/return portal that returns to `world_b_portal` in `Overworld`.
 - Standalone `PortalManager` and `SceneLoader` objects, which discard themselves when the
   persistent copies from another scene already exist.
 
-To enter it from World A, point any World A `PortalTrigger2D` at scene `WorldB`, portal ID
-`world_b_entry`, enable **Changes World**, and select `WorldB`.
+To enter it from World A, `Overworld` has `portal_to_worldb` (`world_b_portal`) pointing at scene
+`WorldB`, portal ID `world_b_entry`, with **Changes World** enabled and **WorldB** selected. The
+player stands inside and presses G.
