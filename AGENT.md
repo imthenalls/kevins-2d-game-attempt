@@ -112,11 +112,21 @@ Run the full suite in one command before considering a change done:
 powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1
 ```
 
-It runs, in order: Unity compile check, Unity Edit Mode tests (`Assets/Tests/EditMode/`), the
-same tests via `dotnet test` (`Tools/ModelHarness.Tests/`), and a Play-mode scene smoke test
-(`Tools/verify-smoke.ps1`, opens each scene and fails on any console error). It exits non-zero
-if any step fails. The smoke test is the only layer that catches runtime/serialization errors
-(for example duplicate serialized field names), so do not skip it.
+It runs, in order: Unity compile check, Unity Edit Mode tests, Unity Play Mode tests (async),
+`dotnet test`, then a scene smoke test. It exits non-zero if any step fails.
+
+Test assemblies:
+
+| Path | Kind | Scope |
+|---|---|---|
+| `Assets/Tests/EditMode/` | Edit Mode, engine-free | Pure `Game.Data` model + config defaults. Mirrored by `dotnet test`. |
+| `Assets/Tests/Presentation/` | Edit Mode | Reflection guards, save-data round trip, economy conservation (references `Game.Presentation`). |
+| `Assets/Tests/PlayMode/` | Play Mode | Loads real scenes and asserts runtime wiring. |
+
+Play Mode tests must run async (`run_tests --mode PlayMode --async_tests`, then poll
+`test_status`); a synchronous request is dropped by the domain reload. The scene smoke test
+(`Tools/verify-smoke.ps1`) is the layer that catches runtime/serialization errors such as
+duplicate serialized field names, so do not skip it.
 
 ## Documentation Rules
 
