@@ -1,3 +1,4 @@
+using Game.Core;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -118,12 +119,12 @@ public class EquipmentUI : MonoBehaviour
 
         InventorySlot sourceSlot = InventoryUI.Model.GetSlot(inventoryIndex);
         if (sourceSlot == null || sourceSlot.IsEmpty || !sourceSlot.item.IsEquip ||
-            sourceSlot.item.equipSlot != targetSlot)
+            sourceSlot.item.AsItemData()?.equipSlot != targetSlot)
         {
             return false;
         }
 
-        ItemData item = sourceSlot.item;
+        ItemData item = sourceSlot.item.AsItemData();
         if (!equipment.TryEquipFromInventory(InventoryUI.Model, item, out ItemData displaced))
             return false;
 

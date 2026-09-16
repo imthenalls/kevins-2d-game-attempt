@@ -1,3 +1,4 @@
+using Game.Core;
 using System;
 using TMPro;
 using UnityEngine;
@@ -48,7 +49,7 @@ public class LootSlotUI : MonoBehaviour,
 
         if (iconImage != null)
         {
-            iconImage.sprite  = empty ? null : slot.item.icon;
+            iconImage.sprite  = empty ? null : slot.item.IconOf();
             iconImage.enabled = !empty;
         }
 
@@ -75,7 +76,7 @@ public class LootSlotUI : MonoBehaviour,
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (backgroundImage != null) backgroundImage.color = hoveredColor;
-        if (slot != null && !slot.IsEmpty) InventoryTooltip.Show(slot.item);
+        if (slot != null && !slot.IsEmpty) InventoryTooltip.Show(slot.item.AsItemData());
     }
 
     public void OnPointerExit(PointerEventData eventData)

@@ -1,3 +1,4 @@
+using Game.Core;
 using System;
 using TMPro;
 using UnityEngine;
@@ -81,7 +82,7 @@ public class InventorySlotUI : MonoBehaviour,
         {
             if (iconImage != null)
             {
-                iconImage.sprite = Slot.item.icon;
+                iconImage.sprite = Slot.item.IconOf();
                 iconImage.enabled = true;
             }
             if (quantityText != null)
@@ -110,7 +111,7 @@ public class InventorySlotUI : MonoBehaviour,
         RefreshBackground();
 
         if (Slot != null && !Slot.IsEmpty)
-            InventoryTooltip.Show(Slot.item);
+            InventoryTooltip.Show(Slot.item.AsItemData());
     }
 
     public void OnPointerExit(PointerEventData eventData)

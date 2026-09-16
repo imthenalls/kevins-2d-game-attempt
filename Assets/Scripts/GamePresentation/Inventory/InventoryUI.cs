@@ -1,3 +1,4 @@
+using Game.Core;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -216,9 +217,9 @@ public class InventoryUI : MonoBehaviour
         for (int i = 0; i < source.SlotCount; i++)
         {
             InventorySlot slot = source.GetSlot(i);
-            if (!slot.IsEmpty && slot.item.scope == ItemScope.Shared &&
-                !sharedItems.Contains(slot.item))
-                sharedItems.Add(slot.item);
+            if (!slot.IsEmpty && slot.item.Scope == ItemScope.Shared &&
+                !sharedItems.Contains(slot.item.AsItemData()))
+                sharedItems.Add(slot.item.AsItemData());
         }
 
         bool movedAny = false;
@@ -308,7 +309,7 @@ public class InventoryUI : MonoBehaviour
 
         if (dragGhostImage == null) return;
         var slot = model.GetSlot(fromIndex);
-        dragGhostImage.sprite = slot.item != null ? slot.item.icon : null;
+        dragGhostImage.sprite = slot.item != null ? slot.item.IconOf() : null;
         dragGhostImage.gameObject.SetActive(slot.item != null);
         dragGhostImage.transform.SetAsLastSibling();
     }
@@ -496,7 +497,7 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        ItemData item = slot.item;
+        ItemData item = slot.item.AsItemData();
         if (!equipment.TryEquipFromInventory(model, item, out ItemData displaced))
         {
             Debug.LogWarning($"[InventoryUI] Could not equip '{item.itemName}'.", this);

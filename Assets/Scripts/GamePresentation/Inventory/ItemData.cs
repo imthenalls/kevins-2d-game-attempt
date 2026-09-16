@@ -1,3 +1,4 @@
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
@@ -11,27 +12,15 @@ using UnityEngine;
 ///   Stacking  — maxStackSize (set to 1 for non-stackables).
 ///   Economy   — sellValue in gold.
 ///
-/// ItemFlags:
-///   Unique    — forces stack size to 1; only one copy can be held.
-///   QuestItem — cannot be dropped or stacked; removed by quest actions.
-///   KeyItem   — cannot be dropped.
+/// Implements the engine-free <see cref="IItem"/> contract so inventories and the economy can
+/// operate on items without a UnityEngine dependency.
 ///
 /// Save/load: ItemData assets must be inside Assets/Resources/Items/ OR registered
 /// with ItemDatabase so they can be looked up by itemId when a save file is loaded.
 /// </summary>
 
-[System.Flags]
-public enum ItemFlags { None = 0, Unique = 1, QuestItem = 2, KeyItem = 4 }
-
-public enum ItemScope
-{
-    Shared,
-    WorldA,
-    WorldB,
-}
-
 [CreateAssetMenu(fileName = "NewItem", menuName = "Inventory/Item")]
-public class ItemData : ScriptableObject
+public class ItemData : ScriptableObject, IItem
 {
     [Header("Identity")]
     public string itemId;
@@ -77,4 +66,12 @@ public class ItemData : ScriptableObject
     /// </summary>
     public bool IsStackable =>
         (flags & (ItemFlags.Unique | ItemFlags.QuestItem)) == 0 && maxStackSize > 1;
+
+    // ── IItem (engine-free contract) ─────────────────────────────────────────
+    public string ItemId => itemId;
+    public string ItemName => itemName;
+    public ItemType Type => type;
+    public ItemFlags Flags => flags;
+    public ItemScope Scope => scope;
+    public int MaxStackSize => maxStackSize;
 }

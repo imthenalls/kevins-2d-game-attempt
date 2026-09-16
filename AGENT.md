@@ -77,6 +77,11 @@ Rules:
    `[SerializeField]` config field and reads it; it may keep only Unity-only references
    (Transform, LayerMask, SpriteRenderer). Unity-native value types are stored in pure form
    (KeyCode as int, Color as RGBA floats).
+7. Engine-free domain logic lives in `GameData` behind a plain-C# contract. `InventoryModel` and
+   `InventorySlot` operate on `IItem`; the Unity `ItemData` ScriptableObject implements `IItem` and
+   keeps presentation-only data (icon, equipment slot, use effects). Reach that data in
+   `GamePresentation` with `IItem.AsItemData()` / `ItemExtensions` — never leak UnityEngine into
+   `GameData`. `ItemType`, `ItemFlags`, and `ItemScope` live in `GameData` for the same reason.
 
 ## Safety Rules
 

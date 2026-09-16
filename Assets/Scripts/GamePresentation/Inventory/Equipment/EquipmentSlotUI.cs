@@ -1,3 +1,4 @@
+using Game.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -95,7 +96,7 @@ public class EquipmentSlotUI : MonoBehaviour,
         if (background == null) return;
         InventorySlot dragged = GetDraggedInventorySlot();
         background.color = dragged != null && !dragged.IsEmpty && dragged.item.IsEquip &&
-            dragged.item.equipSlot == slotType
+            dragged.item.AsItemData()?.equipSlot == slotType
             ? ValidDropColor
             : HoverColor;
     }

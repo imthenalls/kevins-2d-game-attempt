@@ -108,6 +108,6 @@ public class HotbarSlotUI : MonoBehaviour,
         var slot = InventoryUI.Model?.GetSlot(fromIndex);
         if (slot == null || slot.IsEmpty) return;
 
-        HotbarUI.AssignSlot(SlotIndex, slot.item);
+        HotbarUI.AssignSlot(SlotIndex, slot.item.AsItemData());
     }
 }

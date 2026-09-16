@@ -1,3 +1,4 @@
+using Game.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -183,7 +184,7 @@ public class LootContainerUI : MonoBehaviour
 
         int taken = qty - leftover;
         if (taken > 0)
-            QuestEventBus.Raise("ItemCollected", item.itemId, taken);
+            QuestEventBus.Raise("ItemCollected", item.ItemId, taken);
     }
 
     /// <summary>Transfers all items from the container into the player's inventory.</summary>
@@ -204,7 +205,7 @@ public class LootContainerUI : MonoBehaviour
             if (taken > 0)
             {
                 sourceModel.RemoveItem(item, taken);
-                QuestEventBus.Raise("ItemCollected", item.itemId, taken);
+                QuestEventBus.Raise("ItemCollected", item.ItemId, taken);
             }
 
             if (leftover > 0) break; // inventory full — stop trying

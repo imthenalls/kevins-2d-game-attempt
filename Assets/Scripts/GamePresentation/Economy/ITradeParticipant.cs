@@ -1,3 +1,4 @@
+using Game.Core;
 /// <summary>
 /// Exposes the stable identity, mana account, and inventory required by TradeService.
 ///

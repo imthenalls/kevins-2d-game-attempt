@@ -1,3 +1,4 @@
+using Game.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -254,7 +255,7 @@ public sealed class RuntimeEnemyLootPile : MonoBehaviour, IInteractable
             if (slot.IsEmpty)
                 continue;
 
-            ItemData item = slot.item;
+            ItemData item = slot.item.AsItemData();
             int taken = InventoryHelper.GiveItem(item, slot.quantity, interactor);
             if (taken > 0)
                 inventory.RemoveItem(item, taken);

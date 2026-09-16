@@ -1,3 +1,4 @@
+using Game.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -67,7 +68,7 @@ public class InventoryContextMenu : MonoBehaviour
         // Configure visible buttons based on item properties
         if (instance.useButton != null)
         {
-            bool canUse = slot.item.type == ItemType.Consumable || slot.item.IsEquip;
+            bool canUse = slot.item.Type == ItemType.Consumable || slot.item.IsEquip;
             instance.useButton.gameObject.SetActive(canUse);
             if (canUse)
             {
@@ -83,7 +84,7 @@ public class InventoryContextMenu : MonoBehaviour
         if (instance.assignHotbarButton != null)
             instance.assignHotbarButton.gameObject.SetActive(HotbarUI.Model != null);
 
-        bool canDrop = (slot.item.flags & (ItemFlags.QuestItem | ItemFlags.KeyItem)) == 0;
+        bool canDrop = (slot.item.Flags & (ItemFlags.QuestItem | ItemFlags.KeyItem)) == 0;
         if (instance.dropButton != null)
             instance.dropButton.gameObject.SetActive(canDrop);
 
@@ -115,7 +116,8 @@ public class InventoryContextMenu : MonoBehaviour
         var slot = model.GetSlot(targetSlotIndex);
         if (slot.IsEmpty) return;
 
-        var item = slot.item;
+        ItemData item = slot.item.AsItemData();
+        if (item == null) return;
         var player = UnityEngine.Object.FindAnyObjectByType<PlayerController2D>();
 
         if (item.IsEquip)
@@ -188,7 +190,7 @@ public class InventoryContextMenu : MonoBehaviour
         var slot = model.GetSlot(targetSlotIndex);
         if (slot.IsEmpty) return;
 
-        int assigned = HotbarUI.AssignFirstEmpty(slot.item);
+        int assigned = HotbarUI.AssignFirstEmpty(slot.item.AsItemData());
         if (assigned < 0)
             Debug.Log("[InventoryContextMenu] Hotbar is full.");
         Hide();

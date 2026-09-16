@@ -194,7 +194,7 @@ public class SaveManager : MonoBehaviour
                         entry.inventorySlots.Add(new InventorySlotEntry
                         {
                             slotIndex = i,
-                            itemId    = slot.item.itemId,
+                            itemId    = slot.item.ItemId,
                             quantity  = slot.quantity,
                         });
                 }
@@ -450,7 +450,7 @@ public class SaveManager : MonoBehaviour
                 destination.Add(new InventorySlotEntry
                 {
                     slotIndex = i,
-                    itemId = slot.item.itemId,
+                    itemId = slot.item.ItemId,
                     quantity = slot.quantity,
                 });
             }
