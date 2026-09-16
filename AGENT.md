@@ -104,6 +104,20 @@ Primary channel: the official **Unity CLI + Pipeline package** (`com.unity.pipel
 - Bridge fallback: the file-based Unity Bridge (`unity-cmd.ps1`, `Assets/LLM/Bridge/`) remains available if the CLI server is down.
 - Scene and prefab edits still require an explicit request (see Safety Rules above).
 
+## Verification
+
+Run the full suite in one command before considering a change done:
+
+```
+powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1
+```
+
+It runs, in order: Unity compile check, Unity Edit Mode tests (`Assets/Tests/EditMode/`), the
+same tests via `dotnet test` (`Tools/ModelHarness.Tests/`), and a Play-mode scene smoke test
+(`Tools/verify-smoke.ps1`, opens each scene and fails on any console error). It exits non-zero
+if any step fails. The smoke test is the only layer that catches runtime/serialization errors
+(for example duplicate serialized field names), so do not skip it.
+
 ## Documentation Rules
 
 1. Whenever a new feature or system is implemented, create a corresponding `.md` file in the `Documents/` folder explaining what it does and how to set it up in Unity.
