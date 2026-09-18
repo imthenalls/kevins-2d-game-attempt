@@ -189,6 +189,7 @@ edit and play mode. See [Documents/SLIDING_DOORS.md](Documents/SLIDING_DOORS.md)
 ## Scripting Rules
 
 1. Do not use `IReadOnlyList<T>` anywhere in the codebase. Use an appropriate concrete collection type or another API shape instead.
+2. Unity message methods (`Update`, `FixedUpdate`, `LateUpdate`, `OnGUI`, `Awake`, `Start`, `OnEnable`, `OnDisable`, `OnValidate`, ...) are event listeners that Unity calls even when the body is empty, and every call crosses the scripting-perimeter from native. Never declare one the class does not use — after every refactor, delete the ones that no longer have work to do. This also applies to declaring them "as a placeholder for later".
 
 Every new C# script file must begin with a `/// <summary>` XML doc comment block directly above the class (or above its `[Attribute]` lines). The comment must cover:
 
