@@ -42,9 +42,15 @@ in sync if those files change.
 
 ## Known findings
 
-As of the last run the validator reports genuine content issues that were left for a content pass:
+All findings from the first run have been fixed:
 
-- Quest `bandit_king` references item ids `bounty_gold` and `evidence_letter` that are not in `items.json`.
-- Quest `bandit_king` references quest id `sheriffs_gratitude`, which is not defined.
-- `Overworld` contains two NPCs with the id `sword_guard` (a known pre-existing issue; see
-  [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) transitional compromise 3).
+- Items `bounty_gold` and `evidence_letter` were added to `items.json` (referenced by quest
+  `bandit_king`'s `ending_kill` / `ending_expose` nodes).
+- Quest `sheriffs_gratitude` was authored in `Assets/StreamingAssets/quests/` — it is started by
+  `bandit_king`'s `ending_expose` and rewards two health potions for reporting the exposure.
+- The duplicate Overworld NPC id `sword_guard` was resolved by renaming the clone
+  ("sword guard npc (1)") to `sword_guard_2`; it received its own `enemy_loot.json` entry so it
+  drops the same loot as the original. Old saves that keyed either NPC as `sword_guard` keep the
+  first guard's state; the clone is a new save key.
+
+A clean validation run now reports `errors=0 warnings=0`.
