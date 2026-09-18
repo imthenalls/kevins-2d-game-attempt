@@ -27,7 +27,7 @@ public class NpcPathfinder : MonoBehaviour
 
     private Grid grid;
     private Collider2D[] ownColliders;
-    private readonly Collider2D[] overlap = new Collider2D[16];
+    private readonly List<Collider2D> overlap = new List<Collider2D>();
 
     private static readonly Vector3Int[] Directions =
     {
@@ -173,7 +173,7 @@ public class NpcPathfinder : MonoBehaviour
         Grid nearest = null;
         float nearestSqr = float.MaxValue;
         Vector2 origin = transform.position;
-        foreach (Grid candidate in Object.FindObjectsByType<Grid>(FindObjectsSortMode.None))
+        foreach (Grid candidate in Object.FindObjectsByType<Grid>())
         {
             float sqr = ((Vector2)candidate.transform.position - origin).sqrMagnitude;
             if (sqr < nearestSqr)
@@ -209,7 +209,8 @@ public class NpcPathfinder : MonoBehaviour
     private bool IsWalkable(Vector3Int cell)
     {
         Vector3 center = grid.GetCellCenterWorld(cell);
-        int count = Physics2D.OverlapPointNonAlloc(center, overlap, obstacleLayers);
+        var filter = new ContactFilter2D { useLayerMask = true, layerMask = obstacleLayers, useTriggers = true };
+        int count = Physics2D.OverlapPoint(center, filter, overlap);
         for (int i = 0; i < count; i++)
         {
             Collider2D contact = overlap[i];

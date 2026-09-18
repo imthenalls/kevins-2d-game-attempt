@@ -290,7 +290,7 @@ public class SceneRulesManager : MonoBehaviour
         if (_player != null)
             _originalPlayerSpeed = _player.MoveSpeed;
 
-        foreach (var npc in FindObjectsByType<NpcController>(FindObjectsSortMode.None))
+        foreach (var npc in FindObjectsByType<NpcController>())
         {
             _npcs.Add(npc);
 
@@ -306,7 +306,7 @@ public class SceneRulesManager : MonoBehaviour
                 _npcDialogues.Add(dialogue);
         }
 
-        foreach (var portal in FindObjectsByType<PortalTrigger2D>(FindObjectsSortMode.None))
+        foreach (var portal in FindObjectsByType<PortalTrigger2D>())
             _portals.Add(portal);
     }
 

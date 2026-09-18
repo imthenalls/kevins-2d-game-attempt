@@ -219,7 +219,7 @@ public class DialogueUIController : MonoBehaviour
         text.fontStyle = fontStyle;
         text.alignment = alignment;
         text.color = Color.white;
-        text.enableWordWrapping = true;
+        text.textWrappingMode = TextWrappingModes.Normal;
         return text;
     }
 }

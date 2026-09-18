@@ -62,8 +62,10 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Vector2 slotSize    = new Vector2(64f, 64f);
     [SerializeField] private Vector2 slotSpacing = new Vector2(4f,  4f);
 
+#if !ENABLE_INPUT_SYSTEM
     [Header("Legacy Input Fallback")]
     [SerializeField] private KeyCode legacyToggleKey = KeyCode.I;
+#endif
 
     private InventoryModel model;
     private InventoryModel worldAModel;

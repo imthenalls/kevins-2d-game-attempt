@@ -342,8 +342,7 @@ public class EquippedWeaponVisual : MonoBehaviour
 
         weaponHitbox.isTrigger = true;
         weaponHitbox.enabled = false;
-        hitboxContactFilter = new ContactFilter2D();
-        hitboxContactFilter.NoFilter();
+        hitboxContactFilter = ContactFilter2D.noFilter;
         hitboxContactFilter.useTriggers = true;
     }
 

@@ -93,21 +93,23 @@ Run everything with `powershell -ExecutionPolicy Bypass -File Tools/verify-all.p
 
 ### 4. Add Data Validation
 
-A reflection guard already fails the build on duplicate serialized field names
-(`DuplicateSerializedFieldTests`), and `saveVersion` exists on `SaveData`. The following validation
-is still outstanding. Create an Editor validation tool that checks:
+`Tools > Validation > Validate Game Data` (`GameDataValidator`) now covers most of this; see
+[DATA_VALIDATION.md](DATA_VALIDATION.md). A reflection guard also fails the build on duplicate
+serialized field names (`DuplicateSerializedFieldTests`).
 
-- Duplicate or empty NPC IDs
-- Duplicate item IDs
-- Missing dialogue IDs
+Covered:
+
+- Duplicate or empty NPC, item, dialogue, and quest ids
 - Broken dialogue node links
-- Missing quest transition targets
-- Unknown quest action or condition types
-- Invalid portal destinations or scene names
-- Missing spawn-point IDs
-- Item IDs referenced by quests but absent from the database
+- Missing quest transition targets / quest node references
+- Dangling item and quest references from dialogue, quests, NPC inventories, and enemy loot
+- Portal destination references and scene names
 
-This will provide more value than another gameplay system because the project relies heavily on string identifiers.
+Still outstanding:
+
+- Unknown quest action or condition types
+- Missing spawn-point IDs
+- Missing dialogue ids referenced by `NpcDialogue`
 
 ### 5. Stabilize Saving
 

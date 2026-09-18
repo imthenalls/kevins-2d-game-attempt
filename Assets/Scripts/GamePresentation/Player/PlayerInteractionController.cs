@@ -37,7 +37,7 @@ public class PlayerInteractionController : MonoBehaviour
     [SerializeField] private LayerMask interactableLayers = Physics2D.DefaultRaycastLayers;
     [SerializeField] private DialogueUIController dialogueUI;
     [SerializeField] private PlayerController2D playerController;
-    private readonly Collider2D[] overlapResults = new Collider2D[12];
+    private readonly List<Collider2D> overlapResults = new List<Collider2D>();
     private NpcDialogue activeDialogue;
     private DialogueNodeDefinition activeNode;
     private int selectedChoiceIndex;
@@ -109,7 +109,8 @@ public class PlayerInteractionController : MonoBehaviour
 
     private void TryStartNearestDialogue()
     {
-        int hitCount = Physics2D.OverlapCircleNonAlloc(transform.position, config.InteractionSearchRadius, overlapResults, npcLayers);
+        var npcFilter = new ContactFilter2D { useLayerMask = true, layerMask = npcLayers, useTriggers = true };
+        int hitCount = Physics2D.OverlapCircle(transform.position, config.InteractionSearchRadius, npcFilter, overlapResults);
     NpcDialogue nearestDialogue = null;
     float nearestDistanceSqr = float.MaxValue;
 
@@ -333,8 +334,9 @@ public class PlayerInteractionController : MonoBehaviour
 
     private void TryStartNearestInteractable()
     {
-        int hitCount = Physics2D.OverlapCircleNonAlloc(
-            transform.position, config.InteractionSearchRadius, overlapResults, interactableLayers);
+        var interactableFilter = new ContactFilter2D { useLayerMask = true, layerMask = interactableLayers, useTriggers = true };
+        int hitCount = Physics2D.OverlapCircle(
+            transform.position, config.InteractionSearchRadius, interactableFilter, overlapResults);
 
         IInteractable nearest         = null;
         float         nearestDistSqr  = float.MaxValue;

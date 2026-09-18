@@ -208,7 +208,7 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
         float nearestSqr = doorConfig.DetectionRadius * doorConfig.DetectionRadius;
         Vector2 origin = Body.position;
 
-        foreach (SlidingDoor candidate in UnityEngine.Object.FindObjectsByType<SlidingDoor>(FindObjectsSortMode.None))
+        foreach (SlidingDoor candidate in UnityEngine.Object.FindObjectsByType<SlidingDoor>())
         {
             if (candidate == null || candidate.IsOpen)
                 continue;

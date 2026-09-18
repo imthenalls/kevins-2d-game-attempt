@@ -21,7 +21,7 @@ public class NpcPerception : MonoBehaviour
     [SerializeField] private LayerMask detectionLayers = ~0;
     [SerializeField, Min(0.5f)] private float scanRadius = 8f;
 
-    private readonly Collider2D[] buffer = new Collider2D[32];
+    private readonly List<Collider2D> buffer = new List<Collider2D>();
     private readonly List<Collider2D> contacts = new List<Collider2D>();
     private readonly List<SlidingDoor> gates = new List<SlidingDoor>();
     private int lastRefreshFrame = -1;
@@ -52,7 +52,8 @@ public class NpcPerception : MonoBehaviour
         gates.Clear();
         Player = null;
 
-        int count = Physics2D.OverlapCircleNonAlloc(transform.position, scanRadius, buffer, detectionLayers);
+        var filter = new ContactFilter2D { useLayerMask = true, layerMask = detectionLayers, useTriggers = true };
+        int count = Physics2D.OverlapCircle(transform.position, scanRadius, filter, buffer);
         for (int i = 0; i < count; i++)
         {
             Collider2D contact = buffer[i];

@@ -42,10 +42,10 @@ public static class TilemapAlignmentTool
         var sb = new StringBuilder();
         int issues = 0;
 
-        foreach (Grid grid in Object.FindObjectsByType<Grid>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Grid grid in Object.FindObjectsByType<Grid>(FindObjectsInactive.Include))
             issues += CheckTransform(grid.transform, "Grid", sb);
 
-        foreach (Tilemap tilemap in Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Tilemap tilemap in Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include))
             issues += CheckTransform(tilemap.transform, "Tilemap", sb);
 
         if (issues > 0)
@@ -62,7 +62,7 @@ public static class TilemapAlignmentTool
         var sb = new StringBuilder();
         int normalized = 0;
 
-        foreach (Tilemap tilemap in Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Tilemap tilemap in Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include))
         {
             Vector3 offset = tilemap.transform.localPosition;
             if (offset.sqrMagnitude > 0.000001f)
@@ -83,7 +83,7 @@ public static class TilemapAlignmentTool
             }
         }
 
-        foreach (Grid grid in Object.FindObjectsByType<Grid>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (Grid grid in Object.FindObjectsByType<Grid>(FindObjectsInactive.Include))
         {
             if (!IsIdentity(grid.transform))
             {

@@ -44,7 +44,7 @@ public class EquipmentUI : MonoBehaviour
     {
         if (instance == null)
         {
-            instance = FindFirstObjectByType<EquipmentUI>(FindObjectsInactive.Include);
+            instance = FindAnyObjectByType<EquipmentUI>(FindObjectsInactive.Include);
             if (instance == null)
             {
                 Canvas canvas = InventoryUI.Instance != null

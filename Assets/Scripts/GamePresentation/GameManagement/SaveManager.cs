@@ -153,7 +153,7 @@ public class SaveManager : MonoBehaviour
             }
         }
 
-        foreach (var npc in FindObjectsByType<NpcController>(FindObjectsSortMode.None))
+        foreach (var npc in FindObjectsByType<NpcController>())
         {
             var entry = new NpcSaveEntry
             {
@@ -361,7 +361,7 @@ public class SaveManager : MonoBehaviour
         {
             // Build a lookup by npcId for O(1) access
             var npcLookup = new Dictionary<string, NpcController>();
-            foreach (var npc in FindObjectsByType<NpcController>(FindObjectsSortMode.None))
+            foreach (var npc in FindObjectsByType<NpcController>())
                 npcLookup[npc.NpcId] = npc;
 
             foreach (var entry in data.npcStates)
