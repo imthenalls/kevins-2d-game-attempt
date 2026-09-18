@@ -31,4 +31,5 @@ Thumbs.db
 Tools/**/out/
 
 # Keep hand-written .NET project files under Tools (Unity-generated *.csproj stay ignored)
-!Tools/**/*.csproj
+!Tools/**/*.csprojAssets/InitTestScene*.unity
+Assets/InitTestScene*.unity.meta
