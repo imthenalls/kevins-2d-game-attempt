@@ -178,6 +178,27 @@
       "sellValue": 0,
       "flags": ["Unique", "QuestItem"],
       "iconPath": ""
-    }
-  ]
+    },
+    {
+      "id": "bounty_gold",
+      "name": "Bounty Gold",
+      "description": "The bounty paid out after the bandit king is dealt with.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 99,
+      "sellValue": 50,
+      "flags": [],
+      "iconPath": ""
+    },
+    {
+      "id": "evidence_letter",
+      "name": "Evidence Letter",
+      "description": "Proof of the bandit king's crimes. Hand it in to the sheriff.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 1,
+      "sellValue": 0,
+      "flags": ["Unique", "QuestItem"],
+      "iconPath": ""
+    }  ]
 }

@@ -1,0 +1,36 @@
+{
+  "questId": "sheriffs_gratitude",
+  "startNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "objectives": [
+        {
+          "id": "obj_report_expose",
+          "eventType": "NpcTalkedTo",
+          "targetId": "sheriff",
+          "requiredCount": 1
+        }
+      ],
+      "onEnterActions": [],
+      "transitions": [
+        {
+          "targetNodeId": "rewarded",
+          "automatic": true,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_report_expose" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rewarded",
+      "objectives": [],
+      "onEnterActions": [
+        { "type": "SetFact", "key": "sheriffsGratitudeComplete", "value": "True" },
+        { "type": "GiveItem", "itemId": "health_potion", "count": 2 }
+      ],
+      "transitions": []
+    }
+  ]
+}

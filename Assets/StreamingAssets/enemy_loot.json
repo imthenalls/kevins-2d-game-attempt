@@ -16,6 +16,21 @@
           "maxQuantity": 1
         }
       ]
-    }
-  ]
+    },
+    {
+      "npcId": "sword_guard_2",
+      "dropName": "Sword Guard Loot",
+      "items": [
+        {
+          "itemId": "gold_coin",
+          "minQuantity": 5,
+          "maxQuantity": 10
+        },
+        {
+          "itemId": "broken_sword",
+          "minQuantity": 1,
+          "maxQuantity": 1
+        }
+      ]
+    }  ]
 }
