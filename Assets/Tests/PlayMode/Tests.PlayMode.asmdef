@@ -3,7 +3,9 @@
     "rootNamespace": "Game.Tests",
     "references": [
         "Game.Data",
-        "Game.Presentation"
+        "Game.Presentation",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

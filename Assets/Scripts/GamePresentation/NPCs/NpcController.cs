@@ -76,8 +76,6 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     public bool MovementEnabled => behaviorState != NpcBehaviorState.Disabled;
 
     private NpcBehaviorState _stateBeforeMovementLock = NpcBehaviorState.Idle;
-    private GUIStyle _healthTextStyle;
-
     private void Awake()
     {
         if (npcType == NpcType.Enemy)
@@ -95,7 +93,11 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     private void Start()
     {
         if (npcType == NpcType.Enemy)
+        {
             EnemyLootDrop.PrepareInventory(this);
+            if (config.ShowEnemyHealthBar)
+                EnemyHealthBarUI.Create(this);
+        }
     }
 
     private void OnValidate()
@@ -192,67 +194,13 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
         }
     }
 
-    private void OnGUI()
-    {
-        if (!config.ShowEnemyHealthBar || npcType != NpcType.Enemy || Stats == null || !Stats.IsAlive)
-            return;
 
-        Camera worldCamera = Camera.main;
-        if (worldCamera == null)
-            return;
-
-        Vector3 screenPoint = worldCamera.WorldToScreenPoint(
-            transform.position + Vector3.up * config.HealthBarWorldOffset);
-        if (screenPoint.z <= 0f)
-            return;
-
-        float width = config.HealthBarScreenWidth;
-        float height = config.HealthBarScreenHeight;
-        var outer = new Rect(
-            screenPoint.x - width * 0.5f,
-            Screen.height - screenPoint.y - height * 0.5f,
-            width,
-            height);
-        var inner = new Rect(outer.x + 2f, outer.y + 2f, outer.width - 4f, outer.height - 4f);
-        float hpRatio = Stats.MaxHp > 0 ? Mathf.Clamp01((float)Stats.Hp / Stats.MaxHp) : 0f;
-
-        Color previousColor = GUI.color;
-        int previousDepth = GUI.depth;
-        GUI.depth = -100;
-
-        GUI.color = Color.black;
-        GUI.DrawTexture(outer, Texture2D.whiteTexture);
-        GUI.color = new Color(0.25f, 0.04f, 0.04f, 1f);
-        GUI.DrawTexture(inner, Texture2D.whiteTexture);
-
-        if (hpRatio > 0f)
-        {
-            GUI.color = Color.Lerp(new Color(0.9f, 0.12f, 0.08f), new Color(0.2f, 0.85f, 0.2f), hpRatio);
-            GUI.DrawTexture(new Rect(inner.x, inner.y, inner.width * hpRatio, inner.height), Texture2D.whiteTexture);
-        }
-
-        GUI.color = Color.white;
-        GUI.Label(outer, $"{Stats.Hp} / {Stats.MaxHp}", GetHealthTextStyle());
-        GUI.color = previousColor;
-        GUI.depth = previousDepth;
-    }
-
-    private GUIStyle GetHealthTextStyle()
-    {
-        if (_healthTextStyle != null)
-            return _healthTextStyle;
-
-        _healthTextStyle = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 9,
-            fontStyle = FontStyle.Bold
-        };
-        _healthTextStyle.normal.textColor = Color.white;
-        return _healthTextStyle;
-    }
+    /// <summary>Health bar configuration read by EnemyHealthBarUI; values live in Game.Data config.</summary>
+    public bool ShowEnemyHealthBar => config.ShowEnemyHealthBar;
+    public float HealthBarWorldOffset => config.HealthBarWorldOffset;
+    public float HealthBarScreenWidth => config.HealthBarScreenWidth;
+    public float HealthBarScreenHeight => config.HealthBarScreenHeight;
 }
-
 public enum NpcBehaviorState
 {
     Idle,
