@@ -210,6 +210,17 @@ the enemy clears velocity, warning color, and attack state.
 8. Confirm the dash telegraph (yellow ~0.5 s), straight dash, and sword swing.
 9. Stand in `world_b_entry` and press **G** to return to `Overworld` at `world_b_portal`.
 
+### Automated coverage
+
+The old Play-mode harness (`TrainingArenaVerification`) has been removed: it required a
+`Training Arena Wing` object that no saved scene contains any more, so it could no longer run.
+Rebuilding the wing with `Tools > Training Arena > Build Missing Arena` would restore the scene,
+but the harness itself is gone.
+
+For automated coverage, use `powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1`
+(compile, Edit Mode + Play Mode tests, `dotnet test`, and a scene smoke test). The numbered steps
+above remain the manual check.
+
 ## Runtime API
 
 ```csharp

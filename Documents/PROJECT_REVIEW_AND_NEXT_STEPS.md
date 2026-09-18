@@ -18,8 +18,8 @@ The main concern is scope. A large amount of infrastructure has been built, but 
 ### Main Risks
 
 - Many global singletons and static access points
-- Only a small test suite, primarily focused on world state
-- Systems may work individually but have limited end-to-end coverage
+- Test coverage has grown (unit, contract, and Play Mode) but still thins out at system boundaries
+- Systems may work individually but have limited end-to-end coverage (one Play Mode wiring test exists; no full interaction flow yet)
 - JSON IDs, scene names, item IDs, dialogue IDs, and portal IDs can fail only at runtime
 - Runtime-generated UI and automatic component discovery can hide configuration problems
 - Save compatibility may become difficult as data structures evolve
@@ -51,7 +51,8 @@ For important production UI, prefer authored Unity prefabs over relying primaril
 2. Resolve every Console error and warning.
 3. Let Unity generate any missing `.meta` files and commit them.
 4. Inspect scenes and prefabs for `Missing Script` components.
-5. Run all Edit Mode tests.
+5. Run the full verification suite: `powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1`
+   (compile, Edit Mode + Play Mode tests, `dotnet test`, and a scene smoke test).
 6. Commit the class-declaration, duplicate-class, GUID, and documentation repairs as one recovery commit.
 
 ### 2. Build a Vertical Slice
@@ -73,22 +74,28 @@ This sequence exercises nearly every major system in the repository.
 
 ### 3. Add Integration Coverage
 
-Prioritize tests for:
+Prioritize tests for (status as of the inventory decouple):
 
-- Inventory stacking, splitting, moving, sorting, and removal
-- Equipment bonus application and removal
-- Combat damage, invincibility, death, and quest events
-- Quest progression across multiple objectives
-- Save/load round trips
-- Hotbar save restoration
-- Portal destination resolution
-- World-state restoration after scene loading
+- ✅ Inventory stacking, splitting, moving, sorting, and removal (`InventoryModelTests`)
+- ⬜ Equipment bonus application and removal
+- ⬜ Combat damage, invincibility, death, and quest events
+- ⬜ Quest progression across multiple objectives
+- ✅ Save/load round trips (`SaveDataRoundTripTests`)
+- ⬜ Hotbar save restoration
+- ⬜ Portal destination resolution
+- ⬜ World-state restoration after scene loading
+- ✅ Engine-free config defaults and the `ItemData`↔`IItem` contract
 
-Add at least one Play Mode smoke test that loads a real scene and completes a simplified interaction flow.
+A Play Mode test now loads the real scenes and asserts the session boots and NPC models register
+(`SceneIntegrationPlayModeTests`); a full interaction flow is still outstanding.
+
+Run everything with `powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1`.
 
 ### 4. Add Data Validation
 
-Create an Editor validation tool that checks:
+A reflection guard already fails the build on duplicate serialized field names
+(`DuplicateSerializedFieldTests`), and `saveVersion` exists on `SaveData`. The following validation
+is still outstanding. Create an Editor validation tool that checks:
 
 - Duplicate or empty NPC IDs
 - Duplicate item IDs

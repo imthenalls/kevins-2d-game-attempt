@@ -21,7 +21,6 @@ public static class TrainingArenaBuilder
     public const string PrefabPath = "Assets/Prefabs/TrainingChallenger.prefab";
     public static readonly Rect ArenaBounds = new Rect(61, -7, 18, 14);
     private const string Request = "Temp/training-arena-build.request";
-    private const string VerifyRequest = "Temp/training-arena-verify.request";
     private static Sprite square;
     private static Material material;
 
@@ -30,13 +29,6 @@ public static class TrainingArenaBuilder
 
     private static void ProcessRequest()
     {
-        if (!EditorApplication.isCompiling && !EditorApplication.isUpdating &&
-            !EditorApplication.isPlayingOrWillChangePlaymode && File.Exists(VerifyRequest))
-        {
-            File.Delete(VerifyRequest);
-            TrainingArenaVerification.Verify();
-            return;
-        }
         if (EditorApplication.isCompiling || EditorApplication.isUpdating ||
             !File.Exists(Request) || EditorApplication.isPlayingOrWillChangePlaymode) return;
         File.Delete(Request);

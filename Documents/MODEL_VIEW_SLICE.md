@@ -71,16 +71,23 @@ physics/wander ──► Transform moves ──► NpcStateView.LateUpdate ─�
 
 ## Tests
 
-`Assets/Tests/EditMode/` (recreated test assembly) — 8 tests, all passing, no Play Mode:
+The suite has grown since this slice. Run all of it with:
 
-- damage/heal clamps and death
-- logical cell move
-- service commands change the model
-- snapshot save/load round trip
-- **view destroy + recreate keeps the model** (state not reset)
-- the model compiles/runs without UnityEngine
+```
+powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1
+```
 
-Run the model anywhere — no Unity Editor and no scene required:
+| Assembly | Kind | Covers |
+|---|---|---|
+| `Assets/Tests/EditMode/` | Edit Mode, engine-free | `NpcState` model + edge cases, `GameData` config defaults, `InventoryModel`. Mirrored by `dotnet test`. |
+| `Assets/Tests/Presentation/` | Edit Mode | `ItemData`↔`IItem` contract, duplicate-serialized-field guard, save-data round trip, trade/inventory conservation. |
+| `Assets/Tests/PlayMode/` | Play Mode | Loads the real scenes and asserts the session boots and NPC models register. |
+
+The original slice covers damage/heal clamps and death, logical cell move, service commands,
+snapshot save/load round trip, view destroy + recreate keeps the model, and that the model
+compiles/runs without UnityEngine.
+
+Engine-free slices also run without the Editor:
 
 | Command | Needs |
 |---|---|
@@ -89,11 +96,24 @@ Run the model anywhere — no Unity Editor and no scene required:
 | `powershell -ExecutionPolicy Bypass -File Tools/ModelHarness/build-and-run.ps1` | only Unity's bundled Roslyn (no SDK) |
 | `unity command run_tests --mode EditMode` | Unity Editor, no scene |
 
-The `Tools/` projects link the `Assets/Scripts/GamePresentation/GameData` sources directly, so there is one copy of
-the model and one copy of the NUnit test file.
+The `Tools/` projects link the `Assets/Scripts/GameData` sources directly, so there is one copy
+of the model and one copy of the shared NUnit tests.
 
 Runtime verification (`editor_play` + eval): `hpStart=30/30 modelStart=30`;
 `afterDamage stats=23 model=23`; `afterViewRecycle stats=23 model=23 cell=24,-17`.
+
+## Subsequent slices
+
+The same "saveable state out of MonoBehaviours" pattern has since been applied more broadly:
+
+- **Tuning values** — gameplay stat/tuning fields moved into `[Serializable]` config classes in
+  `GameData` (for example `PlayerMovementConfig`, `CombatAttackerConfig`, `SlidingDoorConfig`).
+  See AGENT.md rule 6.
+- **Inventory and economy** — `InventoryModel` and `InventorySlot` now live in `GameData` and
+  operate on the engine-free `IItem` contract. The Unity `ItemData` ScriptableObject implements
+  `IItem` and keeps presentation-only data (icon, equipment slot, use effects) behind
+  `ItemExtensions.AsItemData()`. `ItemType`, `ItemFlags`, and `ItemScope` also live in `GameData`.
+  See AGENT.md rule 7.
 
 ## Transitional compromises
 

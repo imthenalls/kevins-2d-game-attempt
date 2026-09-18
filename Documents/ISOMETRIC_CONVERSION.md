@@ -36,7 +36,7 @@ preserved.
 1. **Renamed** `Assets/Scenes/NewScene.unity` to `Assets/Scenes/Overworld.unity`. The scene
    GUID is unchanged, so all GUID references survive. Name references were updated in:
    `EditorBuildSettings.asset`, `WorldB.unity` (portal route), `PlayerAvatarPrefabCreator.cs`,
-   `WorldBSceneBuilder.cs`, `TrainingArenaBuilder.cs`, `TrainingArenaVerification.cs`.
+   `WorldBSceneBuilder.cs`, `TrainingArenaBuilder.cs`.
 2. **Both Grids** (`Grid`, `Training Arena Wing/Training Grid`) set to Isometric, cell size
    `(1, 0.5)`.
 3. **All non-UI object world positions** transformed by the projection above (47 transforms).
