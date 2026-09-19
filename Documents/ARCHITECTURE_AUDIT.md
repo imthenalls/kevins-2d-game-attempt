@@ -48,6 +48,7 @@ This is also the project's named architecture: **Engine-Free Core**.
 | Quest runtime | `QuestGraphData`, `QuestInstance`, `ICondition`, `IQuestAction` | `QuestLoader` (factories via `QuestRuntimeBindings`), `QuestManager` (events + save) |
 | Equipment / hotbar | `EquipmentModel`, `HotbarModel`, `EquipSlotType` | `EquipmentManager`, `HotbarUI` (cast `IItem`→`ItemData` for asset data) |
 | Save shape | `SaveData`, `NpcSaveEntry`, `QuestSaveEntry`, `MarketTransaction`, `WalletSaveData` | `SaveManager` (JsonUtility read/write) |
+| Key ownership | `Keyring` | `PlayerKeyring` (MonoBehaviour facade, `IKeyHolder` events) |
 
 ## Migrated since the first audit
 
@@ -64,25 +65,25 @@ This is also the project's named architecture: **Engine-Free Core**.
 - **Save shape** — `SaveData`, `NpcSaveEntry`, `QuestSaveEntry`, `MarketTransaction`, and
   `WalletSaveData` moved to `Game.Data`; `SaveManager` stays as the JsonUtility reader/writer.
   Engine-free tests: `Assets/Tests/EditMode/SaveDataShapeTests.cs`.
+- **Key ownership** — logic moved to `Game.Core.Keyring`; `PlayerKeyring` is now a facade
+  (singleton + `IKeyHolder`/`OnChanged`). Engine-free tests: `Assets/Tests/EditMode/KeyringTests.cs`.
 
 ## Deviations — authoritative state still in Presentation
 
 | # | State | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Player HP / MP / Max | `GamePresentation/Entity/EntityStats.cs:30-31` | Player stats are not model-backed | NPCs are fine (bound via `NpcStateView`); the player is the documented next slice in [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) |
-| 2 | Key ownership | `GamePresentation/Inventory/PlayerKeyring.cs:19` | Saveable key state lives in a MonoBehaviour | May be forced by Unity prefab/tag needs — verify before moving |
-| 3 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
+| 1 | Player HP / MP / Max | `GamePresentation/Entity/EntityStats.cs:30-31` | Player HP/MaxHp are not model-backed | Player mana already flows through `Wallet`/`ManaAccount`; NPCs are bound via `NpcStateView`. The player is the documented next slice in [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) |
+| 2 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
 
 ## Practical consequence
 
-Only the player's own live state (HP/MP and physics position) and the keyring still sit in the
-Shell. Mana, facts, quests, equipment, hotbar, inventory, NPC state, and the save shape are all
-engine-free state with fast tests.
+Only the player's own live state remains in the Shell. Mana, facts, quests, equipment, hotbar,
+inventory, NPC state, keys, and the save shape are engine-free state with fast tests.
 
 ## Recommended migration order
 
-1. **`PlayerKeyring`** behind a data model (mind prefab/tag needs).
-2. **Player HP/MP** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
+1. **Player HP/MaxHp** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
+   Player mana is already model-backed via `ManaAccount`, so only health remains.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.

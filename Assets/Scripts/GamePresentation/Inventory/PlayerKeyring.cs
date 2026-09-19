@@ -1,11 +1,15 @@
-using Game.Core;
 using System;
 using System.Collections.Generic;
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Owns the player's key items separately from the slot-based inventory so keys never consume
-/// inventory capacity. Keys are indexed by ItemData.itemId and changes notify the keyring UI.
+/// Unity facade over the engine-free <see cref="Keyring"/>. Owns the player's key items separately
+/// from the slot-based inventory so keys never consume inventory capacity. Keys are indexed by item
+/// id and changes notify the keyring UI.
+///
+/// The key rules live in Game.Data and are unit tested without a scene; this component owns the
+/// singleton lifetime and the change events only.
 ///
 /// Unity setup:
 ///   1. No manual setup is required; InventoryUI adds this component to its persistent object.
@@ -19,9 +23,11 @@ using UnityEngine;
 public sealed class PlayerKeyring : MonoBehaviour, IKeyHolder
 {
     private static PlayerKeyring instance;
-    private readonly Dictionary<string, int> keys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Keyring keyring = new Keyring();
+    private bool subscribed;
 
     public static PlayerKeyring Instance => instance;
+
     public event Action OnChanged;
 
     // IKeyHolder forwards to the existing OnChanged event so keyring UI keeps working.
@@ -60,6 +66,7 @@ public sealed class PlayerKeyring : MonoBehaviour, IKeyHolder
         }
 
         instance = this;
+        Subscribe();
     }
 
     private void OnDestroy()
@@ -68,50 +75,26 @@ public sealed class PlayerKeyring : MonoBehaviour, IKeyHolder
             instance = null;
     }
 
-    public bool HasKey(string itemId, int quantity = 1) =>
-        quantity > 0 && !string.IsNullOrWhiteSpace(itemId) &&
-        keys.TryGetValue(itemId, out int owned) && owned >= quantity;
+    public bool HasKey(string itemId, int quantity = 1) => keyring.HasKey(itemId, quantity);
 
-    public int CountKey(string itemId) =>
-        !string.IsNullOrWhiteSpace(itemId) && keys.TryGetValue(itemId, out int owned) ? owned : 0;
+    public int CountKey(string itemId) => keyring.CountKey(itemId);
 
-    public bool CanAddKey(ItemData item, int quantity = 1)
-    {
-        if (item == null || quantity <= 0 || (item.flags & ItemFlags.KeyItem) == 0)
-            return false;
-        return (item.flags & ItemFlags.Unique) == 0 || (!HasKey(item.itemId) && quantity == 1);
-    }
+    public bool CanAddKey(ItemData item, int quantity = 1) => keyring.CanAddKey(item, quantity);
 
     /// <summary>Stores keys and returns the amount that could not be accepted.</summary>
-    public int AddKey(ItemData item, int quantity = 1)
+    public int AddKey(ItemData item, int quantity = 1) => keyring.AddKey(item, quantity);
+
+    public bool RemoveKey(string itemId, int quantity = 1) => keyring.RemoveKey(itemId, quantity);
+
+    public IEnumerable<KeyValuePair<string, int>> GetEntries() => keyring.GetEntries();
+
+    public void Clear() => keyring.Clear();
+
+    private void Subscribe()
     {
-        if (!CanAddKey(item, quantity))
-            return quantity;
-
-        keys[item.itemId] = CountKey(item.itemId) + quantity;
-        OnChanged?.Invoke();
-        return 0;
-    }
-
-    public bool RemoveKey(string itemId, int quantity = 1)
-    {
-        if (!HasKey(itemId, quantity))
-            return false;
-
-        int remaining = keys[itemId] - quantity;
-        if (remaining > 0)
-            keys[itemId] = remaining;
-        else
-            keys.Remove(itemId);
-        OnChanged?.Invoke();
-        return true;
-    }
-
-    public IEnumerable<KeyValuePair<string, int>> GetEntries() => keys;
-
-    public void Clear()
-    {
-        keys.Clear();
-        OnChanged?.Invoke();
+        if (subscribed)
+            return;
+        subscribed = true;
+        keyring.Changed += () => OnChanged?.Invoke();
     }
 }
