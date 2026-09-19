@@ -144,7 +144,7 @@ public class EquipmentUI : MonoBehaviour
         if (equipment == null || InventoryUI.Model == null)
             return false;
 
-        ItemData item = equipment.Model.GetEquipped(slotType);
+        ItemData item = equipment.Model.GetEquipped(slotType) as ItemData;
         if (item == null || !InventoryUI.Model.CanAddItem(item, 1))
             return false;
 
@@ -167,7 +167,7 @@ public class EquipmentUI : MonoBehaviour
     public ItemData GetEquipped(EquipSlotType slotType)
     {
         EnsureEquipmentBound();
-        return equipment?.Model?.GetEquipped(slotType);
+        return equipment?.Model?.GetEquipped(slotType) as ItemData;
     }
 
     private void Initialize(RectTransform inventoryPanelRoot)
@@ -294,7 +294,7 @@ public class EquipmentUI : MonoBehaviour
         equipment = null;
     }
 
-    private void HandleEquipmentChanged(EquipSlotType _, ItemData __, ItemData ___) => RefreshAll();
+    private void HandleEquipmentChanged(EquipSlotType _, IItem __, IItem ___) => RefreshAll();
 
     private void HandleActiveInventoryChanged(InventoryModel _)
     {

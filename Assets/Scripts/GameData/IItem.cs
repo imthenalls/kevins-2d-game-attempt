@@ -32,5 +32,8 @@ namespace Game.Core
 
         /// <summary>True when this item is equipment.</summary>
         bool IsEquip { get; }
+
+        /// <summary>Equipment slot this item belongs to (only meaningful when IsEquip).</summary>
+        EquipSlotType EquipSlot { get; }
     }
 }

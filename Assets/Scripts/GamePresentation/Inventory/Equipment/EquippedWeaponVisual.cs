@@ -119,7 +119,7 @@ public class EquippedWeaponVisual : MonoBehaviour
     /// <summary>Displays the item currently stored in the equipment model's Weapon slot.</summary>
     public void Refresh()
     {
-        SetWeapon(boundModel?.GetEquipped(EquipSlotType.Weapon));
+        SetWeapon(boundModel?.GetEquipped(EquipSlotType.Weapon) as ItemData);
     }
 
     /// <summary>Starts the visual swing using CombatAttacker's configured duration.</summary>
@@ -215,10 +215,10 @@ public class EquippedWeaponVisual : MonoBehaviour
     }
 
     // Refreshes the displayed sprite when the equipped Weapon slot changes.
-    private void HandleSlotChanged(EquipSlotType slot, ItemData newItem, ItemData _)
+    private void HandleSlotChanged(EquipSlotType slot, IItem newItem, IItem _)
     {
         if (slot == EquipSlotType.Weapon)
-            SetWeapon(newItem);
+            SetWeapon(newItem as ItemData);
     }
 
     // Begins the visual swing when CombatAttacker announces a new attack.

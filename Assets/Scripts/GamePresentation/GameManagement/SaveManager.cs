@@ -128,7 +128,7 @@ public class SaveManager : MonoBehaviour
         {
             foreach (EquipSlotType slotType in Enum.GetValues(typeof(EquipSlotType)))
             {
-                ItemData equippedItem = equipment.Model.GetEquipped(slotType);
+                ItemData equippedItem = equipment.Model.GetEquipped(slotType) as ItemData;
                 if (equippedItem != null)
                 {
                     data.playerEquipment.Add(new EquipmentSaveEntry
@@ -212,7 +212,7 @@ public class SaveManager : MonoBehaviour
             {
                 var item = HotbarUI.Model.GetSlot(i);
                 if (item != null)
-                    data.hotbarSlots.Add(new HotbarEntry { slotIndex = i, itemId = item.itemId });
+                    data.hotbarSlots.Add(new HotbarEntry { slotIndex = i, itemId = item.ItemId });
             }
         }
         data.marketTransactions = TradeService.GetSaveData();

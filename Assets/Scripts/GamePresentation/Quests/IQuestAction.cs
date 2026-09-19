@@ -1,25 +1,7 @@
 using Game.Core;
 using UnityEngine;
 
-/// <summary>
-/// A side effect that executes once when a quest node is entered.
-/// Built-in implementations (created by QuestLoader from the "type" field in JSON):
-///   SetFactAction    — { "type": "SetFact",    "key": "...", "value": "..." }
-///   ClearFlagAction  — { "type": "ClearFlag",  "key": "..." }
-///   ToggleFlagAction — { "type": "ToggleFlag", "key": "..." }
-///   GiveItemAction   — { "type": "GiveItem",   "itemId": "...", "count": 1 }
-///   RemoveItemAction — { "type": "RemoveItem", "itemId": "...", "count": 1 }
-///   StartQuestAction — { "type": "StartQuest", "questId": "..." }
-///
-/// Unity setup: none — actions are pure C# objects, not MonoBehaviours.
-///   To add a custom action: implement IQuestAction and register the type string
-///   in QuestLoader's action factory method.
-/// </summary>
-public interface IQuestAction
-{
-    void Execute();
-}
-
+// The interface now lives in Game.Data (Game.Core). Implementations below stay here.
 // ---------------------------------------------------------------------------
 // SetFact
 // JSON: { "type": "SetFact", "key": "banditKingDead", "value": "True" }

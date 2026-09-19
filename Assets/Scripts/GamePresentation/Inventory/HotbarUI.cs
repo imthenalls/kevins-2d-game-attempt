@@ -100,7 +100,7 @@ public class HotbarUI : MonoBehaviour
             : WorldLayer.WorldA;
         for (int i = 0; i < HotbarModel.SlotCount; i++)
         {
-            ItemData item = model.GetSlot(i);
+            ItemData item = model.GetSlot(i) as ItemData;
             if (item != null && !item.IsAvailableInWorld(world))
                 model.Clear(i);
         }
@@ -146,15 +146,15 @@ public class HotbarUI : MonoBehaviour
 
     private void UseSlot(int index)
     {
-        var item = model.GetSlot(index);
+        IItem item = model.GetSlot(index);
         if (item == null) return;
 
         var inv = InventoryUI.Model;
         if (inv == null || !inv.HasItem(item)) return;
 
         inv.RemoveItem(item, 1);
-        ApplyUseEffect(item);
-        QuestEventBus.Raise("ItemUsed", item.itemId, 1);
+        ApplyUseEffect(item as ItemData);
+        QuestEventBus.Raise("ItemUsed", item.ItemId, 1);
     }
 
     private void ApplyUseEffect(ItemData item)
@@ -172,7 +172,7 @@ public class HotbarUI : MonoBehaviour
     {
         if (slotUIs == null) return;
         for (int i = 0; i < slotUIs.Length; i++)
-            slotUIs[i].Refresh(model.GetSlot(i));
+            slotUIs[i].Refresh(model.GetSlot(i) as ItemData);
     }
 
     // ── Input ─────────────────────────────────────────────────────────────────

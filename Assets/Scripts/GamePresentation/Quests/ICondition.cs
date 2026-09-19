@@ -1,39 +1,8 @@
 using Game.Core;
 using UnityEngine;
 
-/// <summary>
-/// Evaluates to true or false given the current quest instance context.
-/// All conditions on a transition must evaluate to true for the transition to fire.
-/// To express OR logic, use multiple transitions that point to the same target node.
-///
-/// Built-in implementations (created by QuestLoader from the "type" field in JSON):
-///   ObjectiveCompleteCondition — { "type": "ObjectiveComplete", "objectiveId": "..." }
-///   FactCondition              — { "type": "Fact", "key": "...", "value": "..." }
-///   QuestInNodeCondition       — { "type": "QuestInNode", "questId": "...", "nodeId": "..." }
-///   HasItemCondition           — { "type": "HasItem", "itemId": "...", "count": 1 }
-///
-/// Unity setup: none — conditions are pure C# objects, not MonoBehaviours.
-///   To add a custom condition: implement ICondition and register the type string
-///   in QuestLoader's condition factory method.
-/// </summary>
-public interface ICondition
-{
-    bool Evaluate(QuestInstance ctx);
-}
-
-// ---------------------------------------------------------------------------
-// ObjectiveComplete
-// JSON: { "type": "ObjectiveComplete", "objectiveId": "obj_talk" }
-// True when the named objective on the current node has reached its required count.
-// ---------------------------------------------------------------------------
-public class ObjectiveCompleteCondition : ICondition
-{
-    private readonly string _objectiveId;
-
-    public ObjectiveCompleteCondition(string objectiveId) => _objectiveId = objectiveId;
-
-    public bool Evaluate(QuestInstance ctx) => ctx.IsObjectiveComplete(_objectiveId);
-}
+// The interface now lives in Game.Data (Game.Core). Implementations below stay here.
+// ObjectiveComplete moved to Game.Data (Game.Core).
 
 // ---------------------------------------------------------------------------
 // Fact

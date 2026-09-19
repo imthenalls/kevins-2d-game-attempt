@@ -1,3 +1,4 @@
+using Game.Core;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -10,6 +11,12 @@ using Newtonsoft.Json;
 /// </summary>
 public static class QuestLoader
 {
+    static QuestLoader()
+    {
+        QuestRuntimeBindings.BuildCondition = BuildCondition;
+        QuestRuntimeBindings.BuildAction = BuildAction;
+        QuestRuntimeBindings.Log = message => Debug.Log(message);
+    }
     private static readonly JsonSerializerSettings Settings = new()
     {
         NullValueHandling = NullValueHandling.Ignore,

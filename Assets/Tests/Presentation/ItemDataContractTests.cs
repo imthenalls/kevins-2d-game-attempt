@@ -24,6 +24,7 @@ namespace Game.Tests
             public int MaxStackSize => 1;
             public bool IsStackable => false;
             public bool IsEquip => false;
+            public EquipSlotType EquipSlot => EquipSlotType.Weapon;
         }
 
         private readonly List<Object> created = new();

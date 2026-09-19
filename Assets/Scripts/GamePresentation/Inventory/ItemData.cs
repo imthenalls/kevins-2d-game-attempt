@@ -74,4 +74,5 @@ public class ItemData : ScriptableObject, IItem
     public ItemFlags Flags => flags;
     public ItemScope Scope => scope;
     public int MaxStackSize => maxStackSize;
+    public EquipSlotType EquipSlot => equipSlot;
 }

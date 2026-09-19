@@ -55,7 +55,7 @@ public class EquipmentManager : MonoBehaviour
     /// Returns the displaced item (if any) so the caller can return it to inventory.
     /// Returns null if the item is invalid for the slot.
     /// </summary>
-    public ItemData Equip(EquipSlotType slot, ItemData item) => Model.Equip(slot, item);
+    public ItemData Equip(EquipSlotType slot, ItemData item) => Model.Equip(slot, item) as ItemData;
 
     /// <summary>
     /// Removes one equipment item from an inventory and equips it. Any displaced item is
@@ -73,14 +73,14 @@ public class EquipmentManager : MonoBehaviour
         if (!inventory.RemoveItem(item, 1))
             return false;
 
-        displaced = Model.Equip(item.equipSlot, item);
+        displaced = Model.Equip(item.equipSlot, item) as ItemData;
         if (displaced == null)
             return true;
 
         if (inventory.AddItem(displaced, 1) == 0)
             return true;
 
-        ItemData newlyEquipped = Model.Equip(item.equipSlot, displaced);
+        ItemData newlyEquipped = Model.Equip(item.equipSlot, displaced) as ItemData;
         if (newlyEquipped != null)
             inventory.AddItem(newlyEquipped, 1);
         displaced = null;
@@ -91,7 +91,7 @@ public class EquipmentManager : MonoBehaviour
     /// Remove the item from <paramref name="slot"/> and return it.
     /// Returns null if the slot was already empty.
     /// </summary>
-    public ItemData Unequip(EquipSlotType slot) => Model.Unequip(slot);
+    public ItemData Unequip(EquipSlotType slot) => Model.Unequip(slot) as ItemData;
 
     private void EquipStartingItem(EquipSlotType slot, string itemId)
     {
@@ -116,14 +116,16 @@ public class EquipmentManager : MonoBehaviour
 
     // ── Stat application ──────────────────────────────────────────────────────
 
-    private void HandleSlotChanged(EquipSlotType slot, ItemData newItem, ItemData oldItem)
+    private void HandleSlotChanged(EquipSlotType slot, IItem newItem, IItem oldItem)
     {
-        if (oldItem != null)
-            _stats.RemoveStatBonus(oldItem.bonusMaxHp, oldItem.bonusMaxMp,
-                                   oldItem.bonusAttack, oldItem.bonusDefense);
+        ItemData oldData = oldItem as ItemData;
+        if (oldData != null)
+            _stats.RemoveStatBonus(oldData.bonusMaxHp, oldData.bonusMaxMp,
+                                   oldData.bonusAttack, oldData.bonusDefense);
 
-        if (newItem != null)
-            _stats.ApplyStatBonus(newItem.bonusMaxHp, newItem.bonusMaxMp,
-                                  newItem.bonusAttack, newItem.bonusDefense);
+        ItemData newData = newItem as ItemData;
+        if (newData != null)
+            _stats.ApplyStatBonus(newData.bonusMaxHp, newData.bonusMaxMp,
+                                  newData.bonusAttack, newData.bonusDefense);
     }
 }

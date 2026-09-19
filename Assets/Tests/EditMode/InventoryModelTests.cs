@@ -25,6 +25,7 @@ namespace Game.Tests
                 (Flags & (ItemFlags.Unique | ItemFlags.QuestItem)) == 0 && MaxStackSize > 1;
 
             public bool IsEquip => Type == ItemType.Equipment;
+            public EquipSlotType EquipSlot => EquipSlotType.Weapon;
 
             public FakeItem(
                 string id,
