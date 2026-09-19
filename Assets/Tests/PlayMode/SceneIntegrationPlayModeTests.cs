@@ -16,7 +16,7 @@ namespace Game.Tests
     ///
     /// Unity setup: none. Run via the Test Runner (PlayMode) or `unity command run_tests --mode PlayMode`.
     /// </summary>
-    public class SceneIntegrationPlayModeTests
+    public class SceneIntegrationPlayModeTests : PlayModeTestBase
     {
         private const string OverworldScene = "Assets/Scenes/Overworld.unity";
         private const string WorldBScene = "Assets/Scenes/WorldB.unity";

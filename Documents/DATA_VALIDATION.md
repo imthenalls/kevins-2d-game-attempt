@@ -22,7 +22,7 @@ error if any errors were found.
 | Enemy loot (`enemy_loot.json`) | blank/duplicate `npcId`; `itemId` references resolve |
 | Dialogue (`dialogues.json`) | blank/duplicate `dialogueId`; blank/duplicate node `id`; `startNodeId` exists; every `nextNodeId` (node and choice) resolves unless the node/choice ends the conversation; `questId` references resolve; `teleportScene` references resolve |
 | Quests (`Assets/StreamingAssets/quests/*.json`) | blank/duplicate `questId`; blank/duplicate node `id`; `startNodeId` exists; transition `targetNodeId` exists; condition `nodeId` exists; `itemId` and `questId` references resolve |
-| Scenes (`Assets/Scenes/*`) | blank/duplicate `NpcController.NpcId`; portal `destinationPortalId` references resolve |
+| Scenes (`Assets/Scenes/*`) | blank/duplicate `NpcController.NpcId`; portal `destinationPortalId` references resolve; a scene containing a `WorldCharacter` must have exactly one `WorldSceneIdentity` |
 
 All comparisons are case-insensitive, matching how the runtime resolves ids.
 
@@ -54,3 +54,8 @@ All findings from the first run have been fixed:
   first guard's state; the clone is a new save key.
 
 A clean validation run now reports `errors=0 warnings=0`.
+
+The scene-identity check was added after Overworld was found to have a `WorldCharacter` but no
+`WorldSceneIdentity`: a direct (non-portal) load of Overworld while `WorldTravelState.CurrentWorld`
+was World B would deactivate the World A player. Overworld now carries a `WorldSceneIdentity`
+(World A) on a root named "World A", mirroring World B's "World B" root.

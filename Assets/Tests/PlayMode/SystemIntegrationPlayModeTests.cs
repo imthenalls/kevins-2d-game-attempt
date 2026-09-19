@@ -10,7 +10,7 @@ namespace Game.Tests
     /// Play Mode integration tests for the runtime systems: portal destination resolution against a
     /// real scene, and world-state fact storage with a snapshot round trip.
     /// </summary>
-    public class SystemIntegrationPlayModeTests
+    public class SystemIntegrationPlayModeTests : PlayModeTestBase
     {
         private const string OverworldScene = "Assets/Scenes/Overworld.unity";
 

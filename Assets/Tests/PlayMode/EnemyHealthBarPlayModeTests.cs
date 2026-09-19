@@ -14,7 +14,7 @@ namespace Game.Tests
     /// implementation: bars spawn only for enemies with the feature enabled, the fill tracks HP
     /// ratio, and the bar hides itself when the enemy dies.
     /// </summary>
-    public class EnemyHealthBarPlayModeTests
+    public class EnemyHealthBarPlayModeTests : PlayModeTestBase
     {
         private GameObject cameraObject;
         private GameObject subject;

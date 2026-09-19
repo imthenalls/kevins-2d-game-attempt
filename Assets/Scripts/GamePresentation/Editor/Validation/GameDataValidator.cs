@@ -334,6 +334,22 @@ public static class GameDataValidator
                 }
 
                 issues.AddRange(IdIntegrity.FindDuplicateOrBlankIds(npcIds, "scene '" + sceneName + "' npc"));
+
+                int worldCharacters = UnityEngine.Object.FindObjectsByType<WorldCharacter>(FindObjectsInactive.Include).Length;
+                int identities = UnityEngine.Object.FindObjectsByType<WorldSceneIdentity>(FindObjectsInactive.Include).Length;
+                if (worldCharacters > 0 && identities == 0)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Error, "scene.worldIdentity",
+                        "Scene '" + sceneName + "' has a WorldCharacter but no WorldSceneIdentity; a direct " +
+                        "scene load can leave the wrong world active and deactivate the player."));
+                }
+                else if (identities > 1)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Warning, "scene.worldIdentity.multiple",
+                        "Scene '" + sceneName + "' has " + identities + " WorldSceneIdentity components; keep exactly one."));
+                }
             }
             catch (Exception e)
             {

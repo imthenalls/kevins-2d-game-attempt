@@ -9,7 +9,7 @@ namespace Game.Tests
     /// Play Mode integration tests for the combat receive path: damage application, invincibility,
     /// damage multiplier, and death firing exactly once.
     /// </summary>
-    public class CombatIntegrationPlayModeTests
+    public class CombatIntegrationPlayModeTests : PlayModeTestBase
     {
         private GameObject subject;
         private EntityStats stats;

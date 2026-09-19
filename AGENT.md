@@ -165,9 +165,10 @@ Test assemblies:
 Play Mode tests must run async (`run_tests --mode PlayMode --async_tests`, then poll
 `test_status`); a synchronous request is dropped by the domain reload. Play Mode tests share one
 play session, so `DontDestroyOnLoad` singletons (`WorldTravelState`, `GameSessionHost`,
-`PlayerKeyring`) persist between tests — reset the state a test depends on (for example
-`WorldTravelState.SetCurrentWorld(WorldLayer.WorldA)`, which otherwise deactivates the World A
-player) instead of assuming a clean scene. The scene smoke test
+`PlayerKeyring`) persist between tests. Play Mode test fixtures should inherit
+`Assets/Tests/PlayMode/PlayModeTestBase.cs`, which restores `WorldTravelState` to World A before each
+test (otherwise a prior test that loaded World B deactivates the World A player). Reset any other
+state a test depends on rather than assuming a clean scene. The scene smoke test
 (`Tools/verify-smoke.ps1`) is the layer that catches runtime/serialization errors such as
 duplicate serialized field names, so do not skip it.
 

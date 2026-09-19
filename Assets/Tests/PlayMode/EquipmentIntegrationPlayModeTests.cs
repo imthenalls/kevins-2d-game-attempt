@@ -10,7 +10,7 @@ namespace Game.Tests
     /// Play Mode integration tests for equipment: bonuses must be applied to EntityStats when a
     /// slot changes, swapped cleanly, and removed on unequip. Runs Awake/Start for real.
     /// </summary>
-    public class EquipmentIntegrationPlayModeTests
+    public class EquipmentIntegrationPlayModeTests : PlayModeTestBase
     {
         private GameObject subject;
         private EntityStats stats;
