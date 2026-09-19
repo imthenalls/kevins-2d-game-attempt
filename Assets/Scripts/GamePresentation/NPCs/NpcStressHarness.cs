@@ -41,6 +41,9 @@ public sealed class NpcStressHarness : MonoBehaviour
 
     private IEnumerator RunAll()
     {
+        QualitySettings.vSyncCount = 0; // measure raw frame time, not the display refresh cap
+        Application.targetFrameRate = -1;
+
         report.AppendLine("NPC pathfinding stress report");
         report.AppendLine("scale=" + npcScale + " phase=" + phaseSeconds + "s burstEvery=" + burstInterval + "s");
         report.AppendLine();
@@ -58,6 +61,9 @@ public sealed class NpcStressHarness : MonoBehaviour
 
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
+#else
+        yield return new WaitForSeconds(0.5f);
+        Application.Quit();
 #endif
     }
 

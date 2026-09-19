@@ -52,8 +52,39 @@ max in the first baseline sample is a start-up artefact, not steady state.
 ## Interpretation
 
 - **Pathfinding is not the bottleneck.** 100 NPCs all re-pathing in one frame costs ~2.5 ms
-  (walls-only) to ~4.5 ms (NPCs-as-obstacles) — a single frame hitch, not a stall.
+  (walls-only) to ~4.5 ms (NPCs-as-obstacles) in the Editor — a single frame hitch, not a stall.
 - **Steady state scales gently**: 25 → 100 NPCs raises frame time only ~0.35 ms.
-- **The obstacle mask roughly doubles the 100-NPC burst cost** because A\* explores around NPC
-  bodies; the `Walls`-only mask is the cheaper, correct configuration.
-- Numbers are Editor figures; a build will differ. Rendering was kept on-screen (harness camera).
+- The obstacle mask roughly doubles the 100-NPC burst cost in the **Editor**; see the build numbers
+  below for the more realistic picture.
+- Numbers are Editor figures; a build is much faster (below).
+
+## Running it in a build
+
+`NpcStressHarness` also runs from a Player build:
+
+1. Place a harness object in the target scene (e.g. via the run tool, or an eval that adds
+   `NpcStressHarness` and sets `spawnCellMinX/Y/MaxX/Y`), then save the scene.
+2. Build with that scene as the startup scene. `unity command build` does **not** accept a
+   single-value `--scenes`; drop the other scenes from Build Settings instead.
+3. Run the exe with its working directory at the build root; it writes
+   `Temp/npc-stress-report.txt` there and quits itself.
+4. **Remove the harness object from the scene afterwards** so it does not run during normal play.
+
+The harness disables v-sync and target-framerate so the build reports raw frame time.
+
+## Latest build results (StandaloneWindows64, v-sync off)
+
+| NPCs | baseline | steady | burst: repath-all avg / worst | paths ok |
+|---:|---:|---:|---:|---:|
+| 25  | ~0.36–0.44 ms (≈2300–2800 fps) | ~0.36–0.39 ms | 0.92 / 1.17–1.22 ms | 25/25 |
+| 50  | ~0.36–0.37 ms | ~0.38 ms | 1.91–2.00 / 1.98–2.32 ms | 50/50 |
+| 100 | ~0.42–0.47 ms (≈2100–2400 fps) | ~0.44–0.45 ms (≈2200–2280 fps) | 3.14 (Everything) / 3.63 (NoNpcBodies) ms; worst 3.17 / 4.27 ms | 100/100 |
+
+### Build interpretation
+
+- A build runs roughly **3–4× faster per frame** than the Editor (~0.44 ms vs ~1.6 ms at 100 NPCs).
+- The synchronized burst scales ~linearly: 25 → 0.92 ms, 50 → ~1.95 ms, 100 → ~3.1–3.6 ms.
+- **The obstacle mask barely matters for speed in a build** (NoNpcBodies was even marginally slower,
+  because unblocked cells make A\* find longer paths). So the NPC/wall layer separation is a
+  **correctness** fix — NPCs should not treat each other's bodies as walls — not a performance win.
+- Occasional frame spikes (≈2–20 ms) appear in both runs; nothing sustained.
