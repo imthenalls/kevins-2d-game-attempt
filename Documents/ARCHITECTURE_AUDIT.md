@@ -7,10 +7,13 @@
 ## Verdict
 
 `Game.Data` cannot reference Unity or `Game.Presentation` — that is enforced by the compiler, not
-by convention. State that has been migrated (NPC state, inventory, tuning, validation, session) is
-correctly separated. Six systems still keep **authoritative, saveable state inside
-`Game.Presentation`**, which is a deviation from AGENT.md rule 1
-("if we want to save it, do not store the authoritative value in a MonoBehaviour").
+by convention. State that has been migrated (NPC state, inventory, tuning, validation, session,
+mana, world facts) is correctly separated. A handful of systems still keep **authoritative,
+saveable state inside `Game.Presentation`**, which is a deviation from AGENT.md rule 1
+("if we want to save it, do not store the authoritative value in a MonoBehaviour"). See
+[AGENT.md](../AGENT.md) → **Architecture: Engine-Free Core** for the pattern and rules.
+
+This is also the project's named architecture: **Engine-Free Core**.
 
 ## How the boundary is enforced
 
@@ -40,36 +43,41 @@ correctly separated. Six systems still keep **authoritative, saveable state insi
 | Session root | `GameSession` | `GameSessionHost` (composition root, `DontDestroyOnLoad`) |
 | Health contract | `IHealthModel` | `EntityStats` facade (delegates while bound) |
 | Data validation | `IdIntegrity`, `ValidationIssue` | `GameDataValidator` (Editor) |
+| Mana balance / capacity | `ManaAccount`, `WalletSaveData`, `WalletTransaction` | `Wallet` (MonoBehaviour facade) |
+| World facts | `WorldFacts` | `WorldStateManager` (MonoBehaviour facade) |
+
+## Migrated since the first audit
+
+- **Mana** — logic moved to `Game.Core.ManaAccount`; `Wallet` is now a facade forwarding to it and
+  re-raising its events. Engine-free tests: `Assets/Tests/EditMode/ManaAccountTests.cs`.
+- **World facts** — logic moved to `Game.Core.WorldFacts`; `WorldStateManager` is now a facade
+  (singleton + static event). Engine-free tests: `Assets/Tests/EditMode/WorldFactsTests.cs`.
 
 ## Deviations — authoritative state still in Presentation
 
 | # | State | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Mana balance / capacity | `GamePresentation/Economy/Wallet.cs:51` | Money logic is Unity-bound; unit tests must run in the Editor | `Wallet` is a MonoBehaviour persisted via `GetSaveData()` |
-| 2 | Player HP / MP / Max | `GamePresentation/Entity/EntityStats.cs:30-31` | Player stats are not model-backed | NPCs are fine (bound via `NpcStateView`); the player is the documented next slice in [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) |
-| 3 | Quest runtime (active nodes, objective counts) | `GamePresentation/Quests/QuestInstance.cs:22-23` | Quest logic uses `Mathf` (line 188) and cannot be tested engine-free | `EquipmentModel` and `HotbarModel` have the same shape |
-| 4 | World facts | `GamePresentation/Quests/WorldStateManager.cs:29` | Authoritative world state lives in a MonoBehaviour dictionary | Has `GetSnapshot()` / `LoadSnapshot(Dictionary<string, object>)` |
-| 5 | Key ownership | `GamePresentation/Inventory/PlayerKeyring.cs:19` | Saveable key state lives in a MonoBehaviour | May be forced by Unity prefab/tag needs — verify before moving |
-| 6 | Save DTO | `GamePresentation/GameManagement/SaveData.cs:29` | The save shape references presentation types (`QuestManager.QuestSaveEntry`, `MarketTransaction`) | Rule 1 says save DTOs belong in `Game.Data` |
-| 7 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
+| 1 | Player HP / MP / Max | `GamePresentation/Entity/EntityStats.cs:30-31` | Player stats are not model-backed | NPCs are fine (bound via `NpcStateView`); the player is the documented next slice in [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) |
+| 2 | Quest runtime (active nodes, objective counts) | `GamePresentation/Quests/QuestInstance.cs:22-23` | Quest logic uses `Mathf` (line 188) and cannot be tested engine-free | `EquipmentModel` and `HotbarModel` have the same shape |
+| 3 | Key ownership | `GamePresentation/Inventory/PlayerKeyring.cs:19` | Saveable key state lives in a MonoBehaviour | May be forced by Unity prefab/tag needs — verify before moving |
+| 4 | Save DTO | `GamePresentation/GameManagement/SaveData.cs:29` | The save shape references presentation types (`QuestManager.QuestSaveEntry`, `MarketTransaction`) | Rule 1 says save DTOs belong in `Game.Data` |
+| 5 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
 
 ## Practical consequence
 
-Deviations 1, 3, and 4 are why `WalletTests`, `HotbarModelTests`, and `QuestProgressionTests` live
-in `Assets/Tests/Presentation` (Unity-only) instead of the fast `Assets/Tests/EditMode` bucket that
-`dotnet test` mirrors. Moving those types into `Game.Data` is what buys engine-free tests for the
-economy, quests, equipment, and hotbar.
+Deviations 1 and 2 are why `HotbarModelTests`, `EquipmentIntegrationPlayModeTests`, and
+`QuestProgressionTests` live in `Assets/Tests/Presentation` (Unity-only) instead of the fast
+`Assets/Tests/EditMode` bucket that `dotnet test` mirrors. Moving those types into `Game.Data` is
+what buys engine-free tests for quests, equipment, and the hotbar.
 
 ## Recommended migration order
 
-1. **`Wallet` → `GameData.ManaAccount`**, with `Wallet` left as a thin MonoBehaviour facade.
-   Smallest surface; isolates mana and unlocks fast money tests.
-2. **`QuestInstance` / `EquipmentModel` / `HotbarModel` → `Game.Data`** (replace `Mathf`).
+1. **`QuestInstance` / `EquipmentModel` / `HotbarModel` → `Game.Data`** (replace `Mathf`).
    Unlocks engine-free tests for quests, equipment, and hotbar.
-3. **`SaveData` DTO → `Game.Data`** — split quest and wallet DTOs out so the data layer owns the
+2. **`SaveData` DTO → `Game.Data`** — split quest and wallet DTOs out so the data layer owns the
    save shape and no longer depends on presentation types.
-4. **`WorldStateManager` facts** and **`PlayerKeyring`** behind data models (mind prefab/tag needs).
-5. **Player HP/MP** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
+3. **`PlayerKeyring`** behind a data model (mind prefab/tag needs).
+4. **Player HP/MP** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.

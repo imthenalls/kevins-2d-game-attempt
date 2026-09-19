@@ -85,6 +85,38 @@ Rules:
    `GamePresentation` with `IItem.AsItemData()` / `ItemExtensions` — never leak UnityEngine into
    `GameData`. `ItemType`, `ItemFlags`, and `ItemScope` live in `GameData` for the same reason.
 
+## Architecture: Engine-Free Core
+
+**"Engine-Free Core"** is the name of this project's architecture. Two layers and one rule:
+
+| Layer | Assembly | May reference | Owns |
+|---|---|---|---|
+| **Core** | `Game.Data` (`noEngineReferences: true`) | BCL only | Authoritative state, models, services, tuning config, save DTOs, validation |
+| **Shell** | `Game.Presentation` / `Game.Presentation.Editor` | `Game.Data`, UnityEngine | MonoBehaviours, UI, adapters, content assets (`ScriptableObject`) — wiring, references, rendering |
+
+**The rule: Core owns state; the Shell displays and drives it.** If a value is saved, its authority
+belongs in `Game.Data`. A MonoBehaviour may hold Unity-only references (`Transform`, `Sprite`,
+`LayerMask`) and presentation cache — never the source of truth.
+
+When a component must remain (inspector fields, prefab identity, `DontDestroyOnLoad`), keep the
+MonoBehaviour as a thin **facade**: it owns the serialized fields and lifetime and forwards all
+logic to a plain-C# Core type. Examples: `Wallet` → `ManaAccount`, `WorldStateManager` →
+`WorldFacts`, `NpcStateView` → `NpcState`.
+
+Rules for new systems:
+
+1. Put state and rules in a plain C# type under `Assets/Scripts/GameData/` (namespace `Game.Core`).
+2. Put the MonoBehaviour adapter in `Assets/Scripts/GamePresentation/`.
+3. Tuning lives in a `[Serializable]` config class in `GameData` (see Repository Layout rule 6);
+   Unity value types are stored in pure form (KeyCode as int, Color as RGBA floats).
+4. No `UnityEngine` type may enter `GameData` — the build enforces this via `noEngineReferences`.
+5. When a Core type needs engine data, pass it in as an interface implemented by the adapter
+   (`IItem` ⇄ `ItemData`, `IHealthModel` ⇄ `EntityStats`). Do not break the boundary to save time.
+6. Prefer engine-free tests in `Assets/Tests/EditMode/` (mirrored by `dotnet test`); use
+   `Assets/Tests/Presentation/` only for genuinely Unity-bound behaviour.
+7. Run `Tools/verify-all.ps1`. See [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md)
+   for the current conformance state and remaining migrations.
+
 ## Safety Rules
 
 1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.

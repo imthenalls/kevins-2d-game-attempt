@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Global key-value store for all persistent game state.
-/// Quest conditions read from here; quest actions write to here.
-/// World State Components (WorldStateActivator, WorldStateDestroyer, etc.) subscribe to
-/// OnFlagChanged to react immediately when any flag changes at runtime.
-/// Survives scene changes via DontDestroyOnLoad.
+/// Unity facade over the engine-free <see cref="WorldFacts"/> model. Global key-value store for all
+/// persistent game state: quest conditions read from here, quest actions write to here, and world
+/// state components subscribe to <see cref="OnFlagChanged"/> to react immediately.
 ///
-/// Values are stored as objects and compared as strings by FactCondition.
+/// The fact logic lives in Game.Data (and is unit tested without a scene); this component owns the
+/// singleton lifetime and the static change event only.
+///
+/// Values are stored as objects and compared as strings by fact conditions.
 /// Supported value types: bool, int, float, string.
 ///
 /// Add to a GameObject in your first/bootstrap scene (one instance only).
@@ -26,18 +28,14 @@ public class WorldStateManager : MonoBehaviour
     private static WorldStateManager _instance;
     public static WorldStateManager Instance => _instance;
 
-    private readonly Dictionary<string, object> _facts = new();
+    private readonly WorldFacts facts = new WorldFacts();
 
     /// <summary>
-    /// Fired whenever any fact is set, cleared, or toggled.
-    /// Passes the key that changed. Not fired during LoadSnapshot (bulk restore).
+    /// Fired whenever any fact is set, cleared, or toggled. Passes the key that changed.
+    /// Not fired during LoadSnapshot (bulk restore).
     /// Subscribe in OnEnable, unsubscribe in OnDisable.
     /// </summary>
     public static event Action<string> OnFlagChanged;
-
-    // Suppresses OnFlagChanged during bulk snapshot restore to avoid
-    // spurious reactions while scene objects are not yet initialized.
-    private bool _suppressEvents;
 
     private void Awake()
     {
@@ -46,7 +44,9 @@ public class WorldStateManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         _instance = this;
+        facts.Changed += key => OnFlagChanged?.Invoke(key);
         DontDestroyOnLoad(gameObject);
     }
 
@@ -55,119 +55,65 @@ public class WorldStateManager : MonoBehaviour
     // -------------------------------------------------------------------------
 
     /// <summary>Write or overwrite a fact and fire OnFlagChanged.</summary>
-    public void SetFact(string key, object value)
-    {
-        _facts[key] = value;
-        if (!_suppressEvents) OnFlagChanged?.Invoke(key);
-    }
+    public void SetFact(string key, object value) => facts.SetFact(key, value);
 
     /// <summary>Read a fact. Returns null if not present.</summary>
-    public object GetFact(string key) => _facts.TryGetValue(key, out var v) ? v : null;
+    public object GetFact(string key) => facts.GetFact(key);
 
     /// <summary>True if the key has ever been set (regardless of value).</summary>
-    public bool HasFact(string key) => _facts.ContainsKey(key);
+    public bool HasFact(string key) => facts.HasFact(key);
 
     /// <summary>Remove a fact entry and fire OnFlagChanged.</summary>
-    public void ClearFact(string key)
-    {
-        if (_facts.Remove(key) && !_suppressEvents)
-            OnFlagChanged?.Invoke(key);
-    }
+    public void ClearFact(string key) => facts.ClearFact(key);
 
     // -------------------------------------------------------------------------
     // Boolean flag API  (primary API for World State Components)
     // -------------------------------------------------------------------------
 
-    /// <summary>
-    /// Mark a flag as set. Equivalent to SetFact(key, true).
-    /// HasFlag will return true until ClearFlag is called.
-    /// </summary>
-    public void SetFlag(string key) => SetFact(key, true);
+    /// <summary>Mark a flag as set. Equivalent to SetFact(key, true).</summary>
+    public void SetFlag(string key) => facts.SetFlag(key);
 
     /// <summary>Remove a flag so HasFlag returns false.</summary>
-    public void ClearFlag(string key) => ClearFact(key);
+    public void ClearFlag(string key) => facts.ClearFlag(key);
 
-    /// <summary>
-    /// Toggle a flag: sets it if absent, clears it if present.
-    /// </summary>
-    public void ToggleFlag(string key)
-    {
-        if (HasFlag(key)) ClearFlag(key);
-        else              SetFlag(key);
-    }
+    /// <summary>Toggle a flag: sets it if absent, clears it if present.</summary>
+    public void ToggleFlag(string key) => facts.ToggleFlag(key);
 
-    /// <summary>
-    /// True if the key exists and its value is truthy.
-    /// Accepts bool true, string "true" (case-insensitive), or any non-null value
-    /// that is not bool false or string "false". Compatible with SetFact("key","True")
-    /// written by the quest system's SetFact action.
-    /// </summary>
-    public bool HasFlag(string key)
-    {
-        if (!_facts.TryGetValue(key, out var v)) return false;
-        if (v is bool  b) return b;
-        if (v is string s)
-            return !string.Equals(s, "false", StringComparison.OrdinalIgnoreCase);
-        return v != null;
-    }
+    /// <summary>True if the key exists and its value is truthy.</summary>
+    public bool HasFlag(string key) => facts.HasFlag(key);
 
     // -------------------------------------------------------------------------
     // Typed convenience accessors
     // -------------------------------------------------------------------------
 
     /// <summary>Store an integer value.</summary>
-    public void SetInt(string key, int value) => SetFact(key, value);
+    public void SetInt(string key, int value) => facts.SetInt(key, value);
 
-    /// <summary>Read an integer value. Returns <paramref name="fallback"/> if not present or wrong type.</summary>
-    public int GetInt(string key, int fallback = 0)
-    {
-        if (!_facts.TryGetValue(key, out var v)) return fallback;
-        if (v is int   i) return i;
-        if (v is string s && int.TryParse(s, out int parsed)) return parsed;
-        return fallback;
-    }
+    /// <summary>Read an integer value. Returns the fallback if not present or the wrong type.</summary>
+    public int GetInt(string key, int fallback = 0) => facts.GetInt(key, fallback);
 
     /// <summary>Store a float value.</summary>
-    public void SetFloat(string key, float value) => SetFact(key, value);
+    public void SetFloat(string key, float value) => facts.SetFloat(key, value);
 
-    /// <summary>Read a float value. Returns <paramref name="fallback"/> if not present or wrong type.</summary>
-    public float GetFloat(string key, float fallback = 0f)
-    {
-        if (!_facts.TryGetValue(key, out var v)) return fallback;
-        if (v is float f) return f;
-        if (v is string s && float.TryParse(s, System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out float parsed)) return parsed;
-        return fallback;
-    }
+    /// <summary>Read a float value. Returns the fallback if not present or the wrong type.</summary>
+    public float GetFloat(string key, float fallback = 0f) => facts.GetFloat(key, fallback);
 
     /// <summary>Store a string value.</summary>
-    public void SetString(string key, string value) => SetFact(key, value);
+    public void SetString(string key, string value) => facts.SetString(key, value);
 
-    /// <summary>Read a string value. Returns <paramref name="fallback"/> if not present.</summary>
-    public string GetString(string key, string fallback = "")
-    {
-        if (!_facts.TryGetValue(key, out var v)) return fallback;
-        return v != null ? v.ToString() : fallback;
-    }
+    /// <summary>Read a string value. Returns the fallback if not present.</summary>
+    public string GetString(string key, string fallback = "") => facts.GetString(key, fallback);
 
     // -------------------------------------------------------------------------
     // Save / load support
     // -------------------------------------------------------------------------
 
     /// <summary>Returns a shallow copy of the facts dictionary for serialization.</summary>
-    public Dictionary<string, object> GetSnapshot() => new(_facts);
+    public Dictionary<string, object> GetSnapshot() => facts.GetSnapshot();
 
     /// <summary>
-    /// Restores facts from a previously captured snapshot.
-    /// OnFlagChanged is suppressed during restore — world state components
-    /// read current state in their own Start() after the scene loads.
+    /// Restores facts from a previously captured snapshot. OnFlagChanged is suppressed during
+    /// restore — world state components read current state in their own Start() after scene load.
     /// </summary>
-    public void LoadSnapshot(Dictionary<string, object> snapshot)
-    {
-        _suppressEvents = true;
-        _facts.Clear();
-        foreach (var kv in snapshot)
-            _facts[kv.Key] = kv.Value;
-        _suppressEvents = false;
-    }
+    public void LoadSnapshot(Dictionary<string, object> snapshot) => facts.LoadSnapshot(snapshot);
 }
