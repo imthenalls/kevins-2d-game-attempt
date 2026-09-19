@@ -117,6 +117,22 @@ Rules for new systems:
 7. Run `Tools/verify-all.ps1`. See [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md)
    for the current conformance state and remaining migrations.
 
+## Known Hazards
+
+### `WorldTravelState` is a process-global singleton
+
+`WorldTravelState` is `DontDestroyOnLoad`, so `CurrentWorld` persists for the whole play session,
+and `WorldCharacter.SetActiveForWorld` activates only the character whose world matches — a mismatch
+**deactivates the player**.
+
+- Any code path that enters a scene outside the normal portal flow — a fast-travel/menu "return", a
+  new-game flow, a manual `SceneLoader` call, or a direct `LoadScene` — must establish the world
+  (`WorldTravelState.Instance.SetCurrentWorld(...)`) or rely on the scene's `WorldSceneIdentity`.
+- Every scene containing a `WorldCharacter` must have **exactly one** `WorldSceneIdentity`. The data
+  validator (`Tools > Validation > Validate Game Data`) enforces this.
+- Play Mode tests inherit `Assets/Tests/PlayMode/PlayModeTestBase.cs`, which resets the world to
+  World A before each test for the same reason.
+
 ## Safety Rules
 
 1. Do not edit Unity scene or prefab files (`*.unity`, `*.prefab`) unless the user explicitly asks for that exact change in the current request.

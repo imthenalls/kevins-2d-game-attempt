@@ -120,6 +120,15 @@ InventoryModel worldA = InventoryUI.Instance.GetInventoryForWorld(WorldLayer.Wor
 InventoryModel activeInventory = InventoryUI.Model;
 ```
 
+> **Hazard — the active world is process-global.** `WorldTravelState` is `DontDestroyOnLoad`, so
+> `CurrentWorld` persists for the whole play session, and `WorldCharacter.SetActiveForWorld`
+> deactivates the character whose world does not match. Any path that enters a scene outside the
+> portal flow (fast-travel/menu return, a new-game flow, a manual `SceneLoader` load, a direct
+> `LoadScene`) must call `SetCurrentWorld(...)` or rely on the scene's `WorldSceneIdentity`.
+> Scenes containing a `WorldCharacter` must have exactly one `WorldSceneIdentity` — `Overworld` has
+> one set to World A (root "World A"), `WorldB` has one set to World B. The data validator enforces
+> this; Play Mode tests inherit `PlayModeTestBase` which resets the world to World A.
+
 ## Included World B scene
 
 `Assets/Scenes/WorldB.unity` contains:
