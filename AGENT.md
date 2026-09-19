@@ -49,6 +49,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/ISOMETRIC_CONVERSION.md](Documents/ISOMETRIC_CONVERSION.md) | MMBN-style isometric presentation: fixed camera, 2:1 diamond tilemaps, upright sprites, Y-sort, and the Overworld rename |
 | [Documents/TILEMAP_RULES.md](Documents/TILEMAP_RULES.md) | Grid/Tilemap alignment rules: transforms must be at origin, place content via cells, and use the alignment validator |
 | [Documents/DATA_VALIDATION.md](Documents/DATA_VALIDATION.md) | Editor validator for string-id data: blank/duplicate ids, dangling item/quest/node/portal references, dialogue links, and per-scene NPC ids |
+| [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md) | Audit of the Data/Presentation split: enforcement mechanisms, what is separated, remaining authoritative state in Presentation, and migration order |
 
 ---
 
