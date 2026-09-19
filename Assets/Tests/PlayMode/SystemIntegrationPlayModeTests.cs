@@ -106,6 +106,40 @@ namespace Game.Tests
             Assert.AreEqual(session.PlayerHealth.MaxHp, player.Stats.MaxHp);
         }
 
+        [UnityTest]
+        public IEnumerator Player_Position_Is_Model_Backed_And_Teleportable()
+        {
+            yield return LoadScene(OverworldScene);
+
+            PlayerController2D player = Object.FindAnyObjectByType<PlayerController2D>();
+            Assert.IsNotNull(player, "Overworld should contain an active player when the current world is World A.");
+
+            GameSession session = GameSessionHost.Session;
+            Assert.IsNotNull(session);
+            PositionModel model = session.PlayerPosition;
+            Assert.IsNotNull(model, "The player should bind a session-owned position model.");
+
+            Grid grid = Object.FindAnyObjectByType<Grid>();
+            Assert.IsNotNull(grid);
+
+            // The model mirrors the transform's logical cell.
+            Vector3Int current = grid.WorldToCell(player.transform.position);
+            Assert.AreEqual(current.x, model.CellX);
+            Assert.AreEqual(current.y, model.CellY);
+
+            // An external model change (load / teleport) moves the body, without waiting a frame.
+            int savedX = model.CellX;
+            int savedY = model.CellY;
+            float savedOffsetX = model.OffsetX;
+            float savedOffsetY = model.OffsetY;
+
+            model.Set(current.x + 3, current.y, 0f, 0f);
+            Assert.AreEqual(current.x + 3, grid.WorldToCell(player.transform.position).x);
+
+            model.Set(savedX, savedY, savedOffsetX, savedOffsetY);
+            Assert.AreEqual(current.x, grid.WorldToCell(player.transform.position).x);
+        }
+
         private static IEnumerator LoadScene(string path)
         {
             AsyncOperation operation = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(path, UnityEngine.SceneManagement.LoadSceneMode.Single);

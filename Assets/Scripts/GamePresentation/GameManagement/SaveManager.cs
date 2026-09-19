@@ -30,7 +30,7 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 6;
+    private const int CurrentSaveVersion = 7;
     private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
@@ -72,6 +72,16 @@ public class SaveManager : MonoBehaviour
         {
             data.playerX = player.transform.position.x;
             data.playerY = player.transform.position.y;
+
+            PositionModel position = GameSessionHost.Session?.PlayerPosition;
+            if (position != null)
+            {
+                data.hasPlayerCell = true;
+                data.playerCellX = position.CellX;
+                data.playerCellY = position.CellY;
+                data.playerOffsetX = position.OffsetX;
+                data.playerOffsetY = position.OffsetY;
+            }
 
             if (player.TryGetComponent<EntityStats>(out var stats))
             {
@@ -274,7 +284,7 @@ public class SaveManager : MonoBehaviour
         var player = FindAnyObjectByType<PlayerController2D>();
         if (player != null)
         {
-            player.transform.position = new Vector3(data.playerX, data.playerY, 0f);
+            ApplyPlayerPosition(player, data);
 
             if (player.TryGetComponent<EntityStats>(out var stats))
             {
@@ -534,6 +544,39 @@ public class SaveManager : MonoBehaviour
     /// wallet currency and MP, so migration preserves their combined value and expands capacity
     /// when necessary rather than silently deleting either resource.
     /// </summary>
+    /// <summary>
+    /// Restores the player's position from the save. v7 saves store a grid cell + local offset;
+    /// older saves store only world floats, which are converted through the scene Grid so they do
+    /// not land at the origin.
+    /// </summary>
+    private static void ApplyPlayerPosition(PlayerController2D player, SaveData data)
+    {
+        GameSession session = GameSessionHost.Session;
+
+        if (data.hasPlayerCell && session != null)
+        {
+            PositionModel model = session.GetOrCreatePlayerPosition(
+                data.playerCellX, data.playerCellY, data.playerOffsetX, data.playerOffsetY);
+            model.Set(data.playerCellX, data.playerCellY, data.playerOffsetX, data.playerOffsetY);
+            return;
+        }
+
+        var legacy = new Vector3(data.playerX, data.playerY, 0f);
+        Grid grid = FindAnyObjectByType<Grid>();
+        if (session != null && grid != null)
+        {
+            Vector3Int cell = grid.WorldToCell(legacy);
+            Vector3 center = grid.GetCellCenterWorld(cell);
+            float offsetX = legacy.x - center.x;
+            float offsetY = legacy.y - center.y;
+            PositionModel model = session.GetOrCreatePlayerPosition(cell.x, cell.y, offsetX, offsetY);
+            model.Set(cell.x, cell.y, offsetX, offsetY);
+            return;
+        }
+
+        player.transform.position = legacy;
+    }
+
     private static WalletSaveData BuildWalletSaveDataForLoad(SaveData data)
     {
         if (data.saveVersion >= ManaUnifiedSaveVersion && data.wallet != null)

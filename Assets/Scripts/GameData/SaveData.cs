@@ -34,16 +34,25 @@ namespace Game.Core
         // Version 3 adds persistent player equipment slots.
         // Version 4 adds the persistent slot-free player keyring.
         // Version 5 adds two-world travel state and separate world inventories.
-        // Version 6 adds per-world avatar ability unlocks.
-        // Missing fields deserialize as 0, so pre-unification saves are version 0.
+    // Version 6 adds per-world avatar ability unlocks.
+    // Version 7 adds the player's logical grid position (cell + local offset) via hasPlayerCell.
+    // Missing fields deserialize as 0, so pre-unification saves are version 0.
         public int saveVersion;
 
         // ── Scene ────────────────────────────────────────────────────────────────
         public string currentScene = "";
 
-        // ── Player transform ─────────────────────────────────────────────────────
-        public float playerX;
-        public float playerY;
+    // ── Player transform ─────────────────────────────────────────────────────
+    public float playerX;
+    public float playerY;
+
+    // Logical player position (grid cell + local offset). hasPlayerCell is false on pre-v7 saves,
+    // which fall back to converting playerX/playerY through the scene Grid on load.
+    public bool hasPlayerCell;
+    public int playerCellX;
+    public int playerCellY;
+    public float playerOffsetX;
+    public float playerOffsetY;
 
         // ── Two-world state ──────────────────────────────────────────────────────
         public string activeWorld = "WorldA";

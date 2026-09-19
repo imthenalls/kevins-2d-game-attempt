@@ -44,6 +44,9 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     [Tooltip("Visual child to rotate without rotating the Rigidbody2D or collider.")]
     [SerializeField] private Transform visualTransform;
 
+    [Tooltip("Grid for the logical player position. Defaults to a parent Grid, then the nearest in scene.")]
+    [SerializeField] private Grid grid;
+
     private Rigidbody2D rb;
     private Vector2 moveInput;
     private bool movementEnabled = true;
@@ -56,6 +59,9 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     private int currentDashCharges;
     private bool isDashing;
     private TrailRenderer dashTrail;
+
+    private PositionModel positionModel;
+    private const float RepositionEpsilon = 0.001f;
 
     public string     DisplayName     => gameObject.name;
     public EntityStats Stats          { get; private set; }
@@ -114,6 +120,22 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
         if (session != null)
             Stats.BindHealthModel(session.GetOrCreatePlayerHealth(Stats.MaxHp, Stats.Hp));
 
+        // Bind the logical position model (cell + local offset). See LateUpdate/HandlePositionChanged.
+        grid ??= GetComponentInParent<Grid>();
+        if (grid == null)
+            grid = FindAnyObjectByType<Grid>();
+
+        if (session != null && grid != null)
+        {
+            Vector3Int cell = grid.WorldToCell(transform.position);
+            Vector3 center = grid.GetCellCenterWorld(cell);
+            positionModel = session.GetOrCreatePlayerPosition(
+                cell.x, cell.y, transform.position.x - center.x, transform.position.y - center.y);
+            positionModel.Changed += HandlePositionChanged;
+            // Adopt any stored position (returning avatar / loaded save) before physics runs.
+            HandlePositionChanged(positionModel);
+        }
+
         if (settings.ForceNoGravity)
         {
             rb.gravityScale = 0f;
@@ -140,6 +162,46 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
     private void OnDisable()
     {
         StopAndClearDashTrail();
+    }
+
+    // Mirrors the physics transform into the session-owned logical position (Engine-Free Core).
+    // The model is authoritative for save/load; this keeps it in sync as physics moves the body.
+    private void LateUpdate()
+    {
+        if (positionModel == null || grid == null)
+            return;
+
+        Vector3Int cell = grid.WorldToCell(transform.position);
+        Vector3 center = grid.GetCellCenterWorld(cell);
+        positionModel.Set(
+            cell.x,
+            cell.y,
+            transform.position.x - center.x,
+            transform.position.y - center.y);
+    }
+
+    // Applies an externally changed model position (load, teleport, avatar switch) to the body.
+    private void HandlePositionChanged(PositionModel model)
+    {
+        if (model == null || grid == null)
+            return;
+
+        Vector3 target = grid.GetCellCenterWorld(new Vector3Int(model.CellX, model.CellY, 0))
+                         + new Vector3(model.OffsetX, model.OffsetY, 0f);
+        target.z = transform.position.z;
+
+        if ((target - transform.position).sqrMagnitude <= RepositionEpsilon * RepositionEpsilon)
+            return;
+
+        if (rb != null)
+            rb.position = target;
+        transform.position = target;
+    }
+
+    private void OnDestroy()
+    {
+        if (positionModel != null)
+            positionModel.Changed -= HandlePositionChanged;
     }
 
     private void Update()

@@ -137,5 +137,8 @@ The same "saveable state out of MonoBehaviours" pattern has since been applied m
 
 Both follow-ups from this slice are done: the player's HP was migrated the same way — a
 `Game.Core.HealthModel` owned by `GameSession` is bound to the player's `EntityStats` in
-`PlayerController2D.Awake`, replacing the duplicate HP state in `WorldTravelState`. See
-[ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md) for the current conformance state.
+`PlayerController2D.Awake`, replacing the duplicate HP state in `WorldTravelState` — and the
+player's position is now a `Game.Core.PositionModel` (logical cell + local offset) in the session,
+mirrored by `PlayerController2D`. The one remaining float-position path is `WorldTravelState`'s
+per-world remembered positions. See [ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md) for the current
+conformance state.

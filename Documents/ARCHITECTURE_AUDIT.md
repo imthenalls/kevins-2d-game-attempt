@@ -50,6 +50,7 @@ This is also the project's named architecture: **Engine-Free Core**.
 | Save shape | `SaveData`, `NpcSaveEntry`, `QuestSaveEntry`, `MarketTransaction`, `WalletSaveData` | `SaveManager` (JsonUtility read/write) |
 | Key ownership | `Keyring` | `PlayerKeyring` (MonoBehaviour facade, `IKeyHolder` events) |
 | Player health | `HealthModel` (owned by `GameSession`) | `PlayerController2D` binds it to `EntityStats`; `WorldTravelState` shares mana/positions only |
+| Player position | `PositionModel` (owned by `GameSession`) | `PlayerController2D` mirrors the physics transform to/from it |
 
 ## Migrated since the first audit
 
@@ -72,25 +73,29 @@ This is also the project's named architecture: **Engine-Free Core**.
   `EntityStats` in `PlayerController2D.Awake`. The duplicate `WorldTravelState.sharedHp/sharedMaxHp`
   owner was deleted, so HP is now shared across avatars/scenes by the model instead of by copying.
   Engine-free tests: `Assets/Tests/EditMode/HealthModelTests.cs`.
+- **Player position** — a `Game.Core.PositionModel` (logical grid cell + local offset) is owned by
+  `GameSession`; `PlayerController2D` mirrors the physics transform to/from it and repositions the
+  body when the model changes (load/teleport/avatar switch). `SaveData` stores the cell + offset
+  (v7) and converts older float-only saves through the scene Grid on load. Engine-free tests:
+  `Assets/Tests/EditMode/PositionModelTests.cs`.
 
 ## Deviations — authoritative state still in Presentation
 
 | # | State | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
+| 1 | Per-world remembered positions | `WorldTravelState.positions` / `WorldPositionSaveEntry` (float world positions) | Cross-world returns restore float positions, not grid cells | Follow-up: convert to cell + offset like `PositionModel` |
 
 ## Practical consequence
 
-The only remaining Shell-owned authoritative state is the player's continuous physics position,
-which is an intentional compromise (a logical cell model could replace it if needed). Every other
-migrated system is engine-free state with fast tests.
+The player's own state (health, mana, position) and every gameplay system are now engine-free,
+testable state. The one remaining float-position path is `WorldTravelState`'s per-world remembered
+positions, used when returning to a scene.
 
 ## Recommended migration order
 
-The planned migrations are complete. The only open item is optional:
-
-1. **Player physics position** (optional/structural) — introduce a logical position model if
-   continuous world position ever needs to be authoritative.
+1. **Per-world remembered positions → cell + offset** — convert `WorldPositionSaveEntry` and
+   `WorldTravelState.positions` to the same grid-anchored shape as `PositionModel` (with migration
+   for older saves), so cross-world returns are deterministic too.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.
