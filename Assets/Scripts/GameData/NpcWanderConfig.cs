@@ -14,5 +14,11 @@ namespace Game.Core
         public float WanderRadius = 3f;
         public float ArrivalThreshold = 0.2f;
         public float WallLookAhead = 0.3f;
+
+        /// <summary>
+        /// When true and the NPC has an NpcPathfinder, wander picks a reachable destination and
+        /// follows a grid path (falling back to straight-line movement when no path exists).
+        /// </summary>
+        public bool UsePathfinding = true;
     }
 }

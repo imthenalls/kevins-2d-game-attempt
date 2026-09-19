@@ -1,4 +1,5 @@
 using Game.Core;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -25,6 +26,8 @@ public class NpcWanderBehavior : NpcBehaviorBase
 
     private Collider2D[] ownColliders;
     private Vector2 target;
+    private List<Vector2> path;
+    private int pathIndex;
 
     private static readonly RaycastHit2D[] hitBuffer = new RaycastHit2D[16];
 
@@ -37,10 +40,30 @@ public class NpcWanderBehavior : NpcBehaviorBase
     protected override void Enter()
     {
         target = PickTarget();
+        BuildPath();
+    }
+
+    /// <summary>True when the behavior is currently following a computed path.</summary>
+    public bool HasPath => path != null && path.Count > 0;
+
+    /// <summary>
+    /// Re-selects a destination and rebuilds the path without waiting for a new activation. Used by
+    /// the performance harness to force a synchronized re-path across many NPCs in one frame.
+    /// </summary>
+    public void Repath()
+    {
+        target = PickTarget();
+        BuildPath();
     }
 
     protected override void TickBehavior()
     {
+        if (path != null)
+        {
+            FollowPath();
+            return;
+        }
+
         Vector2 position = Body.position;
 
         if (Vector2.Distance(position, target) <= wanderConfig.ArrivalThreshold)
@@ -62,6 +85,45 @@ public class NpcWanderBehavior : NpcBehaviorBase
         }
 
         MoveToward(target, Config.MoveSpeed);
+    }
+
+    /// <summary>Builds a grid path to the current target when pathfinding is enabled.</summary>
+    private void BuildPath()
+    {
+        path = null;
+        pathIndex = 0;
+
+        if (!wanderConfig.UsePathfinding || Pathfinder == null || Body == null)
+            return;
+
+        List<Vector2> computed = Pathfinder.FindPath(Body.position, target);
+        if (computed != null && computed.Count > 0)
+            path = computed;
+    }
+
+    /// <summary>Follows the current path waypoint by waypoint; straight-line is the fallback.</summary>
+    private void FollowPath()
+    {
+        if (pathIndex >= path.Count)
+        {
+            StopMoving();
+            Complete();
+            return;
+        }
+
+        Vector2 waypoint = path[pathIndex];
+        if (Arrived(waypoint, wanderConfig.ArrivalThreshold))
+        {
+            pathIndex++;
+            if (pathIndex >= path.Count)
+            {
+                StopMoving();
+                Complete();
+            }
+            return;
+        }
+
+        MoveToward(waypoint, Config.MoveSpeed);
     }
 
     /// <summary>
