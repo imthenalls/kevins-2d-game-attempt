@@ -30,9 +30,13 @@ Masks compared: `Everything` (the game default — NPC bodies block pathfinding)
 The builder creates two project layers if missing: **`Npc` (6)** and **`Walls` (7)**, and puts the
 stress room's walls on `Walls`. The harness puts spawned NPCs on `Npc`.
 
-> Follow-up: existing NPCs, prefab NPCs, and wall Tilemaps in `Overworld`/`WorldB` are still on the
-> `Default` layer, and component masks (`NpcPathfinder.obstacleLayers`, `NpcWanderBehavior.wallLayers`)
-> default to `~0`. Switching them to the `Walls`-only mask is the remaining part of the layer fix.
+> The rollout is applied: **Tools > World > Apply NPC + Wall Layers** (`NpcLayerRollout`) assigns
+> every `NpcController` hierarchy to `Npc`, every collider-bearing Tilemap (walls) to `Walls`, and
+> switches `NpcPathfinder.obstacleLayers` / `NpcWanderBehavior.wallLayers` /
+> `NpcDashMeleeController.obstacleLayers` from `Everything` to `~(1 << Npc)` — so walls, props, and
+> the player remain obstacles but NPC bodies no longer block each other. `NpcPerception` stays
+> permissive (`~0`) so detection of the player and gates is unaffected. Re-run the tool after adding
+> scenes or NPC prefabs.
 
 ## Latest results (editor, isometric WorldB, .NET 10 SDK / Unity 6.4)
 

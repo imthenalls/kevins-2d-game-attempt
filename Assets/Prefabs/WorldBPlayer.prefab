@@ -174,6 +174,7 @@ MonoBehaviour:
     MinDashSpeed: 0.01
     MinDashRechargeInterval: 0.1
   visualTransform: {fileID: 515261441}
+  grid: {fileID: 0}
 --- !u!114 &239027354
 MonoBehaviour:
   m_ObjectHideFlags: 0

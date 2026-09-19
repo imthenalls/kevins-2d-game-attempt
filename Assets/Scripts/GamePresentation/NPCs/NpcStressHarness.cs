@@ -49,8 +49,8 @@ public sealed class NpcStressHarness : MonoBehaviour
 
         // Two obstacle-mask configurations: the current game default (Everything, so NPC bodies
         // block pathfinding) and the walls-only config a layer fix would give.
-        yield return RunMask("mask=Everything", obstacleMask: ~0);
-        yield return RunMask("mask=WallsOnly", obstacleMask: null);
+        yield return RunMask("obstacles=Everything (NPCs block)", obstacleMask: ~0);
+        yield return RunMask("obstacles=NoNpcBodies", obstacleMask: null);
 
         TearDownCamera();
         WriteReport();
@@ -182,9 +182,7 @@ public sealed class NpcStressHarness : MonoBehaviour
 
         int npcLayer = LayerMask.NameToLayer("Npc");
         if (npcLayer < 0) npcLayer = 0;
-        int wallsLayer = LayerMask.NameToLayer("Walls");
-        int wallsMask = wallsLayer >= 0 ? 1 << wallsLayer : ~0;
-        int pathMask = obstacleMask ?? wallsMask;
+        int pathMask = obstacleMask ?? (npcLayer >= 0 ? ~(1 << npcLayer) : ~0);
 
         int columns = Mathf.Max(1, Mathf.CeilToInt(Mathf.Sqrt(count)));
         int rows = Mathf.Max(1, Mathf.CeilToInt(count / (float)columns));

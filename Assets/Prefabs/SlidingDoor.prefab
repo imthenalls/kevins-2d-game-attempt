@@ -107,27 +107,11 @@ MonoBehaviour:
     UnlockedB: 0.82
     UnlockedA: 1
   grid: {fileID: 0}
-  axis: 0
-  cellLength: 1
   gateSprite: {fileID: 21300000, guid: 9019ceb28a3c32645aaffaa89017452e, type: 3}
   gateId: 
-  reverseSlideDirection: 0
-  slideDuration: 0.45
-  closeAfterPassing: 1
-  closeDelay: 0.25
   travelerLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  displayName: Gate
-  interactionRange: 2
-  startsOpen: 0
-  canClose: 1
-  requiredKeyId: golden_key
-  consumeKeyOnUnlock: 0
-  remainUnlocked: 1
-  lockedMessage: It's locked. You need the {0}.
-  lockedColor: {r: 0.95, g: 0.28, b: 0.16, a: 1}
-  unlockedColor: {r: 0.22, g: 0.9, b: 0.82, a: 1}
 --- !u!1 &810911083771390079
 GameObject:
   m_ObjectHideFlags: 0

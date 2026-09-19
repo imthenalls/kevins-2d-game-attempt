@@ -257,12 +257,6 @@ MonoBehaviour:
   weaponRenderer: {fileID: 910200002}
   facingRenderer: {fileID: 0}
   swingTransform: {fileID: 910200001}
-  startAngleOffset: -20
-  endAngleOffset: 200
-  attackRadiusMultiplier: 1.25
-  trailColor: {r: 1, g: 0.05, b: 0.03, a: 0.85}
-  trailFadeTime: 0.28
-  gripPivotNormalized: {x: 0.16, y: 0.18}
 --- !u!1 &920000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -524,6 +518,7 @@ MonoBehaviour:
     MinDashSpeed: 0.01
     MinDashRechargeInterval: 0.1
   visualTransform: {fileID: 920000002}
+  grid: {fileID: 0}
 --- !u!114 &997259776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -582,9 +577,6 @@ MonoBehaviour:
     StartingWeaponItemId: 
     StartingArmorItemId: 
     StartingAccessoryItemId: 
-  startingWeaponItemId: 
-  startingArmorItemId: 
-  startingAccessoryItemId: 
 --- !u!114 &997259779
 MonoBehaviour:
   m_ObjectHideFlags: 0

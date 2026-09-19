@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 6293985850944655893}
   - component: {fileID: 5358964736349618446}
   - component: {fileID: 8352674287138400720}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: TrainingChallenger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -190,9 +190,6 @@ MonoBehaviour:
     StartingWeaponItemId: iron_sword
     StartingArmorItemId: 
     StartingAccessoryItemId: 
-  startingWeaponItemId: iron_sword
-  startingArmorItemId: 
-  startingAccessoryItemId: 
 --- !u!114 &5358964736349618446
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -252,7 +249,7 @@ MonoBehaviour:
     ArenaHeight: 14
   obstacleLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294967231
 --- !u!1 &4431059809081950587
 GameObject:
   m_ObjectHideFlags: 0
@@ -263,7 +260,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5499765523070833961}
   - component: {fileID: 7019392739945475342}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Aim Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -356,7 +353,7 @@ GameObject:
   - component: {fileID: 8734120045568216658}
   - component: {fileID: 8427007793189576054}
   - component: {fileID: 5187599669214911513}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: WeaponVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -465,9 +462,3 @@ MonoBehaviour:
   weaponRenderer: {fileID: 8427007793189576054}
   facingRenderer: {fileID: 7019392739945475342}
   swingTransform: {fileID: 8734120045568216658}
-  startAngleOffset: -20
-  endAngleOffset: 200
-  attackRadiusMultiplier: 1.25
-  trailColor: {r: 1, g: 0.05, b: 0.03, a: 0.85}
-  trailFadeTime: 0.28
-  gripPivotNormalized: {x: 0.16, y: 0.18}
