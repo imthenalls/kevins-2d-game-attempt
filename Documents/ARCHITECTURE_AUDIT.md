@@ -72,7 +72,7 @@ This is also the project's named architecture: **Engine-Free Core**.
 
 | # | State | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Player HP / MP / Max | `GamePresentation/Entity/EntityStats.cs:30-31` | Player HP/MaxHp are not model-backed | Player mana already flows through `Wallet`/`ManaAccount`; NPCs are bound via `NpcStateView`. The player is the documented next slice in [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) |
+| 1 | Player HP / MaxHp | `GamePresentation/Entity/EntityStats.cs:30-31` **and** `GamePresentation/Worlds/WorldTravelState.cs:47-48, 251-252, 272-273` | Two Shell owners today: `EntityStats._hp` and `WorldTravelState.sharedHp/sharedMaxHp` (captured/applied on world travel) | Player mana already flows through `Wallet`/`ManaAccount`; NPCs are bound via `NpcStateView`. Migrating player HP requires unifying both Shell owners behind one Core model first — not a mechanical move |
 | 2 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
 
 ## Practical consequence
@@ -82,8 +82,13 @@ inventory, NPC state, keys, and the save shape are engine-free state with fast t
 
 ## Recommended migration order
 
-1. **Player HP/MaxHp** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
-   Player mana is already model-backed via `ManaAccount`, so only health remains.
+1. **Unify player HP behind a Core health model.** Today `EntityStats._hp` and
+   `WorldTravelState.sharedHp/sharedMaxHp` both own player HP; the migration must replace both with
+   one `Game.Data` model (an `IHealthModel` bound like `NpcStateView`), then delete the duplicate in
+   `WorldTravelState`. Includes reworking the player save/load path in `SaveManager`. Player mana is
+   already model-backed, so only health remains.
+2. **Player physics position** (optional/structural) — a logical position model if continuous
+   world position ever needs to be authoritative.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.
