@@ -83,6 +83,29 @@ namespace Game.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator Scene_Player_Binds_To_Session_Health()
+        {
+            // WorldTravelState is DontDestroyOnLoad and keeps CurrentWorld across PlayMode tests, so
+            // an earlier test that loaded WorldB would deactivate Overworld's World A player
+            // (WorldCharacter.SetActiveForWorld). Reset the world before loading so this test does
+            // not depend on execution order.
+            WorldTravelState travel = WorldTravelState.Instance;
+            if (travel != null)
+                travel.SetCurrentWorld(WorldLayer.WorldA);
+
+            yield return LoadScene(OverworldScene);
+
+            PlayerController2D player = Object.FindAnyObjectByType<PlayerController2D>();
+            Assert.IsNotNull(player, "Overworld should contain an active player when the current world is World A.");
+
+            GameSession session = GameSessionHost.Session;
+            Assert.IsNotNull(session);
+            Assert.IsNotNull(session.PlayerHealth, "The scene player should bind a session-owned health model.");
+            Assert.AreEqual(session.PlayerHealth.Hp, player.Stats.Hp);
+            Assert.AreEqual(session.PlayerHealth.MaxHp, player.Stats.MaxHp);
+        }
+
         private static IEnumerator LoadScene(string path)
         {
             AsyncOperation operation = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(path, UnityEngine.SceneManagement.LoadSceneMode.Single);
