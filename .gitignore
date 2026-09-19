@@ -31,5 +31,8 @@ Thumbs.db
 Tools/**/out/
 
 # Keep hand-written .NET project files under Tools (Unity-generated *.csproj stay ignored)
-!Tools/**/*.csprojAssets/InitTestScene*.unity
+!Tools/**/*.csproj
+
+# Unity Test Runner leaves these behind; never commit them
+Assets/InitTestScene*.unity
 Assets/InitTestScene*.unity.meta
