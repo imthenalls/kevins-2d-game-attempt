@@ -47,6 +47,7 @@ This is also the project's named architecture: **Engine-Free Core**.
 | World facts | `WorldFacts` | `WorldStateManager` (MonoBehaviour facade) |
 | Quest runtime | `QuestGraphData`, `QuestInstance`, `ICondition`, `IQuestAction` | `QuestLoader` (factories via `QuestRuntimeBindings`), `QuestManager` (events + save) |
 | Equipment / hotbar | `EquipmentModel`, `HotbarModel`, `EquipSlotType` | `EquipmentManager`, `HotbarUI` (cast `IItem`→`ItemData` for asset data) |
+| Save shape | `SaveData`, `NpcSaveEntry`, `QuestSaveEntry`, `MarketTransaction`, `WalletSaveData` | `SaveManager` (JsonUtility read/write) |
 
 ## Migrated since the first audit
 
@@ -60,6 +61,9 @@ This is also the project's named architecture: **Engine-Free Core**.
 - **Equipment / hotbar** — `EquipmentModel`, `HotbarModel`, and `EquipSlotType` moved to `Game.Data`,
   keyed on `IItem` (with `IItem.EquipSlot`); `EquipmentManager` / `HotbarUI` stay as adapters.
   Engine-free tests: `Assets/Tests/EditMode/EquipmentModelTests.cs`.
+- **Save shape** — `SaveData`, `NpcSaveEntry`, `QuestSaveEntry`, `MarketTransaction`, and
+  `WalletSaveData` moved to `Game.Data`; `SaveManager` stays as the JsonUtility reader/writer.
+  Engine-free tests: `Assets/Tests/EditMode/SaveDataShapeTests.cs`.
 
 ## Deviations — authoritative state still in Presentation
 
@@ -67,21 +71,18 @@ This is also the project's named architecture: **Engine-Free Core**.
 |---|---|---|---|---|
 | 1 | Player HP / MP / Max | `GamePresentation/Entity/EntityStats.cs:30-31` | Player stats are not model-backed | NPCs are fine (bound via `NpcStateView`); the player is the documented next slice in [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) |
 | 2 | Key ownership | `GamePresentation/Inventory/PlayerKeyring.cs:19` | Saveable key state lives in a MonoBehaviour | May be forced by Unity prefab/tag needs — verify before moving |
-| 3 | Save DTO | `GamePresentation/GameManagement/SaveData.cs:29` | The save shape still references `QuestManager.QuestSaveEntry` and `MarketTransaction` | Rule 1 says save DTOs belong in `Game.Data` |
-| 4 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
+| 3 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
 
 ## Practical consequence
 
-Deviations are now down to the player's own stats and a few cross-cutting pieces. Equipping,
-hotbar use, quest progression, mana, and world facts are all engine-free state with fast tests;
-only genuinely Unity-bound behaviour (Play Mode adapters) needs the slower buckets.
+Only the player's own live state (HP/MP and physics position) and the keyring still sit in the
+Shell. Mana, facts, quests, equipment, hotbar, inventory, NPC state, and the save shape are all
+engine-free state with fast tests.
 
 ## Recommended migration order
 
-1. **`SaveData` DTO → `Game.Data`** — split the quest and market DTOs out so the data layer owns
-   the save shape and no longer depends on presentation types.
-2. **`PlayerKeyring`** behind a data model (mind prefab/tag needs).
-3. **Player HP/MP** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
+1. **`PlayerKeyring`** behind a data model (mind prefab/tag needs).
+2. **Player HP/MP** through the existing `IHealthModel` seam (the `MODEL_VIEW_SLICE.md` follow-up).
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.

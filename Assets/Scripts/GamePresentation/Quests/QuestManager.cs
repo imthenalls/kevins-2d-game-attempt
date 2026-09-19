@@ -128,21 +128,6 @@ public class QuestManager : MonoBehaviour
     // Save / load support
     // -------------------------------------------------------------------------
 
-    [System.Serializable]
-    public class QuestSaveEntry
-    {
-        public string questId;
-        public List<string> activeNodeIds;
-        public List<ObjectiveCountEntry> objectiveCounts;
-    }
-
-    [System.Serializable]
-    public class ObjectiveCountEntry
-    {
-        public string objectiveId;
-        public int count;
-    }
-
     /// <summary>
     /// Restores active quest instances from a save file entry list.
     /// Uses QuestInstance.FromSave so onEnterActions are NOT re-fired.

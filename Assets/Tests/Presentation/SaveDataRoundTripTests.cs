@@ -87,13 +87,13 @@ namespace Game.Tests
             data.worldFacts.Add(new FactEntry { key = "gate_open", value = "True", type = "bool" });
             data.worldFacts.Add(new FactEntry { key = "kills", value = "7", type = "int" });
 
-            data.activeQuests.Add(new QuestManager.QuestSaveEntry
+            data.activeQuests.Add(new QuestSaveEntry
             {
                 questId = "q1",
                 activeNodeIds = new List<string> { "start" },
-                objectiveCounts = new List<QuestManager.ObjectiveCountEntry>
+                objectiveCounts = new List<ObjectiveCountEntry>
                 {
-                    new QuestManager.ObjectiveCountEntry { objectiveId = "obj1", count = 3 },
+                    new ObjectiveCountEntry { objectiveId = "obj1", count = 3 },
                 },
             });
 
