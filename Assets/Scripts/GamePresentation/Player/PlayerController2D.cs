@@ -106,6 +106,14 @@ public class PlayerController2D : MonoBehaviour, IEntityController, ITradePartic
         ManaWallet = hadWallet ? wallet : gameObject.AddComponent<Wallet>();
         Stats.BindManaWallet(ManaWallet, initializeFromStats: !hadWallet);
 
+        // Player HP lives in the GameSession model so it is shared across avatars/scenes and out of
+        // the MonoBehaviour (Engine-Free Core). The first player binds and seeds it; later avatars
+        // adopt the existing model via EntityStats.BindHealthModel.
+        GameSessionHost.EnsureExists();
+        GameSession session = GameSessionHost.Session;
+        if (session != null)
+            Stats.BindHealthModel(session.GetOrCreatePlayerHealth(Stats.MaxHp, Stats.Hp));
+
         if (settings.ForceNoGravity)
         {
             rb.gravityScale = 0f;

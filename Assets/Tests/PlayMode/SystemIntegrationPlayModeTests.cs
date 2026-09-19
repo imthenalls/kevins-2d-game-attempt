@@ -1,4 +1,5 @@
 using System.Collections;
+using Game.Core;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -55,6 +56,30 @@ namespace Game.Tests
             Assert.IsFalse(state.HasFact("unset_fact"));
 
             Object.Destroy(go);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Player_Health_Is_Model_Backed()
+        {
+            var subject = new GameObject("Player Test Subject", typeof(Rigidbody2D));
+            EntityStats stats = subject.AddComponent<EntityStats>();
+            subject.AddComponent<PlayerController2D>(); // Awake binds player HP to the session model
+            yield return null;
+
+            GameSession session = GameSessionHost.Session;
+            Assert.IsNotNull(session);
+            Assert.IsNotNull(session.PlayerHealth, "The player should bind a session-owned health model.");
+
+            Assert.AreEqual(session.PlayerHealth.Hp, stats.Hp);
+            Assert.AreEqual(session.PlayerHealth.MaxHp, stats.MaxHp);
+
+            session.PlayerHealth.SetHp(session.PlayerHealth.MaxHp);
+            int before = session.PlayerHealth.Hp;
+            stats.TakeDamage(3);
+            Assert.AreEqual(before - 3, session.PlayerHealth.Hp, "damage must flow into the session model");
+
+            Object.Destroy(subject);
             yield return null;
         }
 

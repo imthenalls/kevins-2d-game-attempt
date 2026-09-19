@@ -299,6 +299,30 @@ public class EntityStats : MonoBehaviour
     // ── Stat scaling ────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Set maxHp directly (delegates to the bound health model). Current HP clamps to the new max.
+    /// </summary>
+    public void SetMaxHp(int value)
+    {
+        if (_healthModel != null)
+        {
+            _healthModel.SetMaxHp(value);
+            return;
+        }
+
+        int next = Mathf.Max(1, value);
+        if (next == config.MaxHp) return;
+
+        bool wasAlive = IsAlive;
+        config.MaxHp = next;
+        if (_hp > config.MaxHp)
+            _hp = config.MaxHp;
+        OnHpChanged?.Invoke(_hp, config.MaxHp);
+
+        if (wasAlive && _hp == 0)
+            OnDeath?.Invoke();
+    }
+
+    /// <summary>
     /// Raise maxHp (e.g. on level-up). Optionally also heals the added amount.
     /// </summary>
     public void IncreaseMaxHp(int amount, bool healDelta = true)

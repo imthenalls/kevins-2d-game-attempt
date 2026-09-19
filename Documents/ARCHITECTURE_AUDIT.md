@@ -7,11 +7,11 @@
 ## Verdict
 
 `Game.Data` cannot reference Unity or `Game.Presentation` — that is enforced by the compiler, not
-by convention. State that has been migrated (NPC state, inventory, tuning, validation, session,
-mana, world facts) is correctly separated. A handful of systems still keep **authoritative,
-saveable state inside `Game.Presentation`**, which is a deviation from AGENT.md rule 1
-("if we want to save it, do not store the authoritative value in a MonoBehaviour"). See
-[AGENT.md](../AGENT.md) → **Architecture: Engine-Free Core** for the pattern and rules.
+by convention. Authoritative state — NPC state, inventory, tuning, config, mana, world facts,
+quests, equipment, hotbar, keys, player health, and the save shape — now lives in the Core. The
+only remaining Shell-owned authoritative value is the player's continuous physics position, which
+is a documented transitional compromise. See [AGENT.md](../AGENT.md) → **Architecture: Engine-Free
+Core** for the pattern and rules.
 
 This is also the project's named architecture: **Engine-Free Core**.
 
@@ -49,6 +49,7 @@ This is also the project's named architecture: **Engine-Free Core**.
 | Equipment / hotbar | `EquipmentModel`, `HotbarModel`, `EquipSlotType` | `EquipmentManager`, `HotbarUI` (cast `IItem`→`ItemData` for asset data) |
 | Save shape | `SaveData`, `NpcSaveEntry`, `QuestSaveEntry`, `MarketTransaction`, `WalletSaveData` | `SaveManager` (JsonUtility read/write) |
 | Key ownership | `Keyring` | `PlayerKeyring` (MonoBehaviour facade, `IKeyHolder` events) |
+| Player health | `HealthModel` (owned by `GameSession`) | `PlayerController2D` binds it to `EntityStats`; `WorldTravelState` shares mana/positions only |
 
 ## Migrated since the first audit
 
@@ -67,28 +68,29 @@ This is also the project's named architecture: **Engine-Free Core**.
   Engine-free tests: `Assets/Tests/EditMode/SaveDataShapeTests.cs`.
 - **Key ownership** — logic moved to `Game.Core.Keyring`; `PlayerKeyring` is now a facade
   (singleton + `IKeyHolder`/`OnChanged`). Engine-free tests: `Assets/Tests/EditMode/KeyringTests.cs`.
+- **Player health** — a `Game.Core.HealthModel` is owned by `GameSession` and bound to the player's
+  `EntityStats` in `PlayerController2D.Awake`. The duplicate `WorldTravelState.sharedHp/sharedMaxHp`
+  owner was deleted, so HP is now shared across avatars/scenes by the model instead of by copying.
+  Engine-free tests: `Assets/Tests/EditMode/HealthModelTests.cs`.
 
 ## Deviations — authoritative state still in Presentation
 
 | # | State | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Player HP / MaxHp | `GamePresentation/Entity/EntityStats.cs:30-31` **and** `GamePresentation/Worlds/WorldTravelState.cs:47-48, 251-252, 272-273` | Two Shell owners today: `EntityStats._hp` and `WorldTravelState.sharedHp/sharedMaxHp` (captured/applied on world travel) | Player mana already flows through `Wallet`/`ManaAccount`; NPCs are bound via `NpcStateView`. Migrating player HP requires unifying both Shell owners behind one Core model first — not a mechanical move |
-| 2 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
+| 1 | Player world position | physics `Transform`, saved as floats | Documented transitional compromise | [MODEL_VIEW_SLICE.md](MODEL_VIEW_SLICE.md) compromise 1 |
 
 ## Practical consequence
 
-Only the player's own live state remains in the Shell. Mana, facts, quests, equipment, hotbar,
-inventory, NPC state, keys, and the save shape are engine-free state with fast tests.
+The only remaining Shell-owned authoritative state is the player's continuous physics position,
+which is an intentional compromise (a logical cell model could replace it if needed). Every other
+migrated system is engine-free state with fast tests.
 
 ## Recommended migration order
 
-1. **Unify player HP behind a Core health model.** Today `EntityStats._hp` and
-   `WorldTravelState.sharedHp/sharedMaxHp` both own player HP; the migration must replace both with
-   one `Game.Data` model (an `IHealthModel` bound like `NpcStateView`), then delete the duplicate in
-   `WorldTravelState`. Includes reworking the player save/load path in `SaveManager`. Player mana is
-   already model-backed, so only health remains.
-2. **Player physics position** (optional/structural) — a logical position model if continuous
-   world position ever needs to be authoritative.
+The planned migrations are complete. The only open item is optional:
+
+1. **Player physics position** (optional/structural) — introduce a logical position model if
+   continuous world position ever needs to be authoritative.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.

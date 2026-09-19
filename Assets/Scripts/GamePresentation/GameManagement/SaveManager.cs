@@ -237,10 +237,7 @@ public class SaveManager : MonoBehaviour
 
         if (WorldTravelState.Instance != null)
         {
-            WorldTravelState.Instance.LoadSharedPlayerState(
-                data.playerHp,
-                data.playerMaxHp,
-                BuildWalletSaveDataForLoad(data));
+            WorldTravelState.Instance.LoadSharedPlayerState(BuildWalletSaveDataForLoad(data));
             WorldTravelState.Instance.LoadAbilities(data.worldAbilities);
             WorldTravelState.Instance.LoadState(data.activeWorld, data.worldPositions);
         }
@@ -282,6 +279,7 @@ public class SaveManager : MonoBehaviour
             if (player.TryGetComponent<EntityStats>(out var stats))
             {
                 stats.Configure(data.playerMaxHp, data.playerMaxMp);
+                stats.SetMaxHp(data.playerMaxHp);
                 stats.SetHp(data.playerHp);
             }
 

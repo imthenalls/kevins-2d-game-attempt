@@ -135,6 +135,7 @@ The same "saveable state out of MonoBehaviours" pattern has since been applied m
 
 ## Recommended next slice
 
-**Migrate the player's HP/MP the same way** using the same `GameSession`/`IHealthModel` seam, or
-**give NPCs stable unique ids** so the repository/save keys are unambiguous. The id fix is small
-and removes the duplicate-`npcId` compromise before more data is moved onto the model.
+Both follow-ups from this slice are done: the player's HP was migrated the same way — a
+`Game.Core.HealthModel` owned by `GameSession` is bound to the player's `EntityStats` in
+`PlayerController2D.Awake`, replacing the duplicate HP state in `WorldTravelState`. See
+[ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md) for the current conformance state.

@@ -14,10 +14,27 @@ namespace Game.Core
         public NpcStateRepository Npcs { get; }
         public NpcStateService NpcStates { get; }
 
+        /// <summary>
+        /// Authoritative player health, shared across avatars and scene loads. Null until the first
+        /// player binds; call <see cref="GetOrCreatePlayerHealth"/> to seed and retrieve it.
+        /// </summary>
+        public HealthModel PlayerHealth { get; private set; }
+
         public GameSession()
         {
             Npcs = new NpcStateRepository();
             NpcStates = new NpcStateService(Npcs);
+        }
+
+        /// <summary>
+        /// Returns the player's health model, creating it from the given seed values on first use.
+        /// Later callers adopt the existing model so player HP persists across avatar/scene changes.
+        /// </summary>
+        public HealthModel GetOrCreatePlayerHealth(int maxHp, int hp)
+        {
+            if (PlayerHealth == null)
+                PlayerHealth = new HealthModel(maxHp, hp);
+            return PlayerHealth;
         }
     }
 }

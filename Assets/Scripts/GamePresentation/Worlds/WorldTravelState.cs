@@ -44,8 +44,6 @@ public sealed class WorldTravelState : MonoBehaviour
     private readonly Dictionary<WorldLayer, RememberedPosition> positions = new();
     private readonly Dictionary<WorldLayer, HashSet<string>> unlockedAbilities = new();
     private bool sharedPlayerStateInitialized;
-    private int sharedHp;
-    private int sharedMaxHp;
     private WalletSaveData sharedWallet;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -248,8 +246,6 @@ public sealed class WorldTravelState : MonoBehaviour
             : traveler.GetComponent<Wallet>();
         if (stats == null) return;
 
-        sharedHp = stats.Hp;
-        sharedMaxHp = stats.MaxHp;
         sharedWallet = wallet != null ? wallet.GetSaveData() : null;
         sharedPlayerStateInitialized = true;
     }
@@ -268,17 +264,12 @@ public sealed class WorldTravelState : MonoBehaviour
             : traveler.GetComponent<Wallet>();
         if (stats == null) return;
 
-        int manaCapacity = sharedWallet != null ? sharedWallet.capacity : stats.MaxMp;
-        stats.Configure(Mathf.Max(1, sharedMaxHp), Mathf.Max(0, manaCapacity));
-        stats.SetHp(sharedHp);
         if (wallet != null && sharedWallet != null)
             wallet.LoadSaveData(sharedWallet);
     }
 
-    public void LoadSharedPlayerState(int hp, int maxHp, WalletSaveData wallet)
+    public void LoadSharedPlayerState(WalletSaveData wallet)
     {
-        sharedHp = hp;
-        sharedMaxHp = Mathf.Max(1, maxHp);
         sharedWallet = wallet;
         sharedPlayerStateInitialized = true;
     }
