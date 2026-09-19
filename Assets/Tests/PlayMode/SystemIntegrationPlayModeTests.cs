@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Game.Core;
 using NUnit.Framework;
 using UnityEngine;
@@ -138,6 +139,31 @@ namespace Game.Tests
 
             model.Set(savedX, savedY, savedOffsetX, savedOffsetY);
             Assert.AreEqual(current.x, grid.WorldToCell(player.transform.position).x);
+        }
+
+        [UnityTest]
+        public IEnumerator World_Remembered_Position_RoundTrips_As_Cell()
+        {
+            yield return LoadScene(OverworldScene);
+
+            WorldTravelState travel = WorldTravelState.Instance;
+            Assert.IsNotNull(travel);
+
+            PlayerController2D player = Object.FindAnyObjectByType<PlayerController2D>();
+            Assert.IsNotNull(player);
+
+            Vector3 spot = player.transform.position;
+            travel.RememberTravelerPosition(player.transform);
+
+            Assert.IsTrue(travel.TryGetRememberedPosition(travel.CurrentWorld, out _, out Vector3 restored),
+                "the traveler position should be remembered");
+            Assert.AreEqual(spot.x, restored.x, 0.05f);
+            Assert.AreEqual(spot.y, restored.y, 0.05f);
+
+            var entries = new List<WorldPositionSaveEntry>();
+            travel.WritePositions(entries);
+            Assert.IsTrue(entries.Count > 0);
+            Assert.IsTrue(entries.Exists(e => e.hasCell), "remembered positions should save as grid cells");
         }
 
         private static IEnumerator LoadScene(string path)

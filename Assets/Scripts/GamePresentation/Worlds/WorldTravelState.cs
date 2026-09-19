@@ -31,7 +31,18 @@ public sealed class WorldTravelState : MonoBehaviour
     private sealed class RememberedPosition
     {
         public string scene;
-        public Vector3 position;
+
+        // Grid-anchored form (preferred): logical cell + local offset, like GameSession.PlayerPosition.
+        public bool hasCell;
+        public int cellX;
+        public int cellY;
+        public float offsetX;
+        public float offsetY;
+
+        // Legacy float fallback, used when no Grid was available or for pre-v7 saves.
+        public float legacyX;
+        public float legacyY;
+        public float legacyZ;
     }
 
     public static WorldTravelState Instance { get; private set; }
@@ -76,17 +87,62 @@ public sealed class WorldTravelState : MonoBehaviour
     public void RememberPosition(WorldLayer world, string scene, Vector3 position)
     {
         if (string.IsNullOrWhiteSpace(scene)) return;
-        positions[world] = new RememberedPosition
+
+        var remembered = new RememberedPosition
         {
             scene = scene.Trim(),
-            position = position,
+            legacyX = position.x,
+            legacyY = position.y,
+            legacyZ = position.z,
         };
+
+        Grid grid = FindAnyObjectByType<Grid>();
+        if (grid != null)
+        {
+            Vector3Int cell = grid.WorldToCell(position);
+            Vector3 center = grid.GetCellCenterWorld(cell);
+            remembered.hasCell = true;
+            remembered.cellX = cell.x;
+            remembered.cellY = cell.y;
+            remembered.offsetX = position.x - center.x;
+            remembered.offsetY = position.y - center.y;
+        }
+
+        positions[world] = remembered;
     }
 
     public void RememberTravelerPosition(Transform traveler)
     {
         if (traveler == null) return;
-        RememberPosition(CurrentWorld, SceneManager.GetActiveScene().name, traveler.position);
+
+        string scene = SceneManager.GetActiveScene().name;
+
+        // Prefer the player's authoritative logical position so travel uses the same grid cell as
+        // save/load (Engine-Free Core PositionModel) instead of recomputing from the transform.
+        PositionModel model = traveler.GetComponent<PlayerController2D>() != null
+            ? GameSessionHost.Session?.PlayerPosition
+            : null;
+
+        if (model != null)
+        {
+            positions[CurrentWorld] = new RememberedPosition
+            {
+                scene = scene,
+                hasCell = true,
+                cellX = model.CellX,
+                cellY = model.CellY,
+                offsetX = model.OffsetX,
+                offsetY = model.OffsetY,
+                legacyX = traveler.position.x,
+                legacyY = traveler.position.y,
+                legacyZ = traveler.position.z,
+            };
+        }
+        else
+        {
+            RememberPosition(CurrentWorld, scene, traveler.position);
+        }
+
         CaptureSharedPlayerState(traveler);
     }
 
@@ -98,13 +154,29 @@ public sealed class WorldTravelState : MonoBehaviour
         if (positions.TryGetValue(world, out RememberedPosition remembered))
         {
             scene = remembered.scene;
-            position = remembered.position;
+            position = ResolveWorldPosition(remembered);
             return true;
         }
 
         scene = string.Empty;
         position = Vector3.zero;
         return false;
+    }
+
+    /// <summary>Converts a remembered position back to world space, preferring the grid cell.</summary>
+    private static Vector3 ResolveWorldPosition(RememberedPosition remembered)
+    {
+        if (remembered.hasCell)
+        {
+            Grid grid = FindAnyObjectByType<Grid>();
+            if (grid != null)
+            {
+                Vector3 center = grid.GetCellCenterWorld(new Vector3Int(remembered.cellX, remembered.cellY, 0));
+                return new Vector3(center.x + remembered.offsetX, center.y + remembered.offsetY, 0f);
+            }
+        }
+
+        return new Vector3(remembered.legacyX, remembered.legacyY, remembered.legacyZ);
     }
 
     public void SetCurrentWorld(WorldLayer world)
@@ -156,9 +228,14 @@ public sealed class WorldTravelState : MonoBehaviour
             {
                 world = pair.Key.ToString(),
                 scene = pair.Value.scene,
-                x = pair.Value.position.x,
-                y = pair.Value.position.y,
-                z = pair.Value.position.z,
+                hasCell = pair.Value.hasCell,
+                cellX = pair.Value.cellX,
+                cellY = pair.Value.cellY,
+                offsetX = pair.Value.offsetX,
+                offsetY = pair.Value.offsetY,
+                x = pair.Value.legacyX,
+                y = pair.Value.legacyY,
+                z = pair.Value.legacyZ,
             });
         }
     }
@@ -283,7 +360,28 @@ public sealed class WorldTravelState : MonoBehaviour
             {
                 WorldPositionSaveEntry entry = savedPositions[i];
                 if (entry != null && Enum.TryParse(entry.world, out WorldLayer world))
-                    RememberPosition(world, entry.scene, new Vector3(entry.x, entry.y, entry.z));
+                {
+                    if (entry.hasCell)
+                    {
+                        positions[world] = new RememberedPosition
+                        {
+                            scene = entry.scene,
+                            hasCell = true,
+                            cellX = entry.cellX,
+                            cellY = entry.cellY,
+                            offsetX = entry.offsetX,
+                            offsetY = entry.offsetY,
+                            legacyX = entry.x,
+                            legacyY = entry.y,
+                            legacyZ = entry.z,
+                        };
+                    }
+                    else
+                    {
+                        // Legacy save: convert the stored world floats through the scene Grid.
+                        RememberPosition(world, entry.scene, new Vector3(entry.x, entry.y, entry.z));
+                    }
+                }
             }
         }
 

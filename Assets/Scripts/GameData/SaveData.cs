@@ -121,14 +121,23 @@ namespace Game.Core
     }
 
     [Serializable]
-    public class WorldPositionSaveEntry
-    {
-        public string world;
-        public string scene;
-        public float x;
-        public float y;
-        public float z;
-    }
+public class WorldPositionSaveEntry
+{
+    public string world;
+    public string scene;
+
+    // v7: grid-anchored position (cell + local offset). hasCell false = legacy save, convert x/y/z.
+    public bool hasCell;
+    public int cellX;
+    public int cellY;
+    public float offsetX;
+    public float offsetY;
+
+    // Legacy world floats, kept for older saves and as a no-Grid fallback.
+    public float x;
+    public float y;
+    public float z;
+}
 
     /// <summary>
     /// Serializable pairing of one world layer and one unlocked avatar ability ID.

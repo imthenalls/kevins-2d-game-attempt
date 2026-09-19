@@ -51,6 +51,7 @@ This is also the project's named architecture: **Engine-Free Core**.
 | Key ownership | `Keyring` | `PlayerKeyring` (MonoBehaviour facade, `IKeyHolder` events) |
 | Player health | `HealthModel` (owned by `GameSession`) | `PlayerController2D` binds it to `EntityStats`; `WorldTravelState` shares mana/positions only |
 | Player position | `PositionModel` (owned by `GameSession`) | `PlayerController2D` mirrors the physics transform to/from it |
+| Per-world remembered positions | `WorldPositionSaveEntry` (cell + local offset, v7) | `WorldTravelState` converts through the scene Grid |
 
 ## Migrated since the first audit
 
@@ -78,24 +79,26 @@ This is also the project's named architecture: **Engine-Free Core**.
   body when the model changes (load/teleport/avatar switch). `SaveData` stores the cell + offset
   (v7) and converts older float-only saves through the scene Grid on load. Engine-free tests:
   `Assets/Tests/EditMode/PositionModelTests.cs`.
+- **Per-world remembered positions** — `WorldTravelState` now stores each world's return position as
+  a grid cell + local offset (preferring the player's `PositionModel` when remembering the player),
+  saves it in `WorldPositionSaveEntry` (v7), and converts legacy float-only entries through the
+  scene Grid on load. Play Mode test: `World_Remembered_Position_RoundTrips_As_Cell`.
 
 ## Deviations — authoritative state still in Presentation
 
 | # | State | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Per-world remembered positions | `WorldTravelState.positions` / `WorldPositionSaveEntry` (float world positions) | Cross-world returns restore float positions, not grid cells | Follow-up: convert to cell + offset like `PositionModel` |
+| — | _None._ | — | Every authoritative value is Core-owned; position is grid-anchored. | — |
 
 ## Practical consequence
 
-The player's own state (health, mana, position) and every gameplay system are now engine-free,
-testable state. The one remaining float-position path is `WorldTravelState`'s per-world remembered
-positions, used when returning to a scene.
+The migration is complete: all authoritative state (NPC state, inventory, tuning, mana, world facts,
+quests, equipment, hotbar, keys, player health, player position, per-world remembered positions, and
+the save shape) lives in the Engine-Free Core, with fast engine-free tests for the pure logic.
 
 ## Recommended migration order
 
-1. **Per-world remembered positions → cell + offset** — convert `WorldPositionSaveEntry` and
-   `WorldTravelState.positions` to the same grid-anchored shape as `PositionModel` (with migration
-   for older saves), so cross-world returns are deterministic too.
+No planned migrations remain.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.
