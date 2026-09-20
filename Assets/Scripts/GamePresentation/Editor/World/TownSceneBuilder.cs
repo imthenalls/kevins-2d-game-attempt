@@ -167,48 +167,48 @@ public static class TownSceneBuilder
 
         foreach (var b in Buildings)
         {
-            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, 0f);
-            Vector3 max = new Vector3(float.MinValue, float.MinValue, 0f);
-            foreach (Vector2Int corner in Corners(b))
+            // The four grid corners of the footprint — a parallelogram, not a rectangle.
+            Vector3[] corners =
             {
-                Vector3 w = grid.CellToWorld(new Vector3Int(corner.x, corner.y, 0));
-                min = Vector3.Min(min, w);
-                max = Vector3.Max(max, w);
-            }
-
-            min -= new Vector3(CellW * 0.5f, CellH * 0.5f, 0f);
-            max += new Vector3(CellW * 0.5f, CellH * 0.5f, 0f);
-
-            Vector3 center = (min + max) * 0.5f;
-
-            // Align the building with the isometric street axes instead of leaving it axis-aligned:
-            // rotate to the grid's 2:1 angle and size along the grid axes.
-            float axisLen = Mathf.Sqrt((CellW * 0.5f) * (CellW * 0.5f) + (CellH * 0.5f) * (CellH * 0.5f));
-            float rotationZ = Mathf.Atan2(CellH * 0.5f, CellW * 0.5f) * Mathf.Rad2Deg;
-            float sizeX = b.w * axisLen;
-            float sizeY = b.d * axisLen;
+                grid.CellToWorld(new Vector3Int(b.x, b.y, 0)),
+                grid.CellToWorld(new Vector3Int(b.x + b.w, b.y, 0)),
+                grid.CellToWorld(new Vector3Int(b.x + b.w, b.y + b.d, 0)),
+                grid.CellToWorld(new Vector3Int(b.x, b.y + b.d, 0)),
+            };
+            Vector3 center = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
 
             var building = new GameObject("Building_" + b.x + "_" + b.y);
             building.layer = wallsLayer;
             building.transform.SetParent(root.transform, false);
             building.transform.position = center;
-            building.transform.rotation = Quaternion.Euler(0f, 0f, rotationZ);
+            // No rotation: the body and collider are the grid parallelogram itself.
 
-            // Body visual: a plain square.
+            // Body: a grid-exact parallelogram (edges along both street axes), so it lines up with
+            // the whole town, not just one road.
             var body = new GameObject("Body");
             body.transform.SetParent(building.transform, false);
             var bodyRenderer = body.AddComponent<SpriteRenderer>();
-            bodyRenderer.sprite = squareSprite;
+            bodyRenderer.sprite = EnsureBlockSprite(b.w, b.d);
             bodyRenderer.color = BuildingColor;
             bodyRenderer.sortingOrder = 10;
-            body.transform.localScale = new Vector3(sizeX, sizeY, 1f);
 
-            // Solid building: one collider, no interior access. The door is a teleport trigger, not
-            // a gap (Pokemon-style overworld building).
-            AddBox(building, "Collider", Vector2.zero, new Vector2(sizeX, sizeY), wallsLayer);
+            // Solid collider with the same four grid corners, on the Walls layer (blocks the player
+            // and NPC pathfinding, like an NPC or the training spawn box).
+            var collider = building.AddComponent<PolygonCollider2D>();
+            collider.points = new[]
+            {
+                (Vector2)(corners[0] - center),
+                (Vector2)(corners[1] - center),
+                (Vector2)(corners[2] - center),
+                (Vector2)(corners[3] - center),
+            };
 
-            // Pink door: a trigger wired through the portal system. Destination fields are left
-            // blank on purpose — fill in the interior scene + arrival portal id per building.
+            // Pink door on the front edge (which is parallel to the street), wired through the portal
+            // system with blank destination fields.
+            Vector3 edgeA = b.side == 'S' ? corners[3] : corners[0];
+            Vector3 edgeB = b.side == 'S' ? corners[2] : corners[1];
+            Vector3 edgeMid = (edgeA + edgeB) * 0.5f;
+
             var door = new GameObject("Door");
             door.transform.SetParent(building.transform, false);
             var doorRenderer = door.AddComponent<SpriteRenderer>();
@@ -216,8 +216,8 @@ public static class TownSceneBuilder
             doorRenderer.color = EntranceColor;
             doorRenderer.sortingOrder = 11;
             door.transform.localScale = new Vector3(0.5f, 0.25f, 1f);
-            float frontOffset = b.side == 'S' ? (-sizeY * 0.5f + 0.125f) : (sizeY * 0.5f - 0.125f);
-            door.transform.localPosition = new Vector3(0f, frontOffset, 0f);
+            door.transform.localPosition = edgeMid - center;
+            door.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(CellH * 0.5f, CellW * 0.5f) * Mathf.Rad2Deg);
 
             var doorCollider = door.AddComponent<BoxCollider2D>();
             doorCollider.isTrigger = true;
@@ -335,6 +335,102 @@ public static class TownSceneBuilder
         if (sprite == null)
             throw new System.InvalidOperationException("Could not create/load diamond sprite: " + path);
         return sprite;
+    }
+
+    private static readonly Dictionary<string, Sprite> blockSprites = new();
+
+    /// <summary>
+    /// Generates (once) a parallelogram sprite for a w x d cell block. The edges follow the two
+    /// isometric grid axes, so the shape matches the grid exactly and needs no rotation.
+    /// </summary>
+    private static Sprite EnsureBlockSprite(int w, int d)
+    {
+        string key = w + "x" + d;
+        if (blockSprites.TryGetValue(key, out Sprite cached) && cached != null)
+            return cached;
+
+        Directory.CreateDirectory(TilesDir);
+        string path = TilesDir + "/Block_" + key + ".png";
+
+        if (!File.Exists(path))
+        {
+            const float halfW = 32f; // px per grid unit along +x (64 px/unit, 2:1 iso)
+            const float halfH = 16f; // px per grid unit along +y
+            const float pad = 2f;
+
+            var gridCorners = new[] { new Vector2(0, 0), new Vector2(w, 0), new Vector2(w, d), new Vector2(0, d) };
+            var pts = new Vector2[4];
+            float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
+            for (int i = 0; i < 4; i++)
+            {
+                float px = (gridCorners[i].x - gridCorners[i].y) * halfW;
+                float py = (gridCorners[i].x + gridCorners[i].y) * halfH;
+                pts[i] = new Vector2(px, py);
+                minX = Mathf.Min(minX, px); maxX = Mathf.Max(maxX, px);
+                minY = Mathf.Min(minY, py); maxY = Mathf.Max(maxY, py);
+            }
+
+            int imgW = Mathf.CeilToInt(maxX - minX + pad * 2f);
+            int imgH = Mathf.CeilToInt(maxY - minY + pad * 2f);
+            var texture = new Texture2D(imgW, imgH, TextureFormat.RGBA32, false);
+            var pixels = new Color[imgW * imgH];
+
+            for (int y = 0; y < imgH; y++)
+            {
+                for (int x = 0; x < imgW; x++)
+                {
+                    float inside = 0f;
+                    for (int sy = 0; sy < 2; sy++)
+                    {
+                        for (int sx = 0; sx < 2; sx++)
+                        {
+                            float px = x + pad - minX + (sx + 0.5f) * 0.5f;
+                            float py = y + pad - minY + (sy + 0.5f) * 0.5f;
+                            if (InsideQuad(px, py, pts))
+                                inside += 0.25f;
+                        }
+                    }
+                    pixels[y * imgW + x] = new Color(1f, 1f, 1f, inside);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 64f;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteAlignment = (int)SpriteAlignment.Center;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+        }
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        blockSprites[key] = sprite;
+        return sprite;
+    }
+
+    /// <summary>Convex point-in-quad test (all cross products the same sign).</summary>
+    private static bool InsideQuad(float x, float y, Vector2[] p)
+    {
+        float Cross(Vector2 a, Vector2 b) => (b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x);
+        float s0 = Cross(p[0], p[1]);
+        float s1 = Cross(p[1], p[2]);
+        float s2 = Cross(p[2], p[3]);
+        float s3 = Cross(p[3], p[0]);
+        bool hasNeg = s0 < 0f || s1 < 0f || s2 < 0f || s3 < 0f;
+        bool hasPos = s0 > 0f || s1 > 0f || s2 > 0f || s3 > 0f;
+        return !(hasNeg && hasPos);
     }
 
     private static Tile EnsureTile(string name, Color32 color)
