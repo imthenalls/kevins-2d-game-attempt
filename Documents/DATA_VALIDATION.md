@@ -22,12 +22,12 @@ error if any errors were found.
 | Enemy loot (`enemy_loot.json`) | blank/duplicate `npcId`; `itemId` references resolve |
 | Dialogue (`dialogues.json`) | blank/duplicate `dialogueId`; blank/duplicate node `id`; `startNodeId` exists; every `nextNodeId` (node and choice) resolves unless the node/choice ends the conversation; `questId` references resolve; `teleportScene` references resolve |
 | Quests (`Assets/StreamingAssets/quests/*.json`) | blank/duplicate `questId`; blank/duplicate node `id`; `startNodeId` exists; transition `targetNodeId` exists; condition `nodeId` exists; `itemId` and `questId` references resolve |
-| Scenes (`Assets/Scenes/*`) | blank/duplicate `NpcController.NpcId`; portal `destinationPortalId` references resolve; a scene containing a `WorldCharacter` must have exactly one `WorldSceneIdentity` |
+| Scenes (`Assets/Scenes/*`) | blank/duplicate `NpcController.NpcId`; portal `destinationPortalId` references resolve; exactly one `WorldSceneIdentity` when a `WorldCharacter` exists; a `PlayerSpawnPoint` exists (warns on duplicates); a `Grid` exists and every `Grid`/`Tilemap` is at the origin with identity rotation/scale; a `Camera` is tagged `MainCamera`; every Tilemap with a `TilemapCollider2D` is on the `Walls` layer |
 
 All comparisons are case-insensitive, matching how the runtime resolves ids.
 
 Scene checks open each scene in turn (the active scene setup is restored afterwards) and are
-**skipped with a warning when any open scene has unsaved changes** — save first, then run.
+**skipped with a warning when any open scene has unsaved changes** â€” save first, then run.
 
 ## Adding a check
 
@@ -46,7 +46,7 @@ All findings from the first run have been fixed:
 
 - Items `bounty_gold` and `evidence_letter` were added to `items.json` (referenced by quest
   `bandit_king`'s `ending_kill` / `ending_expose` nodes).
-- Quest `sheriffs_gratitude` was authored in `Assets/StreamingAssets/quests/` — it is started by
+- Quest `sheriffs_gratitude` was authored in `Assets/StreamingAssets/quests/` â€” it is started by
   `bandit_king`'s `ending_expose` and rewards two health potions for reporting the exposure.
 - The duplicate Overworld NPC id `sword_guard` was resolved by renaming the clone
   ("sword guard npc (1)") to `sword_guard_2`; it received its own `enemy_loot.json` entry so it
