@@ -363,6 +363,71 @@ public static class GameDataValidator
                         ValidationSeverity.Warning, "scene.spawnPoint.multiple",
                         "Scene '" + sceneName + "' has " + spawnPoints + " PlayerSpawnPoints; keep one default."));
                 }
+                // Grid + tilemap transform hygiene, a MainCamera, and the Walls-layer convention.
+                var grids = UnityEngine.Object.FindObjectsByType<Grid>(FindObjectsInactive.Include);
+                if (grids.Length == 0)
+                {
+                    issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.grid",
+                        "Scene '" + sceneName + "' has no Grid."));
+                }
+
+                foreach (Grid grid in grids)
+                {
+                    Transform gridTransform = grid.transform;
+                    if (gridTransform.position != Vector3.zero || gridTransform.rotation != Quaternion.identity ||
+                        gridTransform.localScale != Vector3.one)
+                    {
+                        issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.grid.transform",
+                            "Scene '" + sceneName + "' Grid '" + grid.name +
+                            "' must be at the origin with identity rotation and scale 1."));
+                    }
+
+                    if (grid.cellLayout != GridLayout.CellLayout.Isometric ||
+                        grid.cellSize != new Vector3(1f, 0.5f, 0f))
+                    {
+                        issues.Add(new ValidationIssue(ValidationSeverity.Warning, "scene.grid.isometric",
+                            "Scene '" + sceneName + "' Grid '" + grid.name +
+                            "' is not the project's isometric cell (1, 0.5)."));
+                    }
+                }
+
+                int wallsLayerIndex = LayerMask.NameToLayer("Walls");
+                foreach (UnityEngine.Tilemaps.Tilemap map in
+                    UnityEngine.Object.FindObjectsByType<UnityEngine.Tilemaps.Tilemap>(FindObjectsInactive.Include))
+                {
+                    Transform mapTransform = map.transform;
+                    if (mapTransform.position != Vector3.zero || mapTransform.rotation != Quaternion.identity ||
+                        mapTransform.localScale != Vector3.one)
+                    {
+                        issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.tilemap.transform",
+                            "Scene '" + sceneName + "' Tilemap '" + map.name +
+                            "' must be at the origin with identity rotation and scale 1."));
+                    }
+
+                    if (map.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>() != null &&
+                        map.gameObject.layer != wallsLayerIndex)
+                    {
+                        issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.wallsLayer",
+                            "Scene '" + sceneName + "' obstacle Tilemap '" + map.name +
+                            "' is not on the Walls layer (obstacles must block pathfinding)."));
+                    }
+                }
+
+                bool hasMainCamera = false;
+                foreach (Camera sceneCamera in UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
+                {
+                    if (sceneCamera.CompareTag("MainCamera"))
+                    {
+                        hasMainCamera = true;
+                        break;
+                    }
+                }
+
+                if (!hasMainCamera)
+                {
+                    issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.camera",
+                        "Scene '" + sceneName + "' has no Camera tagged MainCamera."));
+                }
             }
             catch (Exception e)
             {
