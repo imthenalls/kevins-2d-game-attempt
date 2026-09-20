@@ -22,7 +22,7 @@ A colour-mockup of the design (rendered before the scene existed) is
 
 ## Tiles
 
-Generated as assets under `Assets/Tiles/Town/` from the default square sprite, each tinted:
+Generated as assets under `Assets/tiles/Town/` from the default square sprite, each tinted:
 
 | Tile | Collider | Used for |
 |---|---|---|

@@ -25,7 +25,7 @@ using UnityEngine.Tilemaps;
 public static class TownSceneBuilder
 {
     public const string ScenePath = "Assets/Scenes/Town.unity";
-    private const string TilesDir = "Assets/Tiles/Town";
+    private const string TilesDir = "Assets/tiles/Town";
     private const string SpritePath = "Packages/com.unity.2d.sprite/Editor/ObjectMenuCreation/DefaultAssets/Textures/Square.png";
 
     private const int GridW = 40;
