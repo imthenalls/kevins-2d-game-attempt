@@ -114,6 +114,12 @@ public static class TownSceneBuilder
         for (int cy = 20; cy <= 22; cy++)
             for (int cx = 0; cx < GridW; cx++) isStreet.Add(cx + "," + cy);
 
+        // Ring road around the whole town (3 cells wide), joined to the cross.
+        for (int cx = 0; cx < GridW; cx++)
+            for (int cy = 0; cy < GridH; cy++)
+                if (cx < 3 || cy < 3 || cx >= GridW - 3 || cy >= GridH - 3)
+                    isStreet.Add(cx + "," + cy);
+
         for (int cx = 0; cx < GridW; cx++)
         {
             for (int cy = 0; cy < GridH; cy++)
@@ -138,6 +144,9 @@ public static class TownSceneBuilder
 
         int built = BuildBuildings();
 
+        var npcRoot = new GameObject("Town NPCs");
+        int npcs = BuildTownNpcs(npcRoot);
+
         // Doors teleport through the portal system, so the scene needs a PortalManager.
         var portalManager = new GameObject("Town Portal Manager");
         portalManager.AddComponent<PortalManager>();
@@ -155,6 +164,7 @@ public static class TownSceneBuilder
             + " ; layer " + LayerMask.NameToLayer("Walls"));
         report.AppendLine("ground tiles: grass=" + CountTiles(grass) + " streets=" + CountTiles(streets)
             + " park=" + CountTiles(park));
+        report.AppendLine("town NPCs: " + npcs);
         File.WriteAllText("Temp/town-build.txt", report.ToString());
         Debug.Log("[Town] " + report);
     }
@@ -250,6 +260,76 @@ public static class TownSceneBuilder
         collider.size = size;
     }
 
+    /// <summary>Spawns placeholder NPCs on the ring road that wander the town (pathfinding around buildings).</summary>
+    private static int BuildTownNpcs(GameObject root)
+    {
+        int npcLayer = Mathf.Max(0, LayerMask.NameToLayer("Npc"));
+        int pathMask = ~(1 << npcLayer);
+        var cells = new[]
+        {
+            new Vector2Int(1, 8), new Vector2Int(1, 30),
+            new Vector2Int(62, 8), new Vector2Int(62, 30),
+            new Vector2Int(16, 1), new Vector2Int(45, 1),
+            new Vector2Int(16, 42), new Vector2Int(45, 42),
+        };
+
+        for (int i = 0; i < cells.Length; i++)
+        {
+            var go = new GameObject("Town NPC " + (i + 1));
+            go.layer = npcLayer;
+            go.transform.SetParent(root.transform, false);
+            go.transform.position = grid.GetCellCenterWorld(new Vector3Int(cells[i].x, cells[i].y, 0));
+            go.transform.localScale = Vector3.one * 0.6f;
+
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = squareSprite;
+            renderer.color = new Color(0.95f, 0.62f, 0.2f);
+            renderer.sortingOrder = 12;
+
+            var body = go.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+            var collider = go.AddComponent<CircleCollider2D>();
+            collider.radius = 0.4f;
+
+            var controller = go.AddComponent<NpcController>();
+            SetStringField(controller, "npcId", "town_npc_" + (i + 1));
+
+            go.AddComponent<NpcBehaviorManager>();
+            var pathfinder = go.AddComponent<NpcPathfinder>();
+            SetIntField(pathfinder, "obstacleLayers", pathMask);
+            go.AddComponent<NpcPerception>();
+            var wanderer = go.AddComponent<NpcWanderBehavior>();
+            SetIntField(wanderer, "wallLayers", pathMask);
+            SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 10f);
+        }
+
+        return cells.Length;
+    }
+
+    private static void SetStringField(Object target, string field, string value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.stringValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetIntField(Object target, string field, int value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.intValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedFloat(Object target, string parentField, string childField, float value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
     private static int CountTiles(Tilemap map)
     {
         if (map == null)

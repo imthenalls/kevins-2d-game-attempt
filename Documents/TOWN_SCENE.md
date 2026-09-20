@@ -55,3 +55,14 @@ another tilemap builder, do the same and verify with `HasTile` after saving.
 
 `Tools/verify-all.ps1` opens Town, enters Play, and fails on any console error; the scene is covered
 by the smoke test alongside Overworld and WorldB.
+
+## Ring road and town NPCs
+
+The streets are a **cross** (vertical `cx 30-32`, horizontal `cy 20-22`) plus a **3-cell ring road
+around the whole perimeter** (`cx < 3`, `cy < 3`, `cx >= GridW-3`, `cy >= GridH-3`), joined to the
+cross. Streets: 891 tiles.
+
+**8 placeholder NPCs** (`town_npc_1..8`, `Npc` layer) spawn on the ring and wander the town:
+`NpcController` + `NpcBehaviorManager` + `NpcWanderBehavior` (pathfinding, `WanderRadius 10`) +
+`NpcPathfinder` (`obstacleLayers = ~(1<<Npc)`) + `NpcPerception` + `Rigidbody2D`/`CircleCollider2D`,
+so they path around the buildings (which are solid on the `Walls` layer).
