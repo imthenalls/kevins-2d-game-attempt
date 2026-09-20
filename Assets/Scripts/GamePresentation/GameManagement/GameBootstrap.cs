@@ -39,6 +39,9 @@ public sealed class GameBootstrap : MonoBehaviour
         root.AddComponent<SceneLoader>();
         root.AddComponent<QuestManager>();
         root.AddComponent<WorldStateManager>();
+
+        // Persistent UI canvas + EventSystem; a scene with its own UI overrides it on load.
+        GameUI.Create(root.transform);
     }
 
     private void Awake()
@@ -70,6 +73,10 @@ public sealed class GameBootstrap : MonoBehaviour
     {
         if (mode != LoadSceneMode.Single)
             return;
+
+        // Let a scene's own UI override the persistent canvas/EventSystem.
+        if (GameUI.Instance != null)
+            GameUI.Instance.SyncForScene(scene);
 
         PlayerSpawnPoint spawn = Object.FindAnyObjectByType<PlayerSpawnPoint>();
         if (spawn == null)
