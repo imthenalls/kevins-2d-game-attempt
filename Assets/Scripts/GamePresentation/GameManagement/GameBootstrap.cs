@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Creates the persistent systems layer once, before any scene loads, and keeps it alive across
@@ -49,11 +50,41 @@ public sealed class GameBootstrap : MonoBehaviour
         }
 
         instance = this;
+        SceneManager.sceneLoaded += HandleSceneLoaded;
     }
 
     private void OnDestroy()
     {
-        if (instance == this)
-            instance = null;
+        if (instance != this)
+            return;
+
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+        instance = null;
+    }
+
+    /// <summary>
+    /// Default spawn: after a scene loads, place the player at its PlayerSpawnPoint. A save load or a
+    /// portal arrival happens later and overrides this, giving the documented precedence.
+    /// </summary>
+    private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode != LoadSceneMode.Single)
+            return;
+
+        PlayerSpawnPoint spawn = Object.FindAnyObjectByType<PlayerSpawnPoint>();
+        if (spawn == null)
+            return;
+
+        PlayerController2D player = Object.FindAnyObjectByType<PlayerController2D>();
+        if (player == null)
+            return;
+
+        Vector3 target = spawn.Position;
+        target.z = player.transform.position.z;
+
+        if (player.TryGetComponent(out Rigidbody2D body))
+            body.position = target;
+        player.transform.position = target;
+        Physics2D.SyncTransforms();
     }
 }

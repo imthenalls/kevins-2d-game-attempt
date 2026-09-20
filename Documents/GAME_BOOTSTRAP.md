@@ -55,3 +55,16 @@ scene destroys itself.
 
 `Tools/verify-all.ps1` - the scene smoke test runs every scene through Play Mode with the bootstrap
 active, and the Play Mode tests exercise the persistent `PortalManager` and `WorldStateManager`.
+
+## Player spawn
+
+`PlayerSpawnPoint` marks where the player starts. `GameBootstrap` reads it on scene load and places the
+player there. Precedence for the player's position:
+
+1. a save load (`SaveManager`) - applied after the scene loads, so it wins
+2. a portal/travel position - applied on arrival, so it wins
+3. `PlayerSpawnPoint` - the default first-entry start
+4. the authored player transform - only if the scene has no spawn point
+
+Each world scene has a `Player Spawn` object. The data validator errors if a scene with a
+`WorldSceneIdentity` has no `PlayerSpawnPoint`, and warns if it has more than one.

@@ -350,6 +350,19 @@ public static class GameDataValidator
                         ValidationSeverity.Warning, "scene.worldIdentity.multiple",
                         "Scene '" + sceneName + "' has " + identities + " WorldSceneIdentity components; keep exactly one."));
                 }
+                int spawnPoints = UnityEngine.Object.FindObjectsByType<PlayerSpawnPoint>(FindObjectsInactive.Include).Length;
+                if (identities > 0 && spawnPoints == 0)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Error, "scene.spawnPoint",
+                        "Scene '" + sceneName + "' has no PlayerSpawnPoint; the player has no defined start position."));
+                }
+                else if (spawnPoints > 1)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Warning, "scene.spawnPoint.multiple",
+                        "Scene '" + sceneName + "' has " + spawnPoints + " PlayerSpawnPoints; keep one default."));
+                }
             }
             catch (Exception e)
             {
