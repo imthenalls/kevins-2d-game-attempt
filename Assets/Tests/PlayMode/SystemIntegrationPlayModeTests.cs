@@ -20,7 +20,7 @@ namespace Game.Tests
         {
             yield return LoadScene(OverworldScene);
 
-            Assert.IsNotNull(PortalManager.Instance, "Overworld should provide a PortalManager.");
+            Assert.IsNotNull(PortalManager.Instance, "GameBootstrap should provide a persistent PortalManager.");
 
             Assert.IsTrue(
                 PortalManager.Instance.TryFindPortal("world_b_portal", out PortalTrigger2D portal),
@@ -28,16 +28,16 @@ namespace Game.Tests
             Assert.AreEqual("WorldB", portal.DestinationScene);
             Assert.IsFalse(PortalManager.Instance.TryFindPortal("no_such_portal_xyz", out _));
 
-            if (PortalManager.Instance != null)
-                Object.Destroy(PortalManager.Instance.gameObject);
+            // PortalManager is persistent now (GameBootstrap) - do not destroy it.
             yield return null;
         }
 
         [UnityTest]
         public IEnumerator World_Facts_RoundTrip_Through_A_Snapshot()
         {
-            var go = new GameObject("World State");
-            WorldStateManager state = go.AddComponent<WorldStateManager>();
+            // WorldStateManager is created by GameBootstrap now; use the persistent instance.
+            WorldStateManager state = WorldStateManager.Instance;
+            Assert.IsNotNull(state, "GameBootstrap should provide a persistent WorldStateManager.");
             yield return null;
 
             state.SetFlag("gate_open");
@@ -56,7 +56,7 @@ namespace Game.Tests
             Assert.AreEqual("kevin", state.GetString("hero"));
             Assert.IsFalse(state.HasFact("unset_fact"));
 
-            Object.Destroy(go);
+            // WorldStateManager is persistent (GameBootstrap) - do not destroy it.
             yield return null;
         }
 
