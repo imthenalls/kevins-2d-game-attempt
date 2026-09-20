@@ -18,7 +18,8 @@ if (-not (Test-Path $Unity)) { throw "Unity CLI not found: $Unity" }
 
 $scenes = @(
     "Assets/Scenes/Overworld.unity",
-    "Assets/Scenes/WorldB.unity"
+    "Assets/Scenes/WorldB.unity",
+    "Assets/Scenes/Town.unity"
 )
 
 $failures = @()

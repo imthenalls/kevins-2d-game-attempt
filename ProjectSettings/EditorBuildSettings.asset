@@ -11,5 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/WorldB.unity
     guid: fb6cb78b5994e7149bd4a1f7415dbb75
+  - enabled: 1
+    path: Assets/Scenes/Town.unity
+    guid: c3596ea864592034ab6c007f215859ac
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

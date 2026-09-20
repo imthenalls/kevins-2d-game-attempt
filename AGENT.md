@@ -51,6 +51,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/DATA_VALIDATION.md](Documents/DATA_VALIDATION.md) | Editor validator for string-id data: blank/duplicate ids, dangling item/quest/node/portal references, dialogue links, and per-scene NPC ids |
 | [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md) | Audit of the Data/Presentation split: enforcement mechanisms, what is separated, remaining authoritative state in Presentation, and migration order |
 | [Documents/NPC_STRESS_TEST.md](Documents/NPC_STRESS_TEST.md) | Disposable 25/50/100-NPC wandering + pathfinding performance harness (Tools > Stress) and its results |
+| [Documents/TOWN_SCENE.md](Documents/TOWN_SCENE.md) | Placeholder town scene built from coloured tiles: roads, solid buildings with a single passable entrance, park, and the tilemap-build gotcha |
 
 ---
 
