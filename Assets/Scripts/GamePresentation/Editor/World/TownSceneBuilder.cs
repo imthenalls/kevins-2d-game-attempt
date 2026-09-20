@@ -8,17 +8,17 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// Builds the placeholder town scene (no art): green grass, dark-gray streets in a cross, solid
-/// building blocks with one passable pink entrance each, and a park with a red plaza.
+/// Builds the placeholder town scene (no art).
 ///
-/// Buildings are solid: the footprint is painted with a colliding tile on a tilemap whose collider is
-/// on the `Walls` layer, so pathfinding (obstacleLayers = everything except Npc) treats them as
-/// obstacles. The entrance cell is left unpainted on the building tilemap and painted on a
-/// non-colliding entrance tilemap, so it is the only passable cell of each building.
+/// Ground is tiles: green grass, dark-gray streets, a park with a red plaza.
 ///
-/// Painting is deferred by one editor tick (`EditorApplication.delayCall`): a tilemap created in the
-/// same tick as its Grid does not accept SetTile calls yet, which silently produced empty tilemaps.
-/// The result is written to Temp/town-build.txt.
+/// BUILDINGS ARE NOT TILES. Each building is a plain GameObject with real BoxCollider2D colliders on
+/// the `Walls` layer (so it blocks the player and NPC pathfinding exactly like an NPC or the training
+/// spawn box), a square SpriteRenderer for its body, and a pink square SpriteRenderer at its single
+/// doorway. The collider is split into three boxes so the doorway cell is the only way through.
+///
+/// Painting is deferred one editor tick: a Tilemap created in the same tick as its Grid silently
+/// ignores SetTile. See Documents/TOWN_SCENE.md.
 ///
 /// Unity setup: none. Menu: Tools &gt; Worlds &gt; Create Town Scene (refuses if the scene exists).
 /// </summary>
@@ -28,26 +28,35 @@ public static class TownSceneBuilder
     private const string TilesDir = "Assets/tiles/Town";
     private const string SpritePath = "Packages/com.unity.2d.sprite/Editor/ObjectMenuCreation/DefaultAssets/Textures/Square.png";
 
-    private const int GridW = 40;
-    private const int GridH = 28;
+    private const int GridW = 64;
+    private const int GridH = 44;
+    private const float CellW = 1f;
+    private const float CellH = 0.5f;
+
+    private const float BlockHeight = 0.25f;
 
     private static readonly Color32 GrassColor    = new Color32(76, 175, 80, 255);
     private static readonly Color32 StreetColor   = new Color32(55, 71, 79, 255);
+    private static readonly Color32 PlazaColor    = new Color32(229, 57, 53, 255);
     private static readonly Color32 BuildingColor = new Color32(176, 190, 197, 255);
     private static readonly Color32 EntranceColor = new Color32(255, 105, 180, 255);
-    private static readonly Color32 PlazaColor    = new Color32(229, 57, 53, 255);
 
     private static readonly List<(int x, int y, int w, int d, char side)> Buildings = new()
     {
-        (4, 7, 6, 4, 'S'), (12, 7, 5, 4, 'S'), (4, 3, 5, 3, 'S'),
-        (22, 7, 7, 4, 'S'), (31, 7, 5, 4, 'S'), (25, 3, 6, 3, 'S'),
-        (4, 16, 6, 4, 'N'), (12, 16, 5, 4, 'N'), (4, 21, 5, 3, 'N'),
+        (5, 16, 4, 3, 'S'), (11, 16, 4, 3, 'S'), (17, 16, 4, 3, 'S'),
+        (5, 4, 4, 3, 'S'), (11, 4, 4, 3, 'S'),
+        (35, 16, 4, 3, 'S'), (41, 16, 4, 3, 'S'), (47, 16, 4, 3, 'S'), (53, 16, 4, 3, 'S'),
+        (35, 4, 4, 3, 'S'), (41, 4, 4, 3, 'S'),
+        (5, 24, 4, 3, 'N'), (11, 24, 4, 3, 'N'), (17, 24, 4, 3, 'N'),
+        (5, 34, 4, 3, 'N'), (11, 34, 4, 3, 'N'),
+        (35, 24, 4, 3, 'N'), (53, 24, 4, 3, 'N'), (35, 36, 4, 3, 'N'), (53, 36, 4, 3, 'N'),
     };
 
-    // Paint phase state (survives to the deferred call).
     private static Scene scene;
-    private static Tilemap grass, park, streets, entrances, buildings;
-    private static Tile grassTile, streetTile, buildingTile, entranceTile, plazaTile;
+    private static Grid grid;
+    private static Tilemap grass, park, streets;
+    private static Tile grassTile, streetTile, plazaTile;
+    private static Sprite squareSprite;
 
     [MenuItem("Tools/Worlds/Create Town Scene")]
     public static void Build()
@@ -57,31 +66,25 @@ public static class TownSceneBuilder
         if (File.Exists(ScenePath))
             throw new System.InvalidOperationException(ScenePath + " already exists. Delete it first.");
 
-        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
-        if (sprite == null)
+        squareSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+        if (squareSprite == null)
             throw new System.InvalidOperationException("Square sprite not found: " + SpritePath);
 
-        grassTile    = EnsureTile("GrassTile", sprite, GrassColor, Tile.ColliderType.None);
-        streetTile   = EnsureTile("StreetTile", sprite, StreetColor, Tile.ColliderType.None);
-        buildingTile = EnsureTile("BuildingTile", sprite, BuildingColor, Tile.ColliderType.Grid);
-        entranceTile = EnsureTile("EntranceTile", sprite, EntranceColor, Tile.ColliderType.None);
-        plazaTile    = EnsureTile("PlazaTile", sprite, PlazaColor, Tile.ColliderType.None);
+        grassTile  = EnsureTile("GrassTile", GrassColor);
+        streetTile = EnsureTile("StreetTile", StreetColor);
+        plazaTile  = EnsureTile("PlazaTile", PlazaColor);
         AssetDatabase.SaveAssets();
 
         scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var gridObject = new GameObject("Town Grid", typeof(Grid));
-        var grid = gridObject.GetComponent<Grid>();
-        grid.cellSize = new Vector3(1f, 0.5f, 0f);
+        grid = gridObject.GetComponent<Grid>();
+        grid.cellSize = new Vector3(CellW, CellH, 0f);
         grid.cellLayout = GridLayout.CellLayout.Isometric;
 
-        int wallsLayer = LayerMask.NameToLayer("Walls");
-
-        grass     = NewMap(grid.transform, "Grass", -100);
-        park      = NewMap(grid.transform, "Park", -95);
-        streets   = NewMap(grid.transform, "Streets", -90);
-        entrances = NewMap(grid.transform, "Entrances", -85);
-        buildings = NewMap(grid.transform, "Buildings", -50, collider: true, layer: wallsLayer);
+        grass   = NewMap(grid.transform, "Grass", -100);
+        park    = NewMap(grid.transform, "Park", -95);
+        streets = NewMap(grid.transform, "Streets", -90);
 
         BuildCamera();
 
@@ -94,18 +97,18 @@ public static class TownSceneBuilder
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();
 
-        // Paint on the next editor tick once the Grid/Tilemaps are live.
         EditorApplication.delayCall += FinishPaint;
     }
 
+    /// <summary>Paints the ground tiles and creates the building objects. Safe to call directly.</summary>
     public static void FinishPaint()
     {
         EditorApplication.delayCall -= FinishPaint;
 
         var isStreet = new HashSet<string>();
-        for (int cx = 18; cx <= 20; cx++)
+        for (int cx = 30; cx <= 32; cx++)
             for (int cy = 0; cy < GridH; cy++) isStreet.Add(cx + "," + cy);
-        for (int cy = 12; cy <= 14; cy++)
+        for (int cy = 20; cy <= 22; cy++)
             for (int cx = 0; cx < GridW; cx++) isStreet.Add(cx + "," + cy);
 
         for (int cx = 0; cx < GridW; cx++)
@@ -118,37 +121,23 @@ public static class TownSceneBuilder
                 else
                     grass.SetTile(cell, grassTile);
 
-                if (cx >= 25 && cx < 33 && cy >= 17 && cy < 23)
-                    park.SetTile(cell, (cx >= 28 && cx < 31 && cy >= 19 && cy < 22) ? plazaTile : grassTile);
+                if (cx >= 44 && cx < 52 && cy >= 30 && cy < 36)
+                    park.SetTile(cell, (cx >= 47 && cx < 50 && cy >= 32 && cy < 35) ? plazaTile : grassTile);
             }
-        }
-
-        int entranceCount = 0;
-        foreach (var b in Buildings)
-        {
-            int ex = b.x + b.w / 2;
-            int ey = b.side == 'S' ? b.y + b.d - 1 : b.y;
-
-            for (int cx = b.x; cx < b.x + b.w; cx++)
-                for (int cy = b.y; cy < b.y + b.d; cy++)
-                    if (!(cx == ex && cy == ey))
-                        buildings.SetTile(new Vector3Int(cx, cy, 0), buildingTile);
-
-            entrances.SetTile(new Vector3Int(ex, ey, 0), entranceTile);
-            entranceCount++;
         }
 
         grass.RefreshAllTiles();
         park.RefreshAllTiles();
         streets.RefreshAllTiles();
-        entrances.RefreshAllTiles();
-        buildings.RefreshAllTiles();
-
         grass.CompressBounds();
         park.CompressBounds();
         streets.CompressBounds();
-        entrances.CompressBounds();
-        buildings.CompressBounds();
+
+        int built = BuildBuildings();
+
+        // Doors teleport through the portal system, so the scene needs a PortalManager.
+        var portalManager = new GameObject("Town Portal Manager");
+        portalManager.AddComponent<PortalManager>();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -159,14 +148,98 @@ public static class TownSceneBuilder
         var report = new StringBuilder();
         report.AppendLine("Town scene built: " + ScenePath);
         report.AppendLine("grid " + GridW + "x" + GridH + " isometric cell (1, 0.5)");
-        report.AppendLine("buildings solid on layer " + LayerMask.NameToLayer("Walls") + " ('Walls'); entrances passable: " + entranceCount);
-        report.AppendLine("painted: grass=" + CountTiles(grass)
-            + " streets=" + CountTiles(streets)
-            + " park=" + CountTiles(park)
-            + " buildings=" + CountTiles(buildings)
-            + " entrances=" + CountTiles(entrances));
+        report.AppendLine("buildings (GameObjects with BoxCollider2D, not tiles): " + built
+            + " ; layer " + LayerMask.NameToLayer("Walls"));
+        report.AppendLine("ground tiles: grass=" + CountTiles(grass) + " streets=" + CountTiles(streets)
+            + " park=" + CountTiles(park));
         File.WriteAllText("Temp/town-build.txt", report.ToString());
         Debug.Log("[Town] " + report);
+    }
+
+    /// <summary>Creates one GameObject per building with a collider gap at the doorway.</summary>
+    private static int BuildBuildings()
+    {
+        var root = new GameObject("Buildings");
+        int wallsLayer = Mathf.Max(0, LayerMask.NameToLayer("Walls"));
+
+        foreach (var b in Buildings)
+        {
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, 0f);
+            Vector3 max = new Vector3(float.MinValue, float.MinValue, 0f);
+            foreach (Vector2Int corner in Corners(b))
+            {
+                Vector3 w = grid.CellToWorld(new Vector3Int(corner.x, corner.y, 0));
+                min = Vector3.Min(min, w);
+                max = Vector3.Max(max, w);
+            }
+
+            min -= new Vector3(CellW * 0.5f, CellH * 0.5f, 0f);
+            max += new Vector3(CellW * 0.5f, CellH * 0.5f, 0f);
+
+            Vector3 center = (min + max) * 0.5f;
+            float sizeX = max.x - min.x;
+            float sizeY = max.y - min.y;
+
+            var building = new GameObject("Building_" + b.x + "_" + b.y);
+            building.layer = wallsLayer;
+            building.transform.SetParent(root.transform, false);
+            building.transform.position = center;
+
+            // Body visual: a plain square.
+            var body = new GameObject("Body");
+            body.transform.SetParent(building.transform, false);
+            var bodyRenderer = body.AddComponent<SpriteRenderer>();
+            bodyRenderer.sprite = squareSprite;
+            bodyRenderer.color = BuildingColor;
+            bodyRenderer.sortingOrder = 10;
+            body.transform.localScale = new Vector3(sizeX, sizeY, 1f);
+
+            // Solid building: one collider, no interior access. The door is a teleport trigger, not
+            // a gap (Pokemon-style overworld building).
+            AddBox(building, "Collider", Vector2.zero, new Vector2(sizeX, sizeY), wallsLayer);
+
+            // Pink door: a trigger wired through the portal system. Destination fields are left
+            // blank on purpose — fill in the interior scene + arrival portal id per building.
+            var door = new GameObject("Door");
+            door.transform.SetParent(building.transform, false);
+            var doorRenderer = door.AddComponent<SpriteRenderer>();
+            doorRenderer.sprite = squareSprite;
+            doorRenderer.color = EntranceColor;
+            doorRenderer.sortingOrder = 11;
+            door.transform.localScale = new Vector3(0.5f, 0.25f, 1f);
+            float frontOffset = b.side == 'S' ? (-sizeY * 0.5f + 0.125f) : (sizeY * 0.5f - 0.125f);
+            door.transform.localPosition = new Vector3(0f, frontOffset, 0f);
+
+            var doorCollider = door.AddComponent<BoxCollider2D>();
+            doorCollider.isTrigger = true;
+
+            var portal = door.AddComponent<PortalTrigger2D>();
+            var portalSo = new SerializedObject(portal);
+            SerializedProperty idProperty = portalSo.FindProperty("portalId");
+            if (idProperty != null)
+                idProperty.stringValue = "door_" + b.x + "_" + b.y;
+            portalSo.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        return Buildings.Count;
+    }
+
+    private static IEnumerable<Vector2Int> Corners((int x, int y, int w, int d, char side) b)
+    {
+        yield return new Vector2Int(b.x, b.y);
+        yield return new Vector2Int(b.x + b.w, b.y);
+        yield return new Vector2Int(b.x, b.y + b.d);
+        yield return new Vector2Int(b.x + b.w, b.y + b.d);
+    }
+
+    private static void AddBox(GameObject parent, string name, Vector2 offset, Vector2 size, int layer)
+    {
+        var go = new GameObject(name);
+        go.layer = layer;
+        go.transform.SetParent(parent.transform, false);
+        go.transform.localPosition = offset;
+        var collider = go.AddComponent<BoxCollider2D>();
+        collider.size = size;
     }
 
     private static int CountTiles(Tilemap map)
@@ -180,19 +253,15 @@ public static class TownSceneBuilder
         return n;
     }
 
-    private static Tilemap NewMap(Transform parent, string name, int order, bool collider = false, int layer = 0)
+    private static Tilemap NewMap(Transform parent, string name, int order)
     {
         var go = new GameObject(name, typeof(Tilemap), typeof(TilemapRenderer));
         go.transform.SetParent(parent, false);
         go.GetComponent<TilemapRenderer>().sortingOrder = order;
-        if (layer != 0)
-            go.layer = layer;
-        if (collider)
-            go.AddComponent<TilemapCollider2D>();
         return go.GetComponent<Tilemap>();
     }
 
-    private static Tile EnsureTile(string name, Sprite sprite, Color32 color, Tile.ColliderType collider)
+    private static Tile EnsureTile(string name, Color32 color)
     {
         Directory.CreateDirectory(TilesDir);
         string path = TilesDir + "/" + name + ".asset";
@@ -201,9 +270,9 @@ public static class TownSceneBuilder
             return existing;
 
         var tile = ScriptableObject.CreateInstance<Tile>();
-        tile.sprite = sprite;
+        tile.sprite = squareSprite;
         tile.color = color;
-        tile.colliderType = collider;
+        tile.colliderType = Tile.ColliderType.None;
         AssetDatabase.CreateAsset(tile, path);
         return tile;
     }

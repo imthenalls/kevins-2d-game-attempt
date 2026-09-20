@@ -1,54 +1,57 @@
 # Town Scene
 
-A placeholder town map built entirely from coloured tiles (no art assets): the Mega-Man-style
-overhead block layout, used as a sandbox for movement, collision, and NPC pathfinding.
+A placeholder town map built with **no art assets**: coloured ground tiles plus building
+**GameObjects with real colliders** (like NPCs or the training spawn box) — not building tiles.
 
 ## Running it
 
 1. **Tools > Worlds > Create Town Scene** — builds `Assets/Scenes/Town.unity` and adds it to Build
-   Settings. It refuses if the scene already exists; delete it (or use an eval) to rebuild.
+   Settings. It refuses if the scene exists; delete it to rebuild.
 2. Open `Assets/Scenes/Town.unity` and press Play.
 
-A colour-mockup of the design (rendered before the scene existed) is
-`Documents/Concept_Town.png`.
+A colour mockup of the design is `Documents/Concept_Town.png`.
 
 ## Layout
 
-- Isometric Grid, cell `(1, 0.5)`, `40 x 28` cells.
-- **Grass** (green) fills the map; **Streets** (dark gray) form a 3-cell cross
-  (vertical `cx 18–20`, horizontal `cy 12–14`), giving four town blocks.
-- **Nine buildings** — each is a rectangle of building tiles (light gray) with **one pink entrance**.
-- **Park** in the south-east block: grass with a 3×3 red plaza.
+- Isometric Grid, cell `(1, 0.5)`, **64 × 44** cells.
+- Ground is tiles: **grass** (green) everywhere, **streets** (dark gray) in a 3-wide cross
+  (vertical `cx 30–32`, horizontal `cy 20–22`) forming four blocks, and a **park** in the south-east
+  block with a 3×3 **red plaza**.
+- **Twenty buildings**, small blocks (4×3 cells) spread through the blocks.
 
-## Tiles
+## Buildings: solid overworld props with a teleporting door
 
-Generated as assets under `Assets/tiles/Town/` from the default square sprite, each tinted:
+Buildings are **not** walk-in and **not** tiles. Classic RPG / Pokémon style: the building is an
+overworld prop and the door teleports you elsewhere (an interior scene) where the inside is rendered.
 
-| Tile | Collider | Used for |
-|---|---|---|
-| `GrassTile` | none | ground |
-| `StreetTile` | none | roads |
-| `BuildingTile` | Grid | building footprints (**on the `Walls` layer**) |
-| `EntranceTile` | none | the single passable cell of each building |
-| `PlazaTile` | none | park centre |
+Each building is a GameObject (`Building_<x>_<y>`) with:
 
-## Buildings are solid; only the entrance is passable
+- **one solid `BoxCollider2D`** covering the whole footprint, on the **`Walls`** layer — no gap, the
+  player never walks inside. Because it is on `Walls` and the NPC pathfinder's `obstacleLayers` is
+  `~(1 << Npc)` (see [NPC_STRESS_TEST.md](NPC_STRESS_TEST.md)), it blocks the player *and* NPC
+  pathfinding, exactly like an NPC or the training spawn box;
+- a square `SpriteRenderer` body;
+- a pink **`Door`** child: a `BoxCollider2D` with `isTrigger` **plus a `PortalTrigger2D`**, i.e. it
+  reuses the existing portal teleport machinery (same as world portals), with a unique id
+  (`door_<x>_<y>`).
 
-The `Buildings` tilemap carries a `TilemapCollider2D` and sits on the **`Walls`** layer. Because the
-NPC pathfinder's `obstacleLayers` is `~(1 << Npc)` (see
-[NPC_STRESS_TEST.md](NPC_STRESS_TEST.md)), the building tiles are obstacles to player collision *and*
-NPC pathfinding. The entrance cell is simply **not painted** on the `Buildings` tilemap (it gets the
-non-colliding `EntranceTile` instead), so it is the only way through — real colliders, real
-pathfinding, no art.
+**The door destinations are intentionally blank.** Fill in `destinationScene` / `destinationPortalId`
+on each `PortalTrigger2D` once the interior scenes and their arrival portals exist. The scene also
+contains a `Town Portal Manager` so the doors have a `PortalManager` to route through.
+
+## Tile assets
+
+Ground tiles are generated under `Assets/tiles/Town/` from the default square sprite:
+`GrassTile`, `StreetTile`, `PlazaTile` (all non-colliding). Buildings and entrances are **not** tiles.
 
 ## Gotcha worth knowing
 
 A `Tilemap` created in the same editor tick as its `Grid` silently ignores `SetTile` — the scene
 saves empty. `TownSceneBuilder` therefore creates the scene, then paints on the next editor tick
-(`FinishPaint`, also callable explicitly), and calls `RefreshAllTiles()` on every map before saving.
-If you write another tilemap builder, do the same or verify with `HasTile` after saving.
+(`FinishPaint`, also callable directly) and calls `RefreshAllTiles()` before saving. If you write
+another tilemap builder, do the same and verify with `HasTile` after saving.
 
 ## Verified
 
-`Tools/verify-all.ps1` opens Town, enters Play, and fails on any console error. The scene is covered
-by the scene smoke test alongside Overworld and WorldB.
+`Tools/verify-all.ps1` opens Town, enters Play, and fails on any console error; the scene is covered
+by the smoke test alongside Overworld and WorldB.
