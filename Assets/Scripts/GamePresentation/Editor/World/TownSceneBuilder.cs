@@ -43,13 +43,12 @@ public static class TownSceneBuilder
 
     private static readonly List<(int x, int y, int w, int d, char side)> Buildings = new()
     {
-        (5, 16, 4, 3, 'S'), (11, 16, 4, 3, 'S'), (17, 16, 4, 3, 'S'),
-        (5, 4, 4, 3, 'S'), (11, 4, 4, 3, 'S'),
-        (35, 16, 4, 3, 'S'), (41, 16, 4, 3, 'S'), (47, 16, 4, 3, 'S'), (53, 16, 4, 3, 'S'),
-        (35, 4, 4, 3, 'S'), (41, 4, 4, 3, 'S'),
-        (5, 24, 4, 3, 'N'), (11, 24, 4, 3, 'N'), (17, 24, 4, 3, 'N'),
-        (5, 34, 4, 3, 'N'), (11, 34, 4, 3, 'N'),
-        (35, 24, 4, 3, 'N'), (53, 24, 4, 3, 'N'), (35, 36, 4, 3, 'N'), (53, 36, 4, 3, 'N'),
+        // Rows are spaced so the building AABBs (wider than the 4x3 footprint in isometric) never
+        // touch: 8 cells apart horizontally, 10 cells apart vertically.
+        (4, 14, 4, 3, 'S'), (12, 14, 4, 3, 'S'), (20, 14, 4, 3, 'S'), (4, 4, 4, 3, 'S'),
+        (35, 14, 4, 3, 'S'), (43, 14, 4, 3, 'S'), (51, 14, 4, 3, 'S'), (35, 4, 4, 3, 'S'),
+        (4, 24, 4, 3, 'N'), (12, 24, 4, 3, 'N'), (4, 34, 4, 3, 'N'),
+        (35, 24, 4, 3, 'N'), (53, 24, 4, 3, 'N'), (35, 36, 4, 3, 'N'),
     };
 
     private static Scene scene;

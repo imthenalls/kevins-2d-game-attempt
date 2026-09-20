@@ -17,7 +17,7 @@ A colour mockup of the design is `Documents/Concept_Town.png`.
 - Ground is tiles: **grass** (green) everywhere, **streets** (dark gray) in a 3-wide cross
   (vertical `cx 30–32`, horizontal `cy 20–22`) forming four blocks, and a **park** in the south-east
   block with a 3×3 **red plaza**.
-- **Twenty buildings**, small blocks (4×3 cells) spread through the blocks.
+- **Fourteen buildings**, small blocks (4x3 cells) in tidy rows, spaced so their footprints never touch.
 
 ## Buildings: solid overworld props with a teleporting door
 
