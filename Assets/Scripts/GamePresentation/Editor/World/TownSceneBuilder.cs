@@ -203,24 +203,23 @@ public static class TownSceneBuilder
                 (Vector2)(corners[3] - center),
             };
 
-            // Pink door on the front edge (which is parallel to the street), wired through the portal
-            // system with blank destination fields.
-            Vector3 edgeA = b.side == 'S' ? corners[3] : corners[0];
-            Vector3 edgeB = b.side == 'S' ? corners[2] : corners[1];
-            Vector3 edgeMid = (edgeA + edgeB) * 0.5f;
+            // Pink door: exactly one grid cell on the building's street-facing edge, drawn with the
+            // same 1-cell diamond as the ground so it sits in the wall like a tile (no rotation).
+            int doorCellX = b.x + b.w / 2;
+            int doorCellY = b.side == 'S' ? (b.y + b.d - 1) : b.y;
+            Vector3 doorWorld = grid.GetCellCenterWorld(new Vector3Int(doorCellX, doorCellY, 0));
 
             var door = new GameObject("Door");
             door.transform.SetParent(building.transform, false);
             var doorRenderer = door.AddComponent<SpriteRenderer>();
-            doorRenderer.sprite = squareSprite;
+            doorRenderer.sprite = diamondSprite;
             doorRenderer.color = EntranceColor;
             doorRenderer.sortingOrder = 11;
-            door.transform.localScale = new Vector3(0.5f, 0.25f, 1f);
-            door.transform.localPosition = edgeMid - center;
-            door.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(CellH * 0.5f, CellW * 0.5f) * Mathf.Rad2Deg);
+            door.transform.position = doorWorld;
 
             var doorCollider = door.AddComponent<BoxCollider2D>();
             doorCollider.isTrigger = true;
+            doorCollider.size = new Vector2(CellW, CellH);
 
             var portal = door.AddComponent<PortalTrigger2D>();
             var portalSo = new SerializedObject(portal);
