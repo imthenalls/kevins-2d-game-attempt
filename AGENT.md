@@ -53,6 +53,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/NPC_STRESS_TEST.md](Documents/NPC_STRESS_TEST.md) | Disposable 25/50/100-NPC wandering + pathfinding performance harness (Tools > Stress) and its results |
 | [Documents/TOWN_SCENE.md](Documents/TOWN_SCENE.md) | Placeholder town scene built from coloured tiles: roads, solid buildings with a single passable entrance, park, and the tilemap-build gotcha |
 | [Documents/GAME_BOOTSTRAP.md](Documents/GAME_BOOTSTRAP.md) | Persistent `Game Systems` layer (session, save, portals, quests, world state) created before any scene; what a scene still needs |
+| [Documents/SCENE_CHECKLIST.md](Documents/SCENE_CHECKLIST.md) | Every scene's required content, what the boot layer supplies (follow camera, EventSystem, shared inventory canvas), and the guards that enforce it |
 
 ---
 
@@ -223,6 +224,30 @@ Changes that require a graph update include (but are not limited to):
 4. Run **Tools > World > Tilemap Alignment > Validate Open Scene** before saving scene changes.
    Use **Normalize Open Scene** to bake a stray offset into cell coordinates and zero the
    transform. See [Documents/TILEMAP_RULES.md](Documents/TILEMAP_RULES.md).
+
+## Scene Requirements
+
+A new scene must not ship without a working camera and UI. The boot layer supplies the defaults, but
+the scene must not defeat them. Full checklist: [Documents/SCENE_CHECKLIST.md](Documents/SCENE_CHECKLIST.md).
+
+1. **At most one enabled camera tagged `MainCamera` per scene.** The bootstrap keeps one (preferring
+   the object named `Main Camera`), adds `CameraFollow`, and disables the extras. Do **not** leave a
+   static `MainCamera` camera with a higher `depth` than the follow camera — it renders on top and
+   the player sees a frozen view.
+2. **Never rely on a hand-added `CameraFollow`.** The bootstrap adds it on scene load; adding one
+   yourself is redundant.
+3. **UI hotkeys (`I`, `E`) come from an `InventoryUI`.** A scene either authors its own
+   `InventoryCanvas` or lets the boot layer instantiate the shared
+   `Assets/Resources/InventoryCanvas.prefab`. Do not delete that prefab, and do not leave
+   `InventoryUI.InputLocked` true without a deliberate `SceneRules` lock.
+4. **UI input needs the Input System package.** With *Active Input Handling* set to the legacy
+   manager only, every UI hotkey silently stops working.
+5. **When you add a scene, register it**: add it to Build Settings **and** to the `Scenes` array in
+   `Assets/Tests/PlayMode/SceneUiCameraPlayModeTests.cs`, otherwise the camera/UI guards will not
+   cover it.
+6. **Verify before finishing**: `Tools/verify-all.ps1` (runs the scene UI/camera guards),
+   `Tools > Validation > Validate Game Data`, and `Tools/verify-smoke.ps1`. See
+   [Documents/SCENE_CHECKLIST.md](Documents/SCENE_CHECKLIST.md) for what each check covers.
 
 ## Editor Preview Rules
 

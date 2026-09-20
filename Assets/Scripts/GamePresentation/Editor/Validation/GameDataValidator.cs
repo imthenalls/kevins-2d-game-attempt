@@ -413,20 +413,42 @@ public static class GameDataValidator
                     }
                 }
 
-                bool hasMainCamera = false;
+                int mainCameras = 0;
+                int enabledMainCameras = 0;
                 foreach (Camera sceneCamera in UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
                 {
-                    if (sceneCamera.CompareTag("MainCamera"))
-                    {
-                        hasMainCamera = true;
-                        break;
-                    }
+                    if (!sceneCamera.CompareTag("MainCamera"))
+                        continue;
+
+                    mainCameras++;
+                    if (sceneCamera.isActiveAndEnabled)
+                        enabledMainCameras++;
                 }
 
-                if (!hasMainCamera)
+                if (mainCameras == 0)
                 {
                     issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.camera",
                         "Scene '" + sceneName + "' has no Camera tagged MainCamera."));
+                }
+                else if (enabledMainCameras > 1)
+                {
+                    issues.Add(new ValidationIssue(ValidationSeverity.Warning, "scene.camera.multiple",
+                        "Scene '" + sceneName + "' has " + enabledMainCameras + " enabled MainCamera cameras; " +
+                        "a static one can render over the follow camera. Untag or disable the extras."));
+                }
+
+                if (UnityEngine.Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsInactive.Include).Length == 0)
+                {
+                    issues.Add(new ValidationIssue(ValidationSeverity.Warning, "scene.eventSystem",
+                        "Scene '" + sceneName + "' has no EventSystem; the bootstrap supplies one at runtime, " +
+                        "so UI still works, but add one if the scene needs its own UI routing."));
+                }
+
+                if (UnityEngine.Object.FindObjectsByType<InventoryUI>(FindObjectsInactive.Include).Length == 0)
+                {
+                    issues.Add(new ValidationIssue(ValidationSeverity.Warning, "scene.inventoryUi",
+                        "Scene '" + sceneName + "' has no InventoryUI; the shared Resources/InventoryCanvas.prefab " +
+                        "is instantiated at runtime for scenes without one."));
                 }
                 if (spawnPoints > 0 &&
                     UnityEngine.Object.FindObjectsByType<PlayerController2D>(FindObjectsInactive.Include).Length == 0)
