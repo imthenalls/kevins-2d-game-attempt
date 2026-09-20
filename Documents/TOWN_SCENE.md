@@ -66,3 +66,11 @@ cross. Streets: 891 tiles.
 `NpcController` + `NpcBehaviorManager` + `NpcWanderBehavior` (pathfinding, `WanderRadius 10`) +
 `NpcPathfinder` (`obstacleLayers = ~(1<<Npc)`) + `NpcPerception` + `Rigidbody2D`/`CircleCollider2D`,
 so they path around the buildings (which are solid on the `Walls` layer).
+
+## Perimeter walls, spawn point, player
+
+- **Perimeter walls**: a `Walls` Tilemap (on the `Walls` layer, `TilemapCollider2D`) is painted one cell
+  outside the roads, so town NPCs cannot wander off the map.
+- **`Player Spawn`** (`PlayerSpawnPoint`) is created by the builder at cell `(10, 10)`.
+- A **Town Player** (`WorldAPlayer` prefab) is placed at the spawn, so the scene satisfies the scene
+  requirements (a spawn point needs a `PlayerController2D` to spawn into).

@@ -22,7 +22,7 @@ error if any errors were found.
 | Enemy loot (`enemy_loot.json`) | blank/duplicate `npcId`; `itemId` references resolve |
 | Dialogue (`dialogues.json`) | blank/duplicate `dialogueId`; blank/duplicate node `id`; `startNodeId` exists; every `nextNodeId` (node and choice) resolves unless the node/choice ends the conversation; `questId` references resolve; `teleportScene` references resolve |
 | Quests (`Assets/StreamingAssets/quests/*.json`) | blank/duplicate `questId`; blank/duplicate node `id`; `startNodeId` exists; transition `targetNodeId` exists; condition `nodeId` exists; `itemId` and `questId` references resolve |
-| Scenes (`Assets/Scenes/*`) | blank/duplicate `NpcController.NpcId`; portal `destinationPortalId` references resolve; exactly one `WorldSceneIdentity` when a `WorldCharacter` exists; a `PlayerSpawnPoint` exists (warns on duplicates); a `Grid` exists and every `Grid`/`Tilemap` is at the origin with identity rotation/scale; a `Camera` is tagged `MainCamera`; every Tilemap with a `TilemapCollider2D` is on the `Walls` layer |
+| Scenes (`Assets/Scenes/*`) | blank/duplicate `NpcController.NpcId`; portal `destinationPortalId` references resolve; exactly one `WorldSceneIdentity` when a `WorldCharacter` exists; a `PlayerSpawnPoint` exists (warns on duplicates); a `Grid` exists and every `Grid`/`Tilemap` is at the origin with identity rotation/scale; a `Camera` is tagged `MainCamera`; every Tilemap with a `TilemapCollider2D` is on the `Walls` layer; a scene with a `PlayerSpawnPoint` also has a `PlayerController2D` |
 
 All comparisons are case-insensitive, matching how the runtime resolves ids.
 

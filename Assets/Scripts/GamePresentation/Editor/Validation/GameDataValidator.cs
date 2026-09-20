@@ -428,6 +428,12 @@ public static class GameDataValidator
                     issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.camera",
                         "Scene '" + sceneName + "' has no Camera tagged MainCamera."));
                 }
+                if (spawnPoints > 0 &&
+                    UnityEngine.Object.FindObjectsByType<PlayerController2D>(FindObjectsInactive.Include).Length == 0)
+                {
+                    issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.player",
+                        "Scene '" + sceneName + "' has a PlayerSpawnPoint but no PlayerController2D; there is nothing for the player to spawn into."));
+                }
             }
             catch (Exception e)
             {

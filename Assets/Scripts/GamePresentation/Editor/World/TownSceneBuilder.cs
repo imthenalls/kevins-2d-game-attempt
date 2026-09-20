@@ -38,6 +38,7 @@ public static class TownSceneBuilder
     private static readonly Color32 GrassColor    = new Color32(76, 175, 80, 255);
     private static readonly Color32 StreetColor   = new Color32(55, 71, 79, 255);
     private static readonly Color32 PlazaColor    = new Color32(229, 57, 53, 255);
+    private static readonly Color32 WallColor     = new Color32(90, 74, 60, 255);
     private static readonly Color32 BuildingColor = new Color32(176, 190, 197, 255);
     private static readonly Color32 EntranceColor = new Color32(255, 105, 180, 255);
 
@@ -53,8 +54,8 @@ public static class TownSceneBuilder
 
     private static Scene scene;
     private static Grid grid;
-    private static Tilemap grass, park, streets;
-    private static Tile grassTile, streetTile, plazaTile;
+    private static Tilemap grass, park, streets, walls;
+    private static Tile grassTile, streetTile, plazaTile, wallTile;
     private static Sprite squareSprite, diamondSprite;
 
     [MenuItem("Tools/Worlds/Create Town Scene")]
@@ -88,6 +89,15 @@ public static class TownSceneBuilder
         grass   = NewMap(grid.transform, "Grass", -100);
         park    = NewMap(grid.transform, "Park", -95);
         streets = NewMap(grid.transform, "Streets", -90);
+
+        // Perimeter walls: collider tiles on the Walls layer, one cell outside the roads, so town
+        // NPCs cannot wander off the map.
+        int wallsLayer = Mathf.Max(0, LayerMask.NameToLayer("Walls"));
+        walls = NewMap(grid.transform, "Walls", -80);
+        walls.gameObject.layer = wallsLayer;
+        walls.gameObject.AddComponent<TilemapCollider2D>();
+        wallTile = EnsureTile("WallTile", WallColor);
+        wallTile.colliderType = Tile.ColliderType.Grid;
 
         BuildCamera();
 
@@ -135,6 +145,20 @@ public static class TownSceneBuilder
             }
         }
 
+        for (int i = -1; i <= GridW; i++)
+        {
+            walls.SetTile(new Vector3Int(i, -1, 0), wallTile);
+            walls.SetTile(new Vector3Int(i, GridH, 0), wallTile);
+        }
+        for (int j = -1; j <= GridH; j++)
+        {
+            walls.SetTile(new Vector3Int(-1, j, 0), wallTile);
+            walls.SetTile(new Vector3Int(GridW, j, 0), wallTile);
+        }
+
+        walls.RefreshAllTiles();
+        walls.CompressBounds();
+
         grass.RefreshAllTiles();
         park.RefreshAllTiles();
         streets.RefreshAllTiles();
@@ -143,6 +167,10 @@ public static class TownSceneBuilder
         streets.CompressBounds();
 
         int built = BuildBuildings();
+
+        var spawn = new GameObject("Player Spawn");
+        spawn.AddComponent<PlayerSpawnPoint>();
+        spawn.transform.position = grid.GetCellCenterWorld(new Vector3Int(10, 10, 0));
 
         var npcRoot = new GameObject("Town NPCs");
         int npcs = BuildTownNpcs(npcRoot);
