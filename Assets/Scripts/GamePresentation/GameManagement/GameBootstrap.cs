@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Creates the persistent systems layer once, before any scene loads, and keeps it alive across
 /// scenes. Gameplay scenes then only need their own content (grid, spawn point, world identity,
-/// camera, NPCs, scene rules) instead of re-adding the managers in every scene.
+/// camera, UI, NPCs, scene rules) instead of re-adding the managers in every scene.
 ///
 /// Uses <c>RuntimeInitializeOnLoadMethod</c> rather than a preload scene so it also works when you
 /// press Play directly on a gameplay scene in the editor.
@@ -39,9 +39,6 @@ public sealed class GameBootstrap : MonoBehaviour
         root.AddComponent<SceneLoader>();
         root.AddComponent<QuestManager>();
         root.AddComponent<WorldStateManager>();
-
-        // Persistent UI canvas + EventSystem; a scene with its own UI overrides it on load.
-        GameUI.Create(root.transform);
     }
 
     private void Awake()
@@ -79,51 +76,25 @@ public sealed class GameBootstrap : MonoBehaviour
         SyncForScene(scene);
     }
 
-    /// <summary>Per-scene wiring: persistent UI override, camera follow, and default spawn.</summary>
+    /// <summary>Per-scene wiring: make the primary camera follow the player, then default the spawn.</summary>
     private static void SyncForScene(Scene scene)
     {
-        if (GameUI.Instance != null)
-            GameUI.Instance.SyncForScene(scene);
-
-        EnsureSingleFollowCamera();
+        EnsureFollowCamera();
         PlacePlayerAtSpawn();
     }
 
     /// <summary>
-    /// Keeps exactly one camera and makes it follow the player. Extra MainCamera-tagged cameras are
-    /// disabled so there is no ambiguity about which one the game uses.
+    /// Adds <see cref="CameraFollow"/> to the primary camera only. Deliberately does not disable or
+    /// re-tag other cameras - scenes may rely on their existing camera(s).
     /// </summary>
-    private static void EnsureSingleFollowCamera()
+    private static void EnsureFollowCamera()
     {
-        Camera chosen = null;
-        foreach (Camera camera in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
-        {
-            if (!camera.CompareTag("MainCamera"))
-                continue;
-
-            if (chosen == null || camera.name == "Main Camera")
-            {
-                if (chosen != null)
-                {
-                    chosen.enabled = false;
-                    chosen.tag = "Untagged";
-                }
-
-                chosen = camera;
-            }
-            else
-            {
-                camera.enabled = false;
-                camera.tag = "Untagged";
-            }
-        }
-
-        if (chosen == null)
+        Camera camera = Camera.main;
+        if (camera == null)
             return;
 
-        chosen.enabled = true;
-        if (chosen.GetComponent<CameraFollow>() == null)
-            chosen.gameObject.AddComponent<CameraFollow>();
+        if (camera.GetComponent<CameraFollow>() == null)
+            camera.gameObject.AddComponent<CameraFollow>();
     }
 
     /// <summary>
