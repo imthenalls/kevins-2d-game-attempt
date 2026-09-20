@@ -180,13 +180,19 @@ public static class TownSceneBuilder
             max += new Vector3(CellW * 0.5f, CellH * 0.5f, 0f);
 
             Vector3 center = (min + max) * 0.5f;
-            float sizeX = max.x - min.x;
-            float sizeY = max.y - min.y;
+
+            // Align the building with the isometric street axes instead of leaving it axis-aligned:
+            // rotate to the grid's 2:1 angle and size along the grid axes.
+            float axisLen = Mathf.Sqrt((CellW * 0.5f) * (CellW * 0.5f) + (CellH * 0.5f) * (CellH * 0.5f));
+            float rotationZ = Mathf.Atan2(CellH * 0.5f, CellW * 0.5f) * Mathf.Rad2Deg;
+            float sizeX = b.w * axisLen;
+            float sizeY = b.d * axisLen;
 
             var building = new GameObject("Building_" + b.x + "_" + b.y);
             building.layer = wallsLayer;
             building.transform.SetParent(root.transform, false);
             building.transform.position = center;
+            building.transform.rotation = Quaternion.Euler(0f, 0f, rotationZ);
 
             // Body visual: a plain square.
             var body = new GameObject("Body");
