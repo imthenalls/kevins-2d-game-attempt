@@ -384,9 +384,9 @@ public static class TownSceneBuilder
                     {
                         for (int sx = 0; sx < 2; sx++)
                         {
-                            float px = x + pad - minX + (sx + 0.5f) * 0.5f;
-                            float py = y + pad - minY + (sy + 0.5f) * 0.5f;
-                            if (InsideQuad(px, py, pts))
+                            float px = x - pad + minX + (sx + 0.5f) * 0.5f;
+                            float py = y - pad + minY + (sy + 0.5f) * 0.5f;
+                            if (InsideBlock(px, py, w, d))
                                 inside += 0.25f;
                         }
                     }
@@ -420,17 +420,17 @@ public static class TownSceneBuilder
         return sprite;
     }
 
-    /// <summary>Convex point-in-quad test (all cross products the same sign).</summary>
-    private static bool InsideQuad(float x, float y, Vector2[] p)
+    /// <summary>
+    /// Exact point-in-parallelogram test: express the point in the grid basis (e1, e2) and check it
+    /// falls within [0,w] x [0,d]. Avoids any winding/sign pitfalls of a cross-product test.
+    /// </summary>
+    private static bool InsideBlock(float px, float py, int w, int d)
     {
-        float Cross(Vector2 a, Vector2 b) => (b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x);
-        float s0 = Cross(p[0], p[1]);
-        float s1 = Cross(p[1], p[2]);
-        float s2 = Cross(p[2], p[3]);
-        float s3 = Cross(p[3], p[0]);
-        bool hasNeg = s0 < 0f || s1 < 0f || s2 < 0f || s3 < 0f;
-        bool hasPos = s0 > 0f || s1 > 0f || s2 > 0f || s3 > 0f;
-        return !(hasNeg && hasPos);
+        const float halfW = 32f;
+        const float halfH = 16f;
+        float u = (px / halfW + py / halfH) * 0.5f;
+        float v = (py / halfH - px / halfW) * 0.5f;
+        return u >= 0f && u <= w && v >= 0f && v <= d;
     }
 
     private static Tile EnsureTile(string name, Color32 color)
