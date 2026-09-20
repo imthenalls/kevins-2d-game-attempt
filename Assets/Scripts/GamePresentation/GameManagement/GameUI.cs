@@ -24,6 +24,8 @@ public sealed class GameUI : MonoBehaviour
     public Canvas Canvas { get; private set; }
     public EventSystem EventSystem { get; private set; }
 
+    private GameObject inventoryCanvas;
+
     public static GameUI Create(Transform parent)
     {
         var go = new GameObject("Game UI");
@@ -90,10 +92,39 @@ public sealed class GameUI : MonoBehaviour
             }
         }
 
+        bool sceneHasInventory = false;
+        foreach (InventoryUI candidate in Object.FindObjectsByType<InventoryUI>(FindObjectsInactive.Include))
+        {
+            if (candidate.gameObject.scene == scene)
+            {
+                sceneHasInventory = true;
+                break;
+            }
+        }
+
         if (Canvas != null)
             Canvas.gameObject.SetActive(!sceneHasCanvas);
         if (EventSystem != null)
             EventSystem.gameObject.SetActive(!sceneHasEventSystem);
+
+        if (!sceneHasInventory)
+            EnsureInventoryCanvas();
+    }
+
+    /// <summary>
+    /// Scenes that do not author their own inventory panel get the shared one, so UI hotkeys work
+    /// everywhere. Instantiated as a root object because InventoryUI persists itself.
+    /// </summary>
+    private void EnsureInventoryCanvas()
+    {
+        if (inventoryCanvas != null)
+            return;
+
+        GameObject prefab = Resources.Load<GameObject>("InventoryCanvas");
+        if (prefab == null)
+            return;
+
+        inventoryCanvas = Instantiate(prefab);
     }
 
     private void SetActive(bool value)

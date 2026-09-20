@@ -16,6 +16,7 @@ Where the always-on managers live, so gameplay scenes only contain content.
 | `SceneLoader` | scene loading used by portals |
 | `QuestManager` | quests |
 | `WorldStateManager` | world facts |
+| `GameUI` | persistent Canvas + EventSystem, and the shared inventory canvas |
 
 It uses `RuntimeInitializeOnLoadMethod` rather than a preload scene, so it also works when you press
 **Play on any gameplay scene** in the editor (a preload scene would silently not run).
@@ -23,6 +24,20 @@ It uses `RuntimeInitializeOnLoadMethod` rather than a preload scene, so it also 
 Already persistent the same way, independent of the bootstrap: `ItemDatabase`,
 `NpcInventoryDatabase`, `WorldTravelState` (all auto-created), plus `PlayerKeyring.GetOrCreate()` and
 some UI (`DialogueUI.GetOrCreate`).
+
+## Camera and UI per scene
+
+`GameBootstrap.SyncForScene` wires each loaded scene:
+
+1. **One follow camera.** Scenes may contain more than one camera tagged `MainCamera` (a static scene
+   camera plus the player's). The bootstrap keeps one (preferring the object named `Main Camera`),
+   disables the rest, and adds `CameraFollow` so the camera tracks the player.
+2. **UI override.** `GameUI` enables its persistent Canvas/EventSystem only when the scene provides
+   none, so a scene's own UI wins.
+3. **Shared inventory.** A scene that does not author its own `InventoryUI` gets the shared
+   `Assets/Resources/InventoryCanvas.prefab` (which is what makes the `I`/`E` hotkeys work in scenes
+   such as Town). Scenes that author their own canvas (Overworld, WorldB) keep theirs.
+
 
 ## What a scene now needs
 

@@ -39,6 +39,9 @@ public sealed class GameBootstrap : MonoBehaviour
         root.AddComponent<SceneLoader>();
         root.AddComponent<QuestManager>();
         root.AddComponent<WorldStateManager>();
+
+        // Persistent UI canvas + EventSystem; a scene with its own UI overrides it on load.
+        GameUI.Create(root.transform);
     }
 
     private void Awake()
@@ -76,25 +79,54 @@ public sealed class GameBootstrap : MonoBehaviour
         SyncForScene(scene);
     }
 
-    /// <summary>Per-scene wiring: make the primary camera follow the player, then default the spawn.</summary>
+    /// <summary>Per-scene wiring: persistent UI override, camera follow, then default spawn.</summary>
     private static void SyncForScene(Scene scene)
     {
-        EnsureFollowCamera();
+        if (GameUI.Instance != null)
+            GameUI.Instance.SyncForScene(scene);
+
+        EnsureSingleFollowCamera();
         PlacePlayerAtSpawn();
     }
 
     /// <summary>
-    /// Adds <see cref="CameraFollow"/> to the primary camera only. Deliberately does not disable or
-    /// re-tag other cameras - scenes may rely on their existing camera(s).
+    /// Keeps exactly one camera and makes it follow the player. Scenes can contain more than one
+    /// MainCamera-tagged camera (e.g. a static scene camera plus the player's); the extra ones are
+    /// disabled so the follow camera is never drawn underneath a static one.
     /// </summary>
-    private static void EnsureFollowCamera()
+    private static void EnsureSingleFollowCamera()
     {
-        Camera camera = Camera.main;
-        if (camera == null)
+        Camera chosen = null;
+        foreach (Camera camera in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
+        {
+            if (!camera.CompareTag("MainCamera"))
+                continue;
+
+            bool better = chosen == null
+                || (camera.name == "Main Camera" && chosen.name != "Main Camera");
+
+            if (!better)
+            {
+                camera.enabled = false;
+                camera.tag = "Untagged";
+                continue;
+            }
+
+            if (chosen != null)
+            {
+                chosen.enabled = false;
+                chosen.tag = "Untagged";
+            }
+
+            chosen = camera;
+        }
+
+        if (chosen == null)
             return;
 
-        if (camera.GetComponent<CameraFollow>() == null)
-            camera.gameObject.AddComponent<CameraFollow>();
+        chosen.enabled = true;
+        if (chosen.GetComponent<CameraFollow>() == null)
+            chosen.gameObject.AddComponent<CameraFollow>();
     }
 
     /// <summary>
