@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 /// The managers it adds are existing singletons that already set their own <c>Instance</c> and
 /// <c>DontDestroyOnLoad</c> in <c>Awake</c>; any duplicate placed in a scene destroys itself.
 ///
-/// Unity setup: none — created automatically. Do not add this component to a scene.
+/// Unity setup: none - created automatically. Do not add this component to a scene.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class GameBootstrap : MonoBehaviour
@@ -56,6 +56,12 @@ public sealed class GameBootstrap : MonoBehaviour
         SceneManager.sceneLoaded += HandleSceneLoaded;
     }
 
+    private void Start()
+    {
+        // sceneLoaded is not guaranteed for the first scene, so sync it explicitly once.
+        SyncForScene(SceneManager.GetActiveScene());
+    }
+
     private void OnDestroy()
     {
         if (instance != this)
@@ -65,19 +71,67 @@ public sealed class GameBootstrap : MonoBehaviour
         instance = null;
     }
 
-    /// <summary>
-    /// Default spawn: after a scene loads, place the player at its PlayerSpawnPoint. A save load or a
-    /// portal arrival happens later and overrides this, giving the documented precedence.
-    /// </summary>
     private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (mode != LoadSceneMode.Single)
             return;
 
-        // Let a scene's own UI override the persistent canvas/EventSystem.
+        SyncForScene(scene);
+    }
+
+    /// <summary>Per-scene wiring: persistent UI override, camera follow, and default spawn.</summary>
+    private static void SyncForScene(Scene scene)
+    {
         if (GameUI.Instance != null)
             GameUI.Instance.SyncForScene(scene);
 
+        EnsureSingleFollowCamera();
+        PlacePlayerAtSpawn();
+    }
+
+    /// <summary>
+    /// Keeps exactly one camera and makes it follow the player. Extra MainCamera-tagged cameras are
+    /// disabled so there is no ambiguity about which one the game uses.
+    /// </summary>
+    private static void EnsureSingleFollowCamera()
+    {
+        Camera chosen = null;
+        foreach (Camera camera in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
+        {
+            if (!camera.CompareTag("MainCamera"))
+                continue;
+
+            if (chosen == null || camera.name == "Main Camera")
+            {
+                if (chosen != null)
+                {
+                    chosen.enabled = false;
+                    chosen.tag = "Untagged";
+                }
+
+                chosen = camera;
+            }
+            else
+            {
+                camera.enabled = false;
+                camera.tag = "Untagged";
+            }
+        }
+
+        if (chosen == null)
+            return;
+
+        chosen.enabled = true;
+        if (chosen.GetComponent<CameraFollow>() == null)
+            chosen.gameObject.AddComponent<CameraFollow>();
+    }
+
+    /// <summary>
+    /// Default spawn: place the player at the scene's PlayerSpawnPoint. A save load or a portal
+    /// arrival happens later and overrides this, giving the documented precedence.
+    /// </summary>
+    private static void PlacePlayerAtSpawn()
+    {
         PlayerSpawnPoint spawn = Object.FindAnyObjectByType<PlayerSpawnPoint>();
         if (spawn == null)
             return;
