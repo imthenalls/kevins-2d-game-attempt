@@ -55,7 +55,7 @@ public static class TownSceneBuilder
     private static Grid grid;
     private static Tilemap grass, park, streets;
     private static Tile grassTile, streetTile, plazaTile;
-    private static Sprite squareSprite;
+    private static Sprite squareSprite, diamondSprite;
 
     [MenuItem("Tools/Worlds/Create Town Scene")]
     public static void Build()
@@ -68,6 +68,10 @@ public static class TownSceneBuilder
         squareSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
         if (squareSprite == null)
             throw new System.InvalidOperationException("Square sprite not found: " + SpritePath);
+
+        // Ground/roads use a DIAMOND sprite: a square sprite drawn in an isometric tilemap stays
+        // axis-aligned and staircases at every boundary. A 2:1 anti-aliased diamond tiles cleanly.
+        diamondSprite = EnsureDiamondSprite();
 
         grassTile  = EnsureTile("GrassTile", GrassColor);
         streetTile = EnsureTile("StreetTile", StreetColor);
@@ -260,16 +264,87 @@ public static class TownSceneBuilder
         return go.GetComponent<Tilemap>();
     }
 
+    /// <summary>
+    /// Generates (once) a 2:1 diamond sprite with anti-aliased edges, sized so one tile fills one
+    /// isometric cell (64x32 px at 64 px/unit = 1 x 0.5 units).
+    /// </summary>
+    private static Sprite EnsureDiamondSprite()
+    {
+        Directory.CreateDirectory(TilesDir);
+        string path = TilesDir + "/Diamond.png";
+        if (!File.Exists(path))
+        {
+            const int w = 64;
+            const int h = 32;
+            var texture = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            var pixels = new Color[w * h];
+            const float cx = (w - 1) * 0.5f;
+            const float cy = (h - 1) * 0.5f;
+            const float a = (w - 1) * 0.5f;
+            const float b = (h - 1) * 0.5f;
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    // 4x supersample to anti-alias the diagonal edges.
+                    float inside = 0f;
+                    for (int sy = 0; sy < 2; sy++)
+                    {
+                        for (int sx = 0; sx < 2; sx++)
+                        {
+                            float px = x + (sx + 0.5f) * 0.5f;
+                            float py = y + (sy + 0.5f) * 0.5f;
+                            float d = Mathf.Abs(px - cx) / a + Mathf.Abs(py - cy) / b;
+                            if (d <= 1f)
+                                inside += 0.25f;
+                        }
+                    }
+                    pixels[y * w + x] = new Color(1f, 1f, 1f, inside);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 64f;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteAlignment = (int)SpriteAlignment.Center;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+        }
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (sprite == null)
+            throw new System.InvalidOperationException("Could not create/load diamond sprite: " + path);
+        return sprite;
+    }
+
     private static Tile EnsureTile(string name, Color32 color)
     {
         Directory.CreateDirectory(TilesDir);
         string path = TilesDir + "/" + name + ".asset";
         Tile existing = AssetDatabase.LoadAssetAtPath<Tile>(path);
         if (existing != null)
+        {
+            existing.sprite = diamondSprite;
+            EditorUtility.SetDirty(existing);
             return existing;
+        }
 
         var tile = ScriptableObject.CreateInstance<Tile>();
-        tile.sprite = squareSprite;
+        tile.sprite = diamondSprite;
         tile.color = color;
         tile.colliderType = Tile.ColliderType.None;
         AssetDatabase.CreateAsset(tile, path);
