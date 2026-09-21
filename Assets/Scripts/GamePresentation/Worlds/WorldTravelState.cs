@@ -119,7 +119,7 @@ public sealed class WorldTravelState : MonoBehaviour
 
         // Prefer the player's authoritative logical position so travel uses the same grid cell as
         // save/load (Engine-Free Core PositionModel) instead of recomputing from the transform.
-        PositionModel model = traveler.GetComponent<PlayerController2D>() != null
+        PositionModel model = traveler.GetComponent<PlayerControllerBase>() != null
             ? GameSessionHost.Session?.PlayerPosition
             : null;
 
@@ -312,7 +312,7 @@ public sealed class WorldTravelState : MonoBehaviour
 
     public void CaptureSharedPlayerState(Transform traveler)
     {
-        if (traveler == null || !traveler.TryGetComponent(out PlayerController2D controller))
+        if (traveler == null || !traveler.TryGetComponent(out PlayerControllerBase controller))
             return;
 
         EntityStats stats = controller.Stats != null
@@ -330,7 +330,7 @@ public sealed class WorldTravelState : MonoBehaviour
     public void ApplySharedPlayerState(Transform traveler)
     {
         if (!sharedPlayerStateInitialized || traveler == null ||
-            !traveler.TryGetComponent(out PlayerController2D controller))
+            !traveler.TryGetComponent(out PlayerControllerBase controller))
             return;
 
         EntityStats stats = controller.Stats != null

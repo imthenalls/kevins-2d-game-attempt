@@ -418,7 +418,7 @@ public sealed class SlidingDoor : MonoBehaviour, IInteractable
             return holder;
 
         if (interactor.CompareTag("Player") ||
-            interactor.GetComponentInParent<PlayerController2D>() != null)
+            interactor.GetComponentInParent<PlayerControllerBase>() != null)
         {
             return PlayerKeyring.GetOrCreate();
         }

@@ -31,7 +31,7 @@ public class SceneRulesManager : MonoBehaviour
 
     // ── Cached references ────────────────────────────────────────────────────
 
-    private PlayerController2D            _player;
+    private PlayerControllerBase            _player;
     private CombatReceiver                _playerReceiver;
     private CombatAttacker                _playerAttacker;
 
@@ -283,7 +283,7 @@ public class SceneRulesManager : MonoBehaviour
 
     private void GatherReferences()
     {
-        _player         = FindAnyObjectByType<PlayerController2D>();
+        _player         = FindAnyObjectByType<PlayerControllerBase>();
         _playerReceiver = _player != null ? _player.CombatReceiver                 : null;
         _playerAttacker = _player != null ? _player.GetComponent<CombatAttacker>() : null;
 

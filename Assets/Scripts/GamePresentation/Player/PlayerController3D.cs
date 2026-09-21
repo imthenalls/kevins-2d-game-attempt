@@ -5,50 +5,44 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Top-down 2D player controller on the XY plane. Reads WASD / left-stick directional input each
-/// frame and drives the Rigidbody2D via linearVelocity. Derives from PlayerControllerBase so shared
-/// systems (inventory, save, world travel, scene rules) work without knowing the dimension.
+/// Planar-isometric 3D player controller. The world is real 3D (XZ ground plane, Y up), but gameplay
+/// is verticality-free: the body never leaves the plane and movement is top-down on XZ. WASD / stick
+/// input is made camera-relative, so W always moves "up" on screen regardless of the rig's yaw.
 ///
-/// Tuning values live in the pure-C# Game.Core.PlayerMovementConfig (Game.Data assembly); this
-/// component only holds the Unity-only references (the visual transform) and reads the config.
+/// Derives from <see cref="PlayerControllerBase"/> so shared systems (inventory, save, world travel,
+/// scene rules, bootstrap) work unchanged. Tuning lives in the pure-C# Game.Core.PlayerMovementConfig.
 ///
 /// Unity setup:
 ///   1. Add to the player root GameObject.
-///   2. Add a Rigidbody2D:
-///        • Gravity Scale = 0  (or enable Force No Gravity in Settings).
-///        • Freeze Z Rotation  (or enable Lock Rotation in Settings).
-///   3. EntityStats is required (enforced by RequireComponent). Its legacy Starting MP and
-///      Max MP initialize the canonical mana account when the player has no Wallet yet.
-///   4. Wallet is found or added automatically on Awake.
-///   5. Optionally add CombatReceiver / CombatAttacker.
-///   6. Assign Settings (PlayerMovementConfig) and Visual Transform in the Inspector.
-///
-/// Movement is locked at runtime by SetMovementEnabled(false) — called automatically
-/// by dialogue, inventory, and cutscene systems.
+///   2. Add a Rigidbody (Use Gravity off, Freeze Position Y + Freeze Rotation).
+///   3. Add a CapsuleCollider (a thin upright capsule) plus EntityStats (required).
+///   4. Optionally add CombatReceiver / CombatAttacker3D.
+///   5. Put the sprite on a child with a BillboardSprite; assign it to Visual Transform.
 ///
 /// Runtime API: MovementEnabled/SetMovementEnabled, MoveSpeed, Stats, ManaWallet,
 /// ApplyAvatarProfile, CapturePositionModel, ApplyPositionModel, IsDashing.
 /// </summary>
-[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(EntityStats))]
-public class PlayerController2D : PlayerControllerBase
+[RequireComponent(typeof(CapsuleCollider))]
+public class PlayerController3D : PlayerControllerBase
 {
     [Header("Movement Settings (Game.Data)")]
     [Tooltip("Authoritative movement/facing/dash tuning. Stored in the pure-C# Game.Data layer.")]
     [SerializeField] private PlayerMovementConfig settings = new PlayerMovementConfig();
 
     [Header("Unity References")]
-    [Tooltip("Visual child to rotate without rotating the Rigidbody2D or collider.")]
+    [Tooltip("Visual child that carries the billboarded sprite.")]
     [SerializeField] private Transform visualTransform;
 
-    [Tooltip("Grid for the logical player position. Defaults to a parent Grid, then the nearest in scene.")]
-    [SerializeField] private Grid grid;
+    [Tooltip("World size of one logical grid cell on the XZ plane.")]
+    [SerializeField, Min(0.01f)] private float gridCellSize = 1f;
 
-    private Rigidbody2D rb;
+    private Rigidbody rb;
     private Vector2 moveInput;
     private bool movementEnabled = true;
     private Vector2 lastMovementDirection = Vector2.up;
-    private Vector2 dashDirection;
+    private Vector3 dashDirection;
     private float playerLength;
     private float dashTimeRemaining;
     private float dashCooldownRemaining;
@@ -72,7 +66,6 @@ public class PlayerController2D : PlayerControllerBase
     public int CurrentDashCharges => currentDashCharges;
     public int MaxDashCharges => settings.MaxDashCharges;
 
-    // Pure form of the trail color; converted to a UnityEngine.Color only where needed.
     private Color TrailColor =>
         new Color(settings.DashTrailR, settings.DashTrailG, settings.DashTrailB, settings.DashTrailA);
 
@@ -101,68 +94,49 @@ public class PlayerController2D : PlayerControllerBase
 
     private void Awake()
     {
-        rb       = GetComponent<Rigidbody2D>();
+        rb       = GetComponent<Rigidbody>();
         stats    = GetComponent<EntityStats>();
-        combatReceiver = GetComponent<CombatReceiver>(); // may be null if CombatReceiver is not added
+        combatReceiver = GetComponent<CombatReceiver>();
+
+        rb.useGravity = false;
+        rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
 
         bool hadWallet = TryGetComponent(out Wallet wallet);
         manaWallet = hadWallet ? wallet : gameObject.AddComponent<Wallet>();
         stats.BindManaWallet(manaWallet, initializeFromStats: !hadWallet);
 
-        // Player HP lives in the GameSession model so it is shared across avatars/scenes and out of
-        // the MonoBehaviour (Engine-Free Core). The first player binds and seeds it; later avatars
-        // adopt the existing model via EntityStats.BindHealthModel.
         GameSessionHost.EnsureExists();
         GameSession session = GameSessionHost.Session;
         if (session != null)
             stats.BindHealthModel(session.GetOrCreatePlayerHealth(stats.MaxHp, stats.Hp));
 
-        // Bind the logical position model (cell + local offset). See LateUpdate/HandlePositionChanged.
-        grid ??= GetComponentInParent<Grid>();
-        if (grid == null)
-            grid = FindAnyObjectByType<Grid>();
-
-        if (session != null && grid != null)
+        if (session != null)
         {
-            Vector3Int cell = grid.WorldToCell(transform.position);
-            Vector3 center = grid.GetCellCenterWorld(cell);
+            Vector3Int cell = WorldToCell(transform.position);
+            Vector3 center = CellCenter(cell);
             positionModel = session.GetOrCreatePlayerPosition(
-                cell.x, cell.y, transform.position.x - center.x, transform.position.y - center.y);
+                cell.x, cell.y, transform.position.x - center.x, transform.position.z - center.z);
             positionModel.Changed += HandlePositionChanged;
-            // Adopt any stored position (returning avatar / loaded save) before physics runs.
             HandlePositionChanged(positionModel);
         }
 
-        if (settings.ForceNoGravity)
-        {
-            rb.gravityScale = 0f;
-        }
-
-        if (settings.LockRotation)
-        {
-            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-        }
-
-        Collider2D playerCollider = GetComponent<Collider2D>();
+        Collider playerCollider = GetComponent<Collider>();
         playerLength = settings.DefaultPlayerLength;
         if (playerCollider != null)
         {
-            Vector2 colliderSize = playerCollider.bounds.size;
-            playerLength = Mathf.Max(settings.MinPlayerLength, colliderSize.x, colliderSize.y);
+            Vector3 size = playerCollider.bounds.size;
+            playerLength = Mathf.Max(settings.MinPlayerLength, size.x, size.z);
         }
 
         currentDashCharges = Mathf.Max(settings.MinDashCharges, settings.MaxDashCharges);
         EnsureDashTrail();
     }
 
-    // Stops and clears the runtime trail if the player controller becomes disabled.
     private void OnDisable()
     {
         StopAndClearDashTrail();
     }
 
-    // Mirrors the physics transform into the session-owned logical position (Engine-Free Core).
-    // The model is authoritative for save/load; this keeps it in sync as physics moves the body.
     private void LateUpdate()
     {
         CapturePositionModel();
@@ -171,16 +145,16 @@ public class PlayerController2D : PlayerControllerBase
     /// <summary>Mirrors the physics transform into the authoritative session position model.</summary>
     public override void CapturePositionModel()
     {
-        if (positionModel == null || grid == null)
+        if (positionModel == null)
             return;
 
-        Vector3Int cell = grid.WorldToCell(transform.position);
-        Vector3 center = grid.GetCellCenterWorld(cell);
+        Vector3Int cell = WorldToCell(transform.position);
+        Vector3 center = CellCenter(cell);
         positionModel.Set(
             cell.x,
             cell.y,
             transform.position.x - center.x,
-            transform.position.y - center.y);
+            transform.position.z - center.z);
     }
 
     /// <summary>Applies the authoritative session position model back onto the physics body.</summary>
@@ -189,15 +163,14 @@ public class PlayerController2D : PlayerControllerBase
         HandlePositionChanged(positionModel);
     }
 
-    // Applies an externally changed model position (load, teleport, avatar switch) to the body.
     private void HandlePositionChanged(PositionModel model)
     {
-        if (model == null || grid == null)
+        if (model == null)
             return;
 
-        Vector3 target = grid.GetCellCenterWorld(new Vector3Int(model.CellX, model.CellY, 0))
-                         + new Vector3(model.OffsetX, model.OffsetY, 0f);
-        target.z = transform.position.z;
+        Vector3 target = CellCenter(new Vector3Int(model.CellX, model.CellY, 0))
+                         + new Vector3(model.OffsetX, 0f, model.OffsetY);
+        target.y = transform.position.y;
 
         if ((target - transform.position).sqrMagnitude <= RepositionEpsilon * RepositionEpsilon)
             return;
@@ -231,28 +204,14 @@ public class PlayerController2D : PlayerControllerBase
 
         if (Keyboard.current != null)
         {
-            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed)
-            {
-                input.x -= 1f;
-            }
-            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed)
-            {
-                input.x += 1f;
-            }
-            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed)
-            {
-                input.y -= 1f;
-            }
-            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed)
-            {
-                input.y += 1f;
-            }
+            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) input.x -= 1f;
+            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) input.x += 1f;
+            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) input.y -= 1f;
+            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) input.y += 1f;
         }
 
         if (Gamepad.current != null)
-        {
             input += Gamepad.current.leftStick.ReadValue();
-        }
 
         moveInput = Vector2.ClampMagnitude(input, 1f);
 #else
@@ -260,8 +219,6 @@ public class PlayerController2D : PlayerControllerBase
         float vertical = Input.GetAxisRaw("Vertical");
         moveInput = new Vector2(horizontal, vertical).normalized;
 #endif
-
-        UpdateMovementFacing();
 
         if (moveInput.sqrMagnitude > settings.FacingInputDeadZone * settings.FacingInputDeadZone)
             lastMovementDirection = moveInput.normalized;
@@ -288,10 +245,38 @@ public class PlayerController2D : PlayerControllerBase
             return;
         }
 
-        rb.linearVelocity = movementEnabled ? moveInput * settings.MoveSpeed : Vector2.zero;
+        rb.linearVelocity = movementEnabled ? WorldDirection(moveInput) * settings.MoveSpeed : Vector3.zero;
     }
 
-    // Starts a fixed-distance dash in the direction the player visual currently faces.
+    // Maps a screen-relative input (x = right, y = up) onto the XZ ground plane using the camera's
+    // yaw, so W always moves the player "up" on screen in any isometric orientation.
+    private Vector3 WorldDirection(Vector2 input)
+    {
+        if (input.sqrMagnitude <= 0.0001f)
+            return Vector3.zero;
+
+        Camera camera = Camera.main;
+        Vector3 forward;
+        Vector3 right;
+
+        if (camera != null)
+        {
+            forward = camera.transform.forward;
+            forward.y = 0f;
+            forward = forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
+            right = camera.transform.right;
+            right.y = 0f;
+            right = right.sqrMagnitude > 0.0001f ? right.normalized : Vector3.right;
+        }
+        else
+        {
+            forward = Vector3.forward;
+            right = Vector3.right;
+        }
+
+        return (right * input.x + forward * input.y).normalized;
+    }
+
     private void BeginDash()
     {
         if (currentDashCharges <= 0)
@@ -302,7 +287,10 @@ public class PlayerController2D : PlayerControllerBase
         if (wasFullyCharged)
             dashRechargeRemaining = settings.DashRechargeSeconds;
 
-        dashDirection = GetFacingDirection();
+        dashDirection = WorldDirection(lastMovementDirection);
+        if (dashDirection.sqrMagnitude <= 0.0001f)
+            dashDirection = WorldDirection(Vector2.up);
+
         float dashSpeed = Mathf.Max(settings.MinDashSpeed, settings.MoveSpeed * settings.DashSpeedMultiplier);
         float dashDistance = playerLength * settings.DashDistanceInPlayerLengths;
         dashTimeRemaining = dashDistance / dashSpeed;
@@ -311,7 +299,6 @@ public class PlayerController2D : PlayerControllerBase
         BeginDashTrail();
     }
 
-    // Restores one missing dash every configured recharge interval until all charges are full.
     private void RechargeDashCharges()
     {
         if (currentDashCharges >= settings.MaxDashCharges)
@@ -332,7 +319,6 @@ public class PlayerController2D : PlayerControllerBase
         }
     }
 
-    // Creates the tapered runtime TrailRenderer used only by the dash.
     private void EnsureDashTrail()
     {
         if (dashTrail != null)
@@ -370,21 +356,13 @@ public class PlayerController2D : PlayerControllerBase
             });
         dashTrail.colorGradient = gradient;
 
-        Shader trailShader = Shader.Find("Sprites/Default");
+        Shader trailShader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (trailShader == null)
+            trailShader = Shader.Find("Sprites/Default");
         if (trailShader != null)
             dashTrail.material = new Material(trailShader) { name = "Runtime Player Dash Trail" };
-
-        SpriteRenderer playerRenderer = visualTransform != null
-            ? visualTransform.GetComponent<SpriteRenderer>()
-            : GetComponentInChildren<SpriteRenderer>();
-        if (playerRenderer != null)
-        {
-            dashTrail.sortingLayerID = playerRenderer.sortingLayerID;
-            dashTrail.sortingOrder = playerRenderer.sortingOrder - 1;
-        }
     }
 
-    // Clears the previous trail and starts emitting from the player's current position.
     private void BeginDashTrail()
     {
         EnsureDashTrail();
@@ -397,14 +375,12 @@ public class PlayerController2D : PlayerControllerBase
         dashTrail.emitting = true;
     }
 
-    // Stops adding points while allowing the completed dash trail to fade naturally.
     private void EndDashTrailEmission()
     {
         if (dashTrail != null)
             dashTrail.emitting = false;
     }
 
-    // Removes all trail points immediately when a dash is cancelled or disabled.
     private void StopAndClearDashTrail()
     {
         if (dashTrail == null)
@@ -414,24 +390,6 @@ public class PlayerController2D : PlayerControllerBase
         dashTrail.Clear();
     }
 
-    // Converts the visual's configured forward axis into a world-space dash direction.
-    private Vector2 GetFacingDirection()
-    {
-        if (visualTransform != null)
-        {
-            float radians = settings.SpriteForwardAngle * Mathf.Deg2Rad;
-            Vector3 localForward = new Vector3(Mathf.Cos(radians), Mathf.Sin(radians), 0f);
-            Vector2 worldForward = visualTransform.TransformDirection(localForward);
-            if (worldForward.sqrMagnitude > 0.0001f)
-                return worldForward.normalized;
-        }
-
-        return lastMovementDirection.sqrMagnitude > 0.0001f
-            ? lastMovementDirection.normalized
-            : Vector2.up;
-    }
-
-    // Reads a single Left Shift press for the dash; holding the key does not retrigger it.
     private bool WasDashPressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -439,28 +397,6 @@ public class PlayerController2D : PlayerControllerBase
 #else
         return Input.GetKeyDown((KeyCode)settings.LegacyDashKeyCode);
 #endif
-    }
-
-    private void UpdateMovementFacing()
-    {
-        if (!settings.FaceMovementDirection ||
-            visualTransform == null ||
-            moveInput.sqrMagnitude <= settings.FacingInputDeadZone * settings.FacingInputDeadZone)
-        {
-            return;
-        }
-
-        float movementAngle = Mathf.Atan2(moveInput.y, moveInput.x) * Mathf.Rad2Deg;
-        float targetAngle = movementAngle - settings.SpriteForwardAngle;
-        float currentAngle = visualTransform.localEulerAngles.z;
-        float nextAngle = settings.FacingTurnSpeed <= 0f
-            ? targetAngle
-            : Mathf.MoveTowardsAngle(
-                currentAngle,
-                targetAngle,
-                settings.FacingTurnSpeed * Time.deltaTime);
-
-        visualTransform.localRotation = Quaternion.Euler(0f, 0f, nextAngle);
     }
 
     public override void SetMovementEnabled(bool enabled)
@@ -472,7 +408,23 @@ public class PlayerController2D : PlayerControllerBase
             isDashing = false;
             dashTimeRemaining = 0f;
             StopAndClearDashTrail();
-            rb.linearVelocity = Vector2.zero;
+            rb.linearVelocity = Vector3.zero;
         }
+    }
+
+    private Vector3Int WorldToCell(Vector3 position)
+    {
+        return new Vector3Int(
+            Mathf.FloorToInt(position.x / gridCellSize),
+            Mathf.FloorToInt(position.z / gridCellSize),
+            0);
+    }
+
+    private Vector3 CellCenter(Vector3Int cell)
+    {
+        return new Vector3(
+            (cell.x + 0.5f) * gridCellSize,
+            0f,
+            (cell.y + 0.5f) * gridCellSize);
     }
 }

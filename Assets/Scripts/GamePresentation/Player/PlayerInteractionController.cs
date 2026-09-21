@@ -13,7 +13,7 @@ using UnityEngine.InputSystem;
 /// choices until the graph ends or the player cancels.
 ///
 /// Unity setup:
-///   1. Add to the player GameObject alongside PlayerController2D.
+///   1. Add to the player GameObject alongside PlayerControllerBase.
 ///   2. Set NPC Layers to the Physics layer(s) your NPC GameObjects are on.
 ///   3. Optionally assign Dialogue UI (DialogueUIController) and Player Controller;
 ///      both are found automatically in the scene if left blank.
@@ -36,7 +36,7 @@ public class PlayerInteractionController : MonoBehaviour
     [Tooltip("Layer(s) that WorldObject and other IInteractable objects are on.")]
     [SerializeField] private LayerMask interactableLayers = Physics2D.DefaultRaycastLayers;
     [SerializeField] private DialogueUIController dialogueUI;
-    [SerializeField] private PlayerController2D playerController;
+    [SerializeField] private PlayerControllerBase playerController;
     private readonly List<Collider2D> overlapResults = new List<Collider2D>();
     private NpcDialogue activeDialogue;
     private DialogueNodeDefinition activeNode;
@@ -46,7 +46,7 @@ public class PlayerInteractionController : MonoBehaviour
     private void Awake()
     {
         dialogueUI = dialogueUI != null ? dialogueUI : DialogueUIController.GetOrCreate();
-        playerController = playerController != null ? playerController : GetComponent<PlayerController2D>();
+        playerController = playerController != null ? playerController : GetComponent<PlayerControllerBase>();
     }
     private void OnDisable()
     {

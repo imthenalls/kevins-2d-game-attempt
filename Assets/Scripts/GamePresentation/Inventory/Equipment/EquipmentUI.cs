@@ -276,7 +276,7 @@ public class EquipmentUI : MonoBehaviour
         if (equipment != null && equipment.Model != null)
             return;
 
-        PlayerController2D player = FindAnyObjectByType<PlayerController2D>();
+        PlayerControllerBase player = FindAnyObjectByType<PlayerControllerBase>();
         EquipmentManager found = player != null ? player.GetComponent<EquipmentManager>() : null;
         if (found == null || found.Model == null)
             return;

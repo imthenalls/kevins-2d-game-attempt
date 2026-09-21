@@ -6,14 +6,14 @@ using UnityEngine;
 /// wiring.
 ///
 /// Unity setup: none - added automatically. Optionally assign Follow Target (defaults to the first
-/// PlayerController2D) or change Zoom in the Inspector.
+/// PlayerControllerBase) or change Zoom in the Inspector.
 ///
 /// Runtime API: none.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class CameraFollow : MonoBehaviour
 {
-    [Tooltip("Target to follow. Defaults to the first PlayerController2D in the scene.")]
+    [Tooltip("Target to follow. Defaults to the first PlayerControllerBase in the scene.")]
     [SerializeField] private Transform followTarget;
 
     [Tooltip("Orthographic size. Smaller = zoomed in more.")]
@@ -43,7 +43,7 @@ public sealed class CameraFollow : MonoBehaviour
 
         if (followTarget == null)
         {
-            PlayerController2D player = FindAnyObjectByType<PlayerController2D>();
+            PlayerControllerBase player = FindAnyObjectByType<PlayerControllerBase>();
             if (player != null)
                 followTarget = player.transform;
         }

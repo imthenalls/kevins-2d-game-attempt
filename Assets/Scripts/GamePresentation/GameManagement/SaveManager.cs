@@ -67,7 +67,7 @@ public class SaveManager : MonoBehaviour
         data.currentScene = SceneManager.GetActiveScene().name;
 
         // Player position + stats
-        var player = FindAnyObjectByType<PlayerController2D>();
+        var player = FindAnyObjectByType<PlayerControllerBase>();
         if (player != null)
         {
             data.playerX = player.transform.position.x;
@@ -281,7 +281,7 @@ public class SaveManager : MonoBehaviour
     private void RestoreSceneState(SaveData data)
     {
         // Player position + stats
-        var player = FindAnyObjectByType<PlayerController2D>();
+        var player = FindAnyObjectByType<PlayerControllerBase>();
         if (player != null)
         {
             ApplyPlayerPosition(player, data);
@@ -549,7 +549,7 @@ public class SaveManager : MonoBehaviour
     /// older saves store only world floats, which are converted through the scene Grid so they do
     /// not land at the origin.
     /// </summary>
-    private static void ApplyPlayerPosition(PlayerController2D player, SaveData data)
+    private static void ApplyPlayerPosition(PlayerControllerBase player, SaveData data)
     {
         GameSession session = GameSessionHost.Session;
 

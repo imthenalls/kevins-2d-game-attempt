@@ -125,8 +125,16 @@ public sealed class GameBootstrap : MonoBehaviour
             return;
 
         chosen.enabled = true;
-        if (chosen.GetComponent<CameraFollow>() == null)
-            chosen.gameObject.AddComponent<CameraFollow>();
+        if (chosen.GetComponent<CameraFollow>() == null && chosen.GetComponent<IsoCameraRig>() == null)
+        {
+            // 3D planar-isometric scenes use the rotated rig; 2D scenes use the flat follow.
+            bool is3D = Object.FindAnyObjectByType<PlayerController3D>() != null
+                        || Object.FindAnyObjectByType<Isometric3DScene>() != null;
+            if (is3D)
+                chosen.gameObject.AddComponent<IsoCameraRig>();
+            else
+                chosen.gameObject.AddComponent<CameraFollow>();
+        }
     }
 
     /// <summary>
@@ -139,16 +147,22 @@ public sealed class GameBootstrap : MonoBehaviour
         if (spawn == null)
             return;
 
-        PlayerController2D player = Object.FindAnyObjectByType<PlayerController2D>();
+        PlayerControllerBase player = Object.FindAnyObjectByType<PlayerControllerBase>();
         if (player == null)
             return;
 
         Vector3 target = spawn.Position;
-        target.z = player.transform.position.z;
+        // A legacy 2D player sits on the world XY plane, so keep its authored depth (z).
+        if (player is PlayerController2D)
+            target.z = player.transform.position.z;
 
-        if (player.TryGetComponent(out Rigidbody2D body))
-            body.position = target;
+        if (player.TryGetComponent(out Rigidbody2D body2D))
+            body2D.position = target;
+        else if (player.TryGetComponent(out Rigidbody body3D))
+            body3D.position = target;
+
         player.transform.position = target;
         Physics2D.SyncTransforms();
+        Physics.SyncTransforms();
     }
 }

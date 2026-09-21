@@ -30,7 +30,7 @@ public class HotbarUI : MonoBehaviour
 
     private static HotbarModel model;
     private HotbarSlotUI[]     slotUIs;
-    private PlayerController2D player;
+    private PlayerControllerBase player;
     private InventoryModel subscribedInventory;
 
     // ── Static API ────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ public class HotbarUI : MonoBehaviour
 
     private void Start()
     {
-        player = FindAnyObjectByType<PlayerController2D>();
+        player = FindAnyObjectByType<PlayerControllerBase>();
 
         // Keep quantity labels in sync whenever the player's inventory changes
         if (InventoryUI.Model != null)
@@ -105,7 +105,7 @@ public class HotbarUI : MonoBehaviour
                 model.Clear(i);
         }
 
-        player = FindAnyObjectByType<PlayerController2D>();
+        player = FindAnyObjectByType<PlayerControllerBase>();
         RefreshAll();
     }
 
@@ -159,7 +159,7 @@ public class HotbarUI : MonoBehaviour
 
     private void ApplyUseEffect(ItemData item)
     {
-        if (player == null) player = FindAnyObjectByType<PlayerController2D>();
+        if (player == null) player = FindAnyObjectByType<PlayerControllerBase>();
         if (player?.Stats == null) return;
 
         if (item.healHp > 0) player.Stats.Heal(item.healHp);

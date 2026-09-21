@@ -56,7 +56,7 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Image dragGhostImage;
     [SerializeField] private Button sortButton;
     [SerializeField] private Button closeButton;
-    [SerializeField] private PlayerController2D playerController;
+    [SerializeField] private PlayerControllerBase playerController;
 
     [Header("Slot Size")]
     [SerializeField] private Vector2 slotSize    = new Vector2(64f, 64f);
@@ -116,7 +116,7 @@ public class InventoryUI : MonoBehaviour
             canvasRect = parentCanvas.GetComponent<RectTransform>();
 
         if (playerController == null)
-            playerController = FindAnyObjectByType<PlayerController2D>();
+            playerController = FindAnyObjectByType<PlayerControllerBase>();
 
         worldAModel = new InventoryModel(rows, columns, ItemScope.WorldA);
         worldBModel = new InventoryModel(rows, columns, ItemScope.WorldB);
@@ -202,7 +202,7 @@ public class InventoryUI : MonoBehaviour
         model.OnChanged -= RefreshAllSlots;
         model = nextModel;
         model.OnChanged += RefreshAllSlots;
-        playerController = FindAnyObjectByType<PlayerController2D>();
+        playerController = FindAnyObjectByType<PlayerControllerBase>();
         SetPlayerMovementLocked(IsOpen);
 
         selectedSlotIndex = -1;
@@ -415,7 +415,7 @@ public class InventoryUI : MonoBehaviour
     private void SetPlayerMovementLocked(bool locked)
     {
         if (playerController == null || !playerController.gameObject.scene.IsValid())
-            playerController = FindAnyObjectByType<PlayerController2D>();
+            playerController = FindAnyObjectByType<PlayerControllerBase>();
         if (playerController != null)
             playerController.SetMovementEnabled(!locked);
     }
@@ -488,7 +488,7 @@ public class InventoryUI : MonoBehaviour
         if (slot == null || slot.IsEmpty || !slot.item.IsEquip) return;
 
         if (playerController == null)
-            playerController = FindAnyObjectByType<PlayerController2D>();
+            playerController = FindAnyObjectByType<PlayerControllerBase>();
 
         EquipmentManager equipment = playerController != null
             ? playerController.GetComponent<EquipmentManager>()

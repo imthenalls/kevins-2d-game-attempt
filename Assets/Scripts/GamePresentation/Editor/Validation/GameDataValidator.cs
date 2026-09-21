@@ -321,6 +321,7 @@ public static class GameDataValidator
             try
             {
                 var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                bool is3D = UnityEngine.Object.FindObjectsByType<Isometric3DScene>(FindObjectsInactive.Include).Length > 0;
                 foreach (NpcController npc in UnityEngine.Object.FindObjectsByType<NpcController>())
                     npcIds.Add(npc.NpcId);
 
@@ -364,6 +365,9 @@ public static class GameDataValidator
                         "Scene '" + sceneName + "' has " + spawnPoints + " PlayerSpawnPoints; keep one default."));
                 }
                 // Grid + tilemap transform hygiene, a MainCamera, and the Walls-layer convention.
+                // 3D planar-isometric scenes are real geometry, not tilemaps, so these are exempt.
+                if (!is3D)
+                {
                 var grids = UnityEngine.Object.FindObjectsByType<Grid>(FindObjectsInactive.Include);
                 if (grids.Length == 0)
                 {
@@ -412,6 +416,7 @@ public static class GameDataValidator
                             "' is not on the Walls layer (obstacles must block pathfinding)."));
                     }
                 }
+                }
 
                 int mainCameras = 0;
                 int enabledMainCameras = 0;
@@ -451,10 +456,10 @@ public static class GameDataValidator
                         "is instantiated at runtime for scenes without one."));
                 }
                 if (spawnPoints > 0 &&
-                    UnityEngine.Object.FindObjectsByType<PlayerController2D>(FindObjectsInactive.Include).Length == 0)
+                    UnityEngine.Object.FindObjectsByType<PlayerControllerBase>(FindObjectsInactive.Include).Length == 0)
                 {
                     issues.Add(new ValidationIssue(ValidationSeverity.Error, "scene.player",
-                        "Scene '" + sceneName + "' has a PlayerSpawnPoint but no PlayerController2D; there is nothing for the player to spawn into."));
+                        "Scene '" + sceneName + "' has a PlayerSpawnPoint but no PlayerControllerBase; there is nothing for the player to spawn into."));
                 }
             }
             catch (Exception e)

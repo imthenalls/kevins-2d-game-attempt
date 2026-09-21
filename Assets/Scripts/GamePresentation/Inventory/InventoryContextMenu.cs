@@ -118,7 +118,7 @@ public class InventoryContextMenu : MonoBehaviour
 
         ItemData item = slot.item.AsItemData();
         if (item == null) return;
-        var player = UnityEngine.Object.FindAnyObjectByType<PlayerController2D>();
+        var player = UnityEngine.Object.FindAnyObjectByType<PlayerControllerBase>();
 
         if (item.IsEquip)
         {

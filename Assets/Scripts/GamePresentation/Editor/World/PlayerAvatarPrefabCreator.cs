@@ -122,7 +122,7 @@ public static class PlayerAvatarPrefabCreator
             Transform[] transforms = roots[i].GetComponentsInChildren<Transform>(true);
             for (int j = 0; j < transforms.Length; j++)
             {
-                if (transforms[j].name == name && transforms[j].GetComponent<PlayerController2D>() != null)
+                if (transforms[j].name == name && transforms[j].GetComponent<PlayerControllerBase>() != null)
                     return transforms[j].gameObject;
             }
         }

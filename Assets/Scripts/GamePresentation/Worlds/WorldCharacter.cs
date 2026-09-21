@@ -37,7 +37,7 @@ public sealed class WorldCharacter : MonoBehaviour
 
     public void ApplyProfile()
     {
-        if (profile != null && TryGetComponent(out PlayerController2D controller))
+        if (profile != null && TryGetComponent(out PlayerControllerBase controller))
             controller.ApplyAvatarProfile(profile);
     }
 

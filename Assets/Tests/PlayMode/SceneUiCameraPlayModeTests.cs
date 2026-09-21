@@ -55,8 +55,8 @@ namespace Game.Tests
 
                 Assert.AreEqual(1, enabledMainCameras,
                     "Expected exactly one enabled MainCamera camera; a static one can render over the follow camera" + where);
-                Assert.IsNotNull(mainCamera.GetComponent<CameraFollow>(),
-                    "Main camera has no CameraFollow (GameBootstrap should add it)" + where);
+                Assert.IsTrue(mainCamera.GetComponent<CameraFollow>() != null || mainCamera.GetComponent<IsoCameraRig>() != null,
+                    "Main camera has no CameraFollow/IsoCameraRig (GameBootstrap should add one)" + where);
                 Assert.IsTrue(mainCamera.orthographic, "Main camera is not orthographic" + where);
 
                 Assert.IsTrue(HasEnabledEventSystem(), "No enabled EventSystem; UI input is dead" + where);
@@ -98,16 +98,20 @@ namespace Game.Tests
                 Camera camera = Camera.main;
                 Assert.IsNotNull(camera, "No Camera.main" + " in " + path);
 
-                PlayerController2D player = Object.FindAnyObjectByType<PlayerController2D>();
+                PlayerControllerBase player = Object.FindAnyObjectByType<PlayerControllerBase>();
                 if (player == null)
                     continue; // scene has no active player for this world; nothing to follow
 
                 for (int frame = 0; frame < 20; frame++)
                     yield return null;
 
-                float distance = Vector2.Distance(camera.transform.position, player.transform.position);
+                // The player must sit on the camera's view axis (works for both the flat follow and
+                // the offset 3D isometric rig, where the camera is not placed on top of the player).
+                Vector3 toPlayer = player.transform.position - camera.transform.position;
+                Vector3 perpendicular = toPlayer - Vector3.Project(toPlayer, camera.transform.forward);
+                float distance = perpendicular.magnitude;
                 Assert.Less(distance, 0.5f,
-                    "Camera did not converge on the player in " + path + " (distance " + distance + ")");
+                    "Camera did not converge on the player in " + path + " (axis distance " + distance + ")");
 
                 checkedScenes++;
             }
