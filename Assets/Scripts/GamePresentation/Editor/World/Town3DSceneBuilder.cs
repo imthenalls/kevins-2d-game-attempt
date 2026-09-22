@@ -43,6 +43,7 @@ public static class Town3DSceneBuilder
     };
 
     private static Scene scene;
+    private static Sprite squareSprite;
 
     [MenuItem("Tools/Worlds/Rebuild Town Scene (3D)")]
     public static void Build()
@@ -51,6 +52,9 @@ public static class Town3DSceneBuilder
             throw new System.InvalidOperationException("Exit Play Mode first.");
 
         Directory.CreateDirectory(MaterialsDir);
+        squareSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+        if (squareSprite == null)
+            throw new System.InvalidOperationException("Square sprite not found: " + SpritePath);
 
         scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         ConfigurePlaceholderLighting();
@@ -65,6 +69,7 @@ public static class Town3DSceneBuilder
         BuildPark();
         BuildBuildings();
         BuildPerimeterWalls();
+        BuildTownNpcs();
         BuildCamera();
         BuildSun();
 
@@ -144,7 +149,6 @@ public static class Town3DSceneBuilder
         var root = new GameObject("Buildings");
         int wallsLayer = Mathf.Max(0, LayerMask.NameToLayer("Walls"));
         Material body = EnsureMaterial("Building", new Color(0.69f, 0.75f, 0.77f), unlit: false);
-        Material door = EnsureMaterial("Door", new Color(1.00f, 0.41f, 0.71f), unlit: true);
 
         foreach (var b in Buildings)
         {
@@ -163,15 +167,16 @@ public static class Town3DSceneBuilder
             // 'S' buildings face the street on their +z edge; 'N' buildings on their -z edge.
             float doorX = doorCellX + 0.5f;
             float doorZ = b.side == 'S' ? b.y + b.d + 0.25f : b.y - 0.25f;
-            Vector3 edge = new Vector3(doorX, 0.6f, doorZ);
 
-            var marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            marker.name = "Door";
+            var marker = new GameObject("Door");
             marker.transform.SetParent(root.transform, false);
-            marker.transform.localScale = new Vector3(0.5f, 1.2f, 0.5f);
-            marker.transform.position = edge;
-            marker.GetComponent<MeshRenderer>().sharedMaterial = door;
-            Object.DestroyImmediate(marker.GetComponent<Collider>());
+            marker.transform.localScale = new Vector3(0.7f, 1.3f, 1f);
+            marker.transform.position = new Vector3(doorX, 0.65f, doorZ);
+            var doorRenderer = marker.AddComponent<SpriteRenderer>();
+            doorRenderer.sprite = squareSprite;
+            doorRenderer.color = new Color(1.00f, 0.41f, 0.71f);
+            doorRenderer.sortingOrder = 60;
+            marker.AddComponent<BillboardSprite>();
         }
     }
 
@@ -253,12 +258,63 @@ public static class Town3DSceneBuilder
         visual.transform.SetParent(player.transform, false);
         visual.transform.localPosition = new Vector3(0f, 0.8f, 0f);
         var renderer = visual.AddComponent<SpriteRenderer>();
-        renderer.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+        renderer.sprite = squareSprite;
         renderer.color = new Color(0.20f, 0.60f, 1f);
         renderer.sortingOrder = 100;
         visual.AddComponent<BillboardSprite>();
 
         SetObjectField(controller, "visualTransform", visual.transform);
+    }
+
+    private static int BuildTownNpcs()
+    {
+        int npcLayer = Mathf.Max(0, LayerMask.NameToLayer("Npc"));
+        int wallMask = 1 << Mathf.Max(0, LayerMask.NameToLayer("Walls"));
+
+        var cells = new[]
+        {
+            new Vector2Int(1, 8), new Vector2Int(1, 30),
+            new Vector2Int(62, 8), new Vector2Int(62, 30),
+            new Vector2Int(16, 1), new Vector2Int(45, 1),
+            new Vector2Int(16, 42), new Vector2Int(45, 42),
+        };
+
+        var root = new GameObject("Town NPCs");
+
+        for (int i = 0; i < cells.Length; i++)
+        {
+            var npc = new GameObject("Town NPC " + (i + 1));
+            npc.layer = npcLayer;
+            npc.transform.SetParent(root.transform, false);
+            npc.transform.position = CellToWorld(cells[i].x, cells[i].y);
+
+            npc.AddComponent<Rigidbody>();
+            var collider = npc.AddComponent<CapsuleCollider>();
+            collider.height = 1.4f;
+            collider.radius = 0.35f;
+            collider.center = new Vector3(0f, 0.7f, 0f);
+
+            var controller = npc.AddComponent<NpcController>();
+            SetStringField(controller, "npcId", "town_npc_" + (i + 1));
+            SetStringField(controller, "displayName", "Villager " + (i + 1));
+
+            var wanderer = npc.AddComponent<NpcWander3D>();
+            SetIntField(wanderer, "wallLayers", wallMask);
+            SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 8f);
+            SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
+
+            var visual = new GameObject("NpcVisual");
+            visual.transform.SetParent(npc.transform, false);
+            visual.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+            visual.transform.localScale = Vector3.one * 0.8f;
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = squareSprite;
+            renderer.color = new Color(0.95f, 0.62f, 0.20f);
+            renderer.sortingOrder = 50;
+            visual.AddComponent<BillboardSprite>();
+        }
+
+        return cells.Length;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -344,6 +400,29 @@ public static class Town3DSceneBuilder
         var so = new SerializedObject(target);
         SerializedProperty p = so.FindProperty(field);
         if (p != null) { p.objectReferenceValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetStringField(Object target, string field, string value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.stringValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetIntField(Object target, string field, int value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.intValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedFloat(Object target, string parentField, string childField, float value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 
     private static void SetEnumField(Object target, string field, int value)
