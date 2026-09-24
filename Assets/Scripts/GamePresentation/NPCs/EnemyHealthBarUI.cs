@@ -84,9 +84,11 @@ public sealed class EnemyHealthBarUI : MonoBehaviour
         fillRect.offsetMax = Vector2.zero;
         fillRect.sizeDelta = Vector2.zero;
 
+        // The label lives under Visual so a single visibility toggle hides the bar and its text
+        // together; previously it was a sibling and stayed on screen after the owner died.
         var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
         label = labelObject.GetComponent<TextMeshProUGUI>();
-        label.rectTransform.SetParent(root, false);
+        label.rectTransform.SetParent(visual, false);
         Stretch(label.rectTransform);
         label.fontSize = 9f;
         label.fontStyle = FontStyles.Bold;
