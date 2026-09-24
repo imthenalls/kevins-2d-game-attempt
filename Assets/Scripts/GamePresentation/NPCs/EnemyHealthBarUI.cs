@@ -124,10 +124,18 @@ public sealed class EnemyHealthBarUI : MonoBehaviour
         }
 
         EntityStats stats = owner.Stats;
+        // A defeated enemy keeps its controller alive for save/death bookkeeping, so the bar must
+        // read liveness (and the owner's active state) rather than assume the object will vanish.
+        bool ownerActive = owner.isActiveAndEnabled && owner.gameObject.activeInHierarchy;
+        if (!ownerActive || stats == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Camera worldCamera = Camera.main;
         bool visible = owner.ShowEnemyHealthBar &&
                        owner.NpcType == NpcType.Enemy &&
-                       stats != null &&
                        stats.IsAlive &&
                        worldCamera != null &&
                        visual != null;
