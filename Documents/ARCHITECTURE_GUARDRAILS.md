@@ -81,13 +81,13 @@ Migrate top-down. Update this table as items land.
 |---|---|---|
 | 🟨 | `NPCs/NpcController.cs` | `NpcBehaviorState` / `NpcType` enums moved to `Game.Core` ✅ (shared by all adapters, not Presentation). Transient `behaviorState`, movement-lock memory and `AggroRange` stay on the MonoBehaviour (not saveable). |
 | ✅ | `NPCs/NpcKeyring.cs` | Facade over `Game.Core.Keyring` (raw `AddKey(id)` seed overload added to Core) |
-| ⬜ | `Entity/EntityStats.cs` | Fallback HP/MP authority + stat-bonus accumulation |
+| 🟨 | `Entity/EntityStats.cs` | Stat-bonus accumulation → `Game.Core.StatBonuses` ✅. Fallback HP/MP still on the MonoBehaviour when no `IHealthModel`/Wallet is bound (the player and NPCs always bind one in practice). |
 | ⬜ | `GameManagement/SceneRulesManager.cs` | Active rule set + original-value restore stack |
 
 ### Tier 4 — Rule containers
 | Status | Where | Rules to move |
 |---|---|---|
-| ⬜ | `GameManagement/SceneRules.cs` + `SceneRulesManager` | Damage multipliers, DOT/HOT, death policy |
+| 🟨 | `GameManagement/SceneRules.cs` + `SceneRulesManager` | Player-death rule + `PlayerDeathBehavior` enum → `Game.Core.PlayerDeathPolicy` ✅. The ScriptableObject stays as the serialization adapter; the multiplier/DOT/HOT fields are data it applies. |
 | ⬜ | `World/SlidingDoor.cs` | Key/lock/auto-close policy |
 | ✅ | `Economy/TradeService.cs` | Moved to `Game.Core.TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`). Operates on `ManaAccount`/`InventoryModel`; the Shell bridges `OnTradeCompleted` to `QuestEventBus` via `TradeQuestBridge`. |
 | ⬜ | `Portals/PortalManager.cs` | `IsKeySatisfied` access policy + cooldown |
@@ -105,7 +105,7 @@ pathfinder/melee/dash/attack/wander components and the behavior manager/idle/rec
 facades over them. Engine-free tests:
 `Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
 
-Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), and the raw `Keyring.AddKey(id)` seed path. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
+Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, and `PlayerDeathBehavior`/`PlayerDeathPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 
 ## Known-good (do not "fix")
 

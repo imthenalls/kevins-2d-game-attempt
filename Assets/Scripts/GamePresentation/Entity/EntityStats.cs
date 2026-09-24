@@ -33,9 +33,8 @@ public class EntityStats : MonoBehaviour
     private IHealthModel _healthModel;
     private bool _awakeInitialized;
 
-    // equipment bonuses (tracked separately from base stats)
-    private int _bonusAttack;
-    private int _bonusDefense;
+    // Equipment bonuses are authoritative in Game.Core.
+    private readonly StatBonuses _bonuses = new StatBonuses();
 
     // read-only accessors
     public int Hp => _healthModel != null ? _healthModel.Hp : _hp;
@@ -46,10 +45,10 @@ public class EntityStats : MonoBehaviour
     public bool IsAlive => _hp > 0;
 
     /// <summary>Total attack bonus from equipped items.</summary>
-    public int BonusAttack => _bonusAttack;
+    public int BonusAttack => _bonuses.Attack;
 
     /// <summary>Total defense bonus from equipped items.</summary>
-    public int BonusDefense => _bonusDefense;
+    public int BonusDefense => _bonuses.Defense;
 
     /// <summary>Fired whenever HP changes. Args: (currentHp, maxHp)</summary>
     public event Action<int, int> OnHpChanged;
@@ -379,8 +378,7 @@ public class EntityStats : MonoBehaviour
     {
         if (hp > 0) IncreaseMaxHp(hp, healDelta: true);
         if (mp > 0) IncreaseMaxMp(mp, restoreDelta: true);
-        _bonusAttack  += atk;
-        _bonusDefense += def;
+        _bonuses.Add(atk, def);
     }
 
     /// <summary>
@@ -391,8 +389,7 @@ public class EntityStats : MonoBehaviour
     {
         if (hp > 0) DecreaseMaxHp(hp);
         if (mp > 0) DecreaseMaxMp(mp);
-        _bonusAttack  = Mathf.Max(0, _bonusAttack  - atk);
-        _bonusDefense = Mathf.Max(0, _bonusDefense - def);
+        _bonuses.Remove(atk, def);
     }
 
     private void DecreaseMaxHp(int amount)

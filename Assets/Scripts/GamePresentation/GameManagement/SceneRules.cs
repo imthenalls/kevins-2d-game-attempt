@@ -105,11 +105,3 @@ public class SceneRules : ScriptableObject
     [Tooltip("Scene to load when playerDeathBehavior is set to SendToScene.")]
     public string deathScene = "";
 }
-
-public enum PlayerDeathBehavior
-{
-    Default,         // do nothing — let existing subscribers handle it
-    RespawnInPlace,  // restore player HP to full and stay in the scene
-    SendToScene,     // load deathScene via SceneLoader
-    GameOver         // load the "GameOver" scene
-}

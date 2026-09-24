@@ -528,19 +528,18 @@ public class SceneRulesManager : MonoBehaviour
 
     private void HandlePlayerDeath(CombatReceiver _)
     {
-        switch (_appliedRules.playerDeathBehavior)
+        // The death rule lives in Game.Core; the manager performs the resolved outcome.
+        PlayerDeathResolution resolution = PlayerDeathPolicy.Resolve(
+            _appliedRules.playerDeathBehavior, _appliedRules.deathScene);
+
+        switch (resolution.Outcome)
         {
-            case PlayerDeathBehavior.RespawnInPlace:
+            case PlayerDeathOutcome.RespawnToFull:
                 _player.Stats?.Heal(_player.Stats.MaxHp);
                 break;
 
-            case PlayerDeathBehavior.SendToScene:
-                if (!string.IsNullOrEmpty(_appliedRules.deathScene))
-                    SceneLoader.Instance?.LoadScene(_appliedRules.deathScene);
-                break;
-
-            case PlayerDeathBehavior.GameOver:
-                SceneLoader.Instance?.LoadScene("GameOver");
+            case PlayerDeathOutcome.LoadScene:
+                SceneLoader.Instance?.LoadScene(resolution.SceneName);
                 break;
         }
     }
