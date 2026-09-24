@@ -3,13 +3,11 @@ using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Tracks HP and exposes the shared mana API for any entity. When a Wallet is present,
-/// MP reads and writes delegate to that canonical mana account; entities without a Wallet
-/// retain a local MP pool for backward-compatible enemies and other non-economic actors.
-///
-/// HP/MP configuration lives in the pure-C# Game.Core.EntityStatsConfig (Game.Data assembly);
-/// this component reads and updates that config instead of owning the values itself. When bound
-/// to an IHealthModel (see NpcStateView), HP delegates to that model as well.
+/// Tracks HP and MP for any entity, delegating all authoritative values to engine-free Game.Data
+/// models. HP is always owned by an <see cref="IHealthModel"/> (a bound model such as
+/// <see cref="HealthModel"/>/NpcState, or a private fallback); MP is owned by a bound <see cref="Wallet"/>
+/// (<see cref="ManaAccount"/>) or a private fallback <see cref="ManaAccount"/>. Equipment bonuses live
+/// in <see cref="StatBonuses"/>. This component is a thin facade over those models.
 ///
 /// Unity setup:
 ///   1. Add to an entity root GameObject. PlayerController2D requires it automatically.
@@ -18,7 +16,7 @@ using UnityEngine;
 ///
 /// Runtime API:
 ///   SpendMp, RestoreMp, SetMp, IncreaseMaxMp, and OnMpChanged remain compatible.
-///   BindManaWallet connects a Wallet added later at runtime.
+///   BindManaWallet connects a Wallet added later at runtime; BindHealthModel binds a saveable model.
 ///   Call Configure immediately after AddComponent for runtime-spawned entities.
 /// </summary>
 public class EntityStats : MonoBehaviour
@@ -26,23 +24,27 @@ public class EntityStats : MonoBehaviour
     [Header("Stats Config (Game.Data)")]
     [SerializeField] private EntityStatsConfig config = new EntityStatsConfig();
 
-    // current values
-    private int _hp;
-    private int _mp;
-    private Wallet _manaWallet;
+    // Authoritative fallback models (Game.Core). A bound external model/wallet takes precedence.
+    private HealthModel _fallbackHealth;
+    private ManaAccount _manaPool;
     private IHealthModel _healthModel;
+    private Wallet _manaWallet;
     private bool _awakeInitialized;
+    private bool _configured;
+
+    // Last observed HP, for death-edge detection (the models do not report the previous value).
+    private int _lastHp;
 
     // Equipment bonuses are authoritative in Game.Core.
     private readonly StatBonuses _bonuses = new StatBonuses();
 
     // read-only accessors
-    public int Hp => _healthModel != null ? _healthModel.Hp : _hp;
-    public int Mp => _manaWallet != null ? _manaWallet.Balance : _mp;
+    public int Hp => _healthModel != null ? _healthModel.Hp : config.StartingHp;
+    public int Mp => _manaWallet != null ? _manaWallet.Balance : (_manaPool != null ? _manaPool.Balance : config.StartingMp);
     public int MaxHp => _healthModel != null ? _healthModel.MaxHp : config.MaxHp;
-    public int MaxMp => _manaWallet != null ? _manaWallet.Capacity : config.MaxMp;
+    public int MaxMp => _manaWallet != null ? _manaWallet.Capacity : (_manaPool != null ? _manaPool.Capacity : config.MaxMp);
     public Wallet ManaWallet => _manaWallet;
-    public bool IsAlive => _hp > 0;
+    public bool IsAlive => _healthModel != null && _healthModel.Hp > 0;
 
     /// <summary>Total attack bonus from equipped items.</summary>
     public int BonusAttack => _bonuses.Attack;
@@ -59,30 +61,7 @@ public class EntityStats : MonoBehaviour
     /// <summary>Fired when HP reaches 0.</summary>
     public event Action OnDeath;
 
-    private bool _configured;
-
     private void Awake() => EnsureInitialized();
-
-    /// <summary>
-    /// Initializes HP/MP and binds a Wallet if one is present. Safe to call repeatedly and from
-    /// another component's Awake that may run before this one (Unity Awake order is not guaranteed).
-    /// </summary>
-    public void EnsureInitialized()
-    {
-        if (_awakeInitialized)
-            return;
-
-        _awakeInitialized = true;
-
-        if (!_configured)
-        {
-            _hp = Mathf.Clamp(config.StartingHp, 0, config.MaxHp);
-            _mp = Mathf.Clamp(config.StartingMp, 0, config.MaxMp);
-        }
-
-        if (TryGetComponent<Wallet>(out var wallet))
-            BindManaWallet(wallet);
-    }
 
     private void OnDestroy()
     {
@@ -91,14 +70,50 @@ public class EntityStats : MonoBehaviour
     }
 
     /// <summary>
+    /// Initializes the fallback HP/MP models and binds a Wallet if one is present. Safe to call
+    /// repeatedly and from another component's Awake that may run before this one.
+    /// </summary>
+    public void EnsureInitialized()
+    {
+        if (_awakeInitialized)
+            return;
+
+        _awakeInitialized = true;
+
+        // Fallback MP pool (engine-free); any Wallet added later takes over.
+        _manaPool = new ManaAccount(0);
+        _manaPool.InitializeMana(
+            Mathf.Clamp(config.StartingMp, 0, config.MaxMp), Mathf.Max(0, config.MaxMp));
+        _manaPool.BalanceChanged += HandlePoolBalanceChanged;
+        _manaPool.CapacityChanged += HandlePoolCapacityChanged;
+
+        // Fallback HP model (engine-free). Keep any external model bound before Awake.
+        _fallbackHealth = new HealthModel(config.MaxHp, Mathf.Clamp(config.StartingHp, 0, config.MaxHp));
+        if (_healthModel == null)
+        {
+            _fallbackHealth.HpChanged += HandleModelHpChanged;
+            _healthModel = _fallbackHealth;
+        }
+        _lastHp = _healthModel.Hp;
+
+        if (TryGetComponent<Wallet>(out var wallet))
+            BindManaWallet(wallet);
+    }
+
+    /// <summary>
     /// Binds (or clears, with null) a pure-C# health model. While bound, Hp/MaxHp read from the
-    /// model and TakeDamage/Heal/SetHp/IncreaseMaxHp/DecreaseMaxHp delegate to it, so the
-    /// MonoBehaviour no longer owns the authoritative HP value.
+    /// model and damage/heal/set delegate to it. Passing null reverts to the private fallback model,
+    /// which adopts the values observed so far.
     /// </summary>
     public void BindHealthModel(IHealthModel model)
     {
+        if (model == null)
+            model = _fallbackHealth;
         if (_healthModel == model)
             return;
+
+        int hp = _healthModel != null ? _healthModel.Hp : config.StartingHp;
+        int max = _healthModel != null ? _healthModel.MaxHp : config.MaxHp;
 
         if (_healthModel != null)
             _healthModel.HpChanged -= HandleModelHpChanged;
@@ -108,36 +123,45 @@ public class EntityStats : MonoBehaviour
         if (_healthModel != null)
         {
             _healthModel.HpChanged += HandleModelHpChanged;
-            _hp = _healthModel.Hp;
+
+            if (_healthModel == _fallbackHealth)
+            {
+                // Reverting to the fallback: adopt the last observed values instead of resetting.
+                _fallbackHealth.SetMaxHp(max);
+                _fallbackHealth.SetHp(hp);
+            }
+
             config.MaxHp = _healthModel.MaxHp;
-            OnHpChanged?.Invoke(_hp, config.MaxHp);
+            _lastHp = _healthModel.Hp;
         }
+
+        OnHpChanged?.Invoke(Hp, MaxHp);
     }
 
     /// <summary>
-    /// Presentation refresh from the bound model. Does not write back into the model.
+    /// Presentation refresh from a bound model. Does not write back into the model.
     /// </summary>
     public void SetHpFromModel(int value)
     {
         if (_healthModel != null && _healthModel.Hp == value)
             return;
 
-        bool wasAlive = _hp > 0;
-        _hp = Mathf.Clamp(value, 0, MaxHp);
-        OnHpChanged?.Invoke(_hp, MaxHp);
+        bool wasAlive = _lastHp > 0;
+        _lastHp = Mathf.Clamp(value, 0, MaxHp);
+        OnHpChanged?.Invoke(_lastHp, MaxHp);
 
-        if (wasAlive && _hp == 0)
+        if (wasAlive && _lastHp == 0)
             OnDeath?.Invoke();
     }
 
     private void HandleModelHpChanged(int hp, int max)
     {
-        bool wasAlive = _hp > 0;
-        _hp = hp;
+        bool wasAlive = _lastHp > 0;
+        _lastHp = hp;
         config.MaxHp = max;
-        OnHpChanged?.Invoke(_hp, config.MaxHp);
+        OnHpChanged?.Invoke(hp, config.MaxHp);
 
-        if (wasAlive && _hp == 0)
+        if (wasAlive && hp == 0)
             OnDeath?.Invoke();
     }
 
@@ -151,18 +175,24 @@ public class EntityStats : MonoBehaviour
         config.StartingHp = hp;
         config.MaxMp = mp;
         config.StartingMp = mp;
-        _hp = hp;
-        _mp = mp;
         _configured = true;
 
-        if (_manaWallet != null)
-            _manaWallet.InitializeMana(mp, mp, clearHistory: false);
-
-        if (_healthModel != null)
+        if (_fallbackHealth != null)
+        {
+            _fallbackHealth.SetMaxHp(hp);
+            _fallbackHealth.SetHp(hp);
+        }
+        else if (_healthModel != null)
         {
             _healthModel.SetMaxHp(hp);
             _healthModel.SetHp(hp);
         }
+
+        if (_manaPool != null)
+            _manaPool.InitializeMana(mp, mp, clearHistory: false);
+
+        if (_manaWallet != null)
+            _manaWallet.InitializeMana(mp, mp, clearHistory: false);
     }
 
     /// <summary>
@@ -186,7 +216,6 @@ public class EntityStats : MonoBehaviour
         if (initializeFromStats)
             InitializeWalletFromLegacyStats(wallet);
 
-        _mp = wallet.Balance;
         config.MaxMp = wallet.Capacity;
         wallet.OnBalanceChanged += HandleManaBalanceChanged;
         wallet.OnCapacityChanged += HandleManaCapacityChanged;
@@ -198,55 +227,28 @@ public class EntityStats : MonoBehaviour
     /// <summary>Reduce HP by <paramref name="amount"/>. Clamps to 0.</summary>
     public void TakeDamage(int amount)
     {
-        if (amount <= 0) return;
-
-        if (_healthModel != null)
-        {
-            _healthModel.ApplyDamage(amount);
+        if (amount <= 0 || _healthModel == null)
             return;
-        }
 
-        if (!IsAlive) return;
-
-        _hp = Mathf.Max(_hp - amount, 0);
-        OnHpChanged?.Invoke(_hp, config.MaxHp);
-
-        if (_hp == 0)
-            OnDeath?.Invoke();
+        _healthModel.ApplyDamage(amount);
     }
 
     /// <summary>Increase HP by <paramref name="amount"/>. Clamps to maxHp.</summary>
     public void Heal(int amount)
     {
-        if (amount <= 0) return;
-
-        if (_healthModel != null)
-        {
-            _healthModel.Heal(amount);
+        if (amount <= 0 || _healthModel == null)
             return;
-        }
 
-        if (!IsAlive) return;
-
-        _hp = Mathf.Min(_hp + amount, config.MaxHp);
-        OnHpChanged?.Invoke(_hp, config.MaxHp);
+        _healthModel.Heal(amount);
     }
 
     /// <summary>Set HP directly (e.g. full restore on level-up).</summary>
     public void SetHp(int value)
     {
-        if (_healthModel != null)
-        {
-            _healthModel.SetHp(value);
+        if (_healthModel == null)
             return;
-        }
 
-        bool wasAlive = IsAlive;
-        _hp = Mathf.Clamp(value, 0, config.MaxHp);
-        OnHpChanged?.Invoke(_hp, config.MaxHp);
-
-        if (wasAlive && _hp == 0)
-            OnDeath?.Invoke();
+        _healthModel.SetHp(value);
     }
 
     // ── MP ──────────────────────────────────────────────────────────────────
@@ -258,16 +260,10 @@ public class EntityStats : MonoBehaviour
     public bool SpendMp(int cost)
     {
         if (_manaWallet != null)
-            return _manaWallet.TryConsumeMana(
-                cost,
-                "Spell or ability mana cost",
-                "entity_stats.spend_mp");
+            return _manaWallet.TryConsumeMana(cost, "Spell or ability mana cost", "entity_stats.spend_mp");
 
-        if (cost <= 0 || _mp < cost) return false;
-
-        _mp -= cost;
-        OnMpChanged?.Invoke(_mp, config.MaxMp);
-        return true;
+        return _manaPool != null &&
+               _manaPool.TryConsumeMana(cost, "Spell or ability mana cost", "entity_stats.spend_mp");
     }
 
     /// <summary>Increase MP by <paramref name="amount"/>. Clamps to maxMp.</summary>
@@ -275,17 +271,11 @@ public class EntityStats : MonoBehaviour
     {
         if (_manaWallet != null)
         {
-            _manaWallet.RestoreMana(
-                amount,
-                "Mana restored",
-                "entity_stats.restore_mp");
+            _manaWallet.RestoreMana(amount, "Mana restored", "entity_stats.restore_mp");
             return;
         }
 
-        if (amount <= 0) return;
-
-        _mp = Mathf.Min(_mp + amount, config.MaxMp);
-        OnMpChanged?.Invoke(_mp, config.MaxMp);
+        _manaPool?.RestoreMana(amount, "Mana restored", "entity_stats.restore_mp");
     }
 
     /// <summary>Set MP directly.</summary>
@@ -293,41 +283,21 @@ public class EntityStats : MonoBehaviour
     {
         if (_manaWallet != null)
         {
-            _manaWallet.SetBalance(
-                value,
-                "Mana set through EntityStats",
-                "entity_stats.set_mp");
+            _manaWallet.SetBalance(value, "Mana set through EntityStats", "entity_stats.set_mp");
             return;
         }
 
-        _mp = Mathf.Clamp(value, 0, config.MaxMp);
-        OnMpChanged?.Invoke(_mp, config.MaxMp);
+        _manaPool?.SetBalance(value, "Mana set through EntityStats", "entity_stats.set_mp");
     }
 
     // ── Stat scaling ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Set maxHp directly (delegates to the bound health model). Current HP clamps to the new max.
+    /// Set maxHp directly (delegates to the health model). Current HP clamps to the new max.
     /// </summary>
     public void SetMaxHp(int value)
     {
-        if (_healthModel != null)
-        {
-            _healthModel.SetMaxHp(value);
-            return;
-        }
-
-        int next = Mathf.Max(1, value);
-        if (next == config.MaxHp) return;
-
-        bool wasAlive = IsAlive;
-        config.MaxHp = next;
-        if (_hp > config.MaxHp)
-            _hp = config.MaxHp;
-        OnHpChanged?.Invoke(_hp, config.MaxHp);
-
-        if (wasAlive && _hp == 0)
-            OnDeath?.Invoke();
+        _healthModel?.SetMaxHp(value);
     }
 
     /// <summary>
@@ -335,18 +305,12 @@ public class EntityStats : MonoBehaviour
     /// </summary>
     public void IncreaseMaxHp(int amount, bool healDelta = true)
     {
-        if (amount <= 0) return;
-
-        if (_healthModel != null)
-        {
-            _healthModel.SetMaxHp(_healthModel.MaxHp + amount);
-            if (healDelta) _healthModel.Heal(amount);
+        if (amount <= 0 || _healthModel == null)
             return;
-        }
 
-        config.MaxHp += amount;
-        if (healDelta) Heal(amount);
-        else OnHpChanged?.Invoke(_hp, config.MaxHp);
+        _healthModel.SetMaxHp(_healthModel.MaxHp + amount);
+        if (healDelta)
+            _healthModel.Heal(amount);
     }
 
     /// <summary>
@@ -354,7 +318,8 @@ public class EntityStats : MonoBehaviour
     /// </summary>
     public void IncreaseMaxMp(int amount, bool restoreDelta = true)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+            return;
 
         if (_manaWallet != null)
         {
@@ -362,9 +327,7 @@ public class EntityStats : MonoBehaviour
             return;
         }
 
-        config.MaxMp += amount;
-        if (restoreDelta) RestoreMp(amount);
-        else OnMpChanged?.Invoke(_mp, config.MaxMp);
+        _manaPool?.IncreaseCapacity(amount, restoreDelta);
     }
 
     // ── Equipment bonuses ────────────────────────────────────────────────────
@@ -394,22 +357,16 @@ public class EntityStats : MonoBehaviour
 
     private void DecreaseMaxHp(int amount)
     {
-        if (amount <= 0) return;
-
-        if (_healthModel != null)
-        {
-            _healthModel.SetMaxHp(Mathf.Max(1, _healthModel.MaxHp - amount));
+        if (amount <= 0 || _healthModel == null)
             return;
-        }
 
-        config.MaxHp = Mathf.Max(1, config.MaxHp - amount);
-        _hp   = Mathf.Min(_hp, config.MaxHp);
-        OnHpChanged?.Invoke(_hp, config.MaxHp);
+        _healthModel.SetMaxHp(Mathf.Max(1, _healthModel.MaxHp - amount));
     }
 
     private void DecreaseMaxMp(int amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+            return;
 
         if (_manaWallet != null)
         {
@@ -417,32 +374,32 @@ public class EntityStats : MonoBehaviour
             return;
         }
 
-        config.MaxMp = Mathf.Max(0, config.MaxMp - amount);
-        _mp   = Mathf.Min(_mp, config.MaxMp);
-        OnMpChanged?.Invoke(_mp, config.MaxMp);
+        _manaPool?.DecreaseCapacity(amount);
     }
 
     private void InitializeWalletFromLegacyStats(Wallet wallet)
     {
         int initialMp = _awakeInitialized || _configured
-            ? _mp
+            ? (_manaPool != null ? _manaPool.Balance : config.StartingMp)
             : Mathf.Clamp(config.StartingMp, 0, config.MaxMp);
         wallet.InitializeMana(initialMp, config.MaxMp);
     }
 
     private void HandleManaBalanceChanged(int balance)
     {
-        _mp = balance;
-        OnMpChanged?.Invoke(balance, _manaWallet != null ? _manaWallet.Capacity : config.MaxMp);
+        config.MaxMp = _manaWallet != null ? _manaWallet.Capacity : config.MaxMp;
+        OnMpChanged?.Invoke(balance, config.MaxMp);
     }
 
     private void HandleManaCapacityChanged(int capacity)
     {
         config.MaxMp = capacity;
-        if (_manaWallet != null)
-            _mp = _manaWallet.Balance;
-        OnMpChanged?.Invoke(_mp, capacity);
+        OnMpChanged?.Invoke(_manaWallet != null ? _manaWallet.Balance : 0, capacity);
     }
+
+    private void HandlePoolBalanceChanged(int balance) => OnMpChanged?.Invoke(balance, _manaPool.Capacity);
+
+    private void HandlePoolCapacityChanged(int capacity) => OnMpChanged?.Invoke(_manaPool.Balance, capacity);
 
     private void UnsubscribeFromManaWallet()
     {

@@ -81,7 +81,7 @@ Migrate top-down. Update this table as items land.
 |---|---|---|
 | 🟨 | `NPCs/NpcController.cs` | `NpcBehaviorState` / `NpcType` enums moved to `Game.Core` ✅ (shared by all adapters, not Presentation). Transient `behaviorState`, movement-lock memory and `AggroRange` stay on the MonoBehaviour (not saveable). |
 | ✅ | `NPCs/NpcKeyring.cs` | Facade over `Game.Core.Keyring` (raw `AddKey(id)` seed overload added to Core) |
-| 🟨 | `Entity/EntityStats.cs` | Stat-bonus accumulation → `Game.Core.StatBonuses` ✅. Fallback HP/MP still on the MonoBehaviour when no `IHealthModel`/Wallet is bound (the player and NPCs always bind one in practice). |
+| ✅ | `Entity/EntityStats.cs` | HP always delegates to an `IHealthModel` (private fallback `Game.Core.HealthModel`), MP to a `Wallet`/`ManaAccount` or a fallback `ManaAccount`, bonuses to `Game.Core.StatBonuses`. The MonoBehaviour holds no authoritative HP/MP. |
 | ✅ | `GameManagement/SceneRulesManager.cs` | The active rule set is data applied by the adapter (the ScriptableObject is the serialization boundary); no Core model is warranted without migrating the asset. |
 
 ### Tier 4 — Rule containers
@@ -107,7 +107,7 @@ facades over them. Engine-free tests:
 
 Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, `DoorLockPolicy`, and `PortalAccessPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 
-**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. The only substantial state left on a MonoBehaviour is `EntityStats`' fallback HP/MP when no `IHealthModel`/Wallet is bound (the player and NPCs always bind one).
+**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. No authoritative gameplay state remains on a MonoBehaviour.
 
 ## Known-good (do not "fix")
 
