@@ -191,6 +191,23 @@ public class EquippedWeaponVisual3D : MonoBehaviour
 
         weaponRenderer.sprite = item != null ? item.icon : null;
         weaponRenderer.enabled = weaponRenderer.sprite != null;
+        ApplyWeaponScale();
+    }
+
+    // Normalizes the icon's resolution so the held weapon is a sensible world size regardless of the
+    // source texture; keeps the sprite and the swing hitbox in the same ballpark.
+    private void ApplyWeaponScale()
+    {
+        if (weaponRenderer == null || weaponRenderer.sprite == null)
+            return;
+
+        Vector2 size = weaponRenderer.sprite.bounds.size;
+        float longest = Mathf.Max(size.x, size.y);
+        if (longest <= 0.0001f)
+            return;
+
+        float scale = Mathf.Max(0.01f, config.WeaponSpriteLength / longest);
+        transform.localScale = new Vector3(scale, scale, 1f);
     }
 
     private void ResetPose()

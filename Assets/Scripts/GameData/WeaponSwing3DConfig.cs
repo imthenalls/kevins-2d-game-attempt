@@ -32,5 +32,8 @@ namespace Game.Core
 
         /// <summary>Half-angle (degrees) around the current blade direction that counts as a hit.</summary>
         public float HitConeDegrees = 75f;
+
+        /// <summary>Longest sprite dimension of the held weapon, normalized to this many world units.</summary>
+        public float WeaponSpriteLength = 0.7f;
     }
 }
