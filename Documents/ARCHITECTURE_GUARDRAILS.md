@@ -88,10 +88,10 @@ Migrate top-down. Update this table as items land.
 | Status | Where | Rules to move |
 |---|---|---|
 | 🟨 | `GameManagement/SceneRules.cs` + `SceneRulesManager` | Player-death rule + `PlayerDeathBehavior` enum → `Game.Core.PlayerDeathPolicy` ✅. The ScriptableObject stays as the serialization adapter; the multiplier/DOT/HOT fields are data it applies. |
-| ⬜ | `World/SlidingDoor.cs` | Key/lock/auto-close policy |
+| 🟨 | `World/SlidingDoor.cs` | Lock rule → `Game.Core.DoorLockPolicy` ✅. Key resolution, animation and auto-close remain the Unity adapter. |
 | ✅ | `Economy/TradeService.cs` | Moved to `Game.Core.TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`). Operates on `ManaAccount`/`InventoryModel`; the Shell bridges `OnTradeCompleted` to `QuestEventBus` via `TradeQuestBridge`. |
 | ⬜ | `Portals/PortalManager.cs` | `IsKeySatisfied` access policy + cooldown |
-| ⬜ | `World/EnemyLootDrop.cs` | Randomized loot generation |
+| ✅ | `World/EnemyLootDrop.cs` | Randomized loot quantity → `Game.Core.LootTable` |
 | ⬜ | `World/LootContainer.cs` | Looted-flag policy |
 | ⬜ | `World/TrainingEnemySpawner.cs` | Spawn scheduling rule |
 | ⬜ | `WorldState/WorldStateNpcReactor.cs`, `NPCs/NpcDialogue.cs` | Flag reactions + gift policy |
@@ -105,7 +105,7 @@ pathfinder/melee/dash/attack/wander components and the behavior manager/idle/rec
 facades over them. Engine-free tests:
 `Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
 
-Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, and `PlayerDeathBehavior`/`PlayerDeathPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
+Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, and `DoorLockPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 
 ## Known-good (do not "fix")
 

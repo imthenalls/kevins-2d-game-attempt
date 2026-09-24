@@ -23,6 +23,7 @@ public static class EnemyLootDrop
     private static readonly HashSet<NpcController> PreparedEnemies = new HashSet<NpcController>();
     private static bool loaded;
     private static Sprite pileSprite;
+    private static readonly System.Random LootRng = new System.Random();
 
     /// <summary>Seeds the matching enemy's actual InventoryModel once per spawned NPC.</summary>
     public static void PrepareInventory(NpcController npc)
@@ -52,9 +53,8 @@ public static class EnemyLootDrop
                 continue;
             }
 
-            int minimum = Mathf.Max(0, entry.minQuantity);
-            int maximum = Mathf.Max(minimum, entry.maxQuantity);
-            int quantity = UnityEngine.Random.Range(minimum, maximum + 1);
+            // The random quantity rule lives in Game.Core (deterministic, unit-tested).
+            int quantity = LootTable.RollQuantity(entry.minQuantity, entry.maxQuantity, LootRng);
             if (quantity <= 0)
                 continue;
 

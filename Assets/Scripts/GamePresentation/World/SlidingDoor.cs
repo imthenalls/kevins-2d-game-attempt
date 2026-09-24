@@ -378,9 +378,14 @@ public sealed class SlidingDoor : MonoBehaviour, IInteractable
 
         IKeyHolder holder = ResolveKeyHolder(interactor);
         ItemDatabase database = ItemDatabase.Instance;
-        if (database == null || holder == null ||
-            !database.TryGet(config.RequiredKeyId, out ItemData key) || key == null ||
-            !holder.HasKey(config.RequiredKeyId))
+        ItemData key = null;
+        bool resolvedKey = database != null && holder != null &&
+                           !string.IsNullOrWhiteSpace(config.RequiredKeyId) &&
+                           database.TryGet(config.RequiredKeyId, out key) && key != null;
+        bool holderHasKey = resolvedKey && holder.HasKey(config.RequiredKeyId);
+
+        // The lock rule lives in Game.Core.
+        if (!DoorLockPolicy.CanUnlock(IsLocked, config.RequiredKeyId, holderHasKey))
         {
             Debug.Log($"[SlidingDoor] {config.DisplayName} is locked. Required key: '{config.RequiredKeyId}'.", this);
             OnUnlockFailed?.Invoke();
