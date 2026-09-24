@@ -59,15 +59,18 @@ public class PortalManager : MonoBehaviour
             return false;
         }
 
-        if (!sourcePortal.IsUnlocked())
+        // The access rule lives in Game.Core; the manager performs the resolved outcome.
+        bool keySatisfied = IsKeySatisfied(sourcePortal, traveler);
+        switch (PortalAccessPolicy.Evaluate(sourcePortal.IsUnlocked(), keySatisfied))
         {
-            Debug.Log($"Portal '{sourcePortal.PortalId}' is locked by world-state flag " +
-                      $"'{sourcePortal.RequiredUnlockFlag}'.", sourcePortal.Self);
-            return false;
-        }
+            case PortalAccess.LockedByWorldState:
+                Debug.Log($"Portal '{sourcePortal.PortalId}' is locked by world-state flag " +
+                          $"'{sourcePortal.RequiredUnlockFlag}'.", sourcePortal.Self);
+                return false;
 
-        if (!IsKeySatisfied(sourcePortal, traveler))
-            return false;
+            case PortalAccess.LockedByKey:
+                return false; // IsKeySatisfied already logged the reason
+        }
 
         return TryTeleportToPortal(
             sourcePortal.DestinationPortalId,
