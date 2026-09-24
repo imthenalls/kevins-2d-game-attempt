@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using Game.Core;
 
 /// <summary>
 /// Rebuilds <c>Assets/Scenes/Town.unity</c> as a 3D planar-isometric scene: real geometry on the XZ

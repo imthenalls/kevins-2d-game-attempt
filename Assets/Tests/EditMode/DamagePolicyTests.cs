@@ -32,5 +32,15 @@ namespace Game.Tests
             Assert.AreEqual(0, DamagePolicy.Resolve(0, 3f));
             Assert.AreEqual(0, DamagePolicy.Resolve(-5, 3f));
         }
+
+        [Test]
+        public void Only_Enemies_Drop_Loot_On_Death()
+        {
+            Assert.IsTrue(DamagePolicy.DropsLootOnDeath(NpcType.Enemy));
+            Assert.IsFalse(DamagePolicy.DropsLootOnDeath(NpcType.Generic));
+            Assert.IsFalse(DamagePolicy.DropsLootOnDeath(NpcType.Vendor));
+            Assert.IsFalse(DamagePolicy.DropsLootOnDeath(NpcType.QuestGiver));
+            Assert.IsFalse(DamagePolicy.DropsLootOnDeath(NpcType.Trainer));
+        }
     }
 }

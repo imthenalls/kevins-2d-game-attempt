@@ -73,13 +73,13 @@ Migrate top-down. Update this table as items land.
 | Status | Where | Decision to extract |
 |---|---|---|
 | ✅ | `Entity/CombatAttacker.cs` | Cooldown, input buffer, once-per-swing hit registry, recoil → `Game.Core.AttackModel` |
-| 🟨 | `Entity/CombatReceiver.cs` | Damage gate + damage scaling → `Game.Core.DamagePolicy` (done). Death resolution (loot/hide/event) still in the facade — it keys off `NpcType`, which is a Tier 3 move. |
+| ✅ | `Entity/CombatReceiver.cs` | Damage gate + scaling + enemy-death rule → `Game.Core.DamagePolicy` (`CanReceive`, `Resolve`, `DropsLootOnDeath`); the facade applies the side effects (loot/hide/event). |
 | ⬜ | `Inventory/Equipment/EquippedWeaponVisual3D.cs` | Which receivers a swing hits (hit-cone selection) |
 
 ### Tier 3 — State on MonoBehaviours
 | Status | Where | State to move |
 |---|---|---|
-| ⬜ | `NPCs/NpcController.cs` | `behaviorState`, movement-lock memory, `AggroRange`, and the `NpcBehaviorState`/`NpcType` enums |
+| 🟨 | `NPCs/NpcController.cs` | `NpcBehaviorState` / `NpcType` enums moved to `Game.Core` ✅ (shared by all adapters, not Presentation). Transient `behaviorState`, movement-lock memory and `AggroRange` stay on the MonoBehaviour (not saveable). |
 | ⬜ | `NPCs/NpcKeyring.cs` | Duplicate of `Game.Core.Keyring` — make it a facade |
 | ⬜ | `Entity/EntityStats.cs` | Fallback HP/MP authority + stat-bonus accumulation |
 | ⬜ | `GameManagement/SceneRulesManager.cs` | Active rule set + original-value restore stack |

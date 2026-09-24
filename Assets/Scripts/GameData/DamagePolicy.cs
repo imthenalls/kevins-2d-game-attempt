@@ -30,5 +30,11 @@ namespace Game.Core
 
             return (int)Math.Round(scaled, MidpointRounding.ToEven);
         }
+
+        /// <summary>
+        /// True when an NPC of this type, on death, drops a loot pile, hides its body and raises the
+        /// EnemyKilled event. Non-enemy NPCs simply die.
+        /// </summary>
+        public static bool DropsLootOnDeath(NpcType type) => type == NpcType.Enemy;
     }
 }

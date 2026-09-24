@@ -212,19 +212,3 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     public float HealthBarScreenWidth => config.HealthBarScreenWidth;
     public float HealthBarScreenHeight => config.HealthBarScreenHeight;
 }
-public enum NpcBehaviorState
-{
-    Idle,
-    Talking,
-    Disabled,
-    Combat
-}
-
-public enum NpcType
-{
-    Generic,
-    QuestGiver,
-    Vendor,
-    Trainer,
-    Enemy,
-}

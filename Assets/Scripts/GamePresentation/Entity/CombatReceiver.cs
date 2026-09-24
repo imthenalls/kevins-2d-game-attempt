@@ -115,7 +115,7 @@ public class CombatReceiver : MonoBehaviour
 
         // Stop the defeated enemy, move its owned inventory into a separate world drop,
         // then hide the body while preserving this object for save/death bookkeeping.
-        if (_npcController != null && _npcController.NpcType == NpcType.Enemy)
+        if (_npcController != null && DamagePolicy.DropsLootOnDeath(_npcController.NpcType))
         {
             _npcController.SetBehaviorState(NpcBehaviorState.Disabled);
             if (TryGetComponent(out Rigidbody2D body2D))
