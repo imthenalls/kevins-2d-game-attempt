@@ -190,8 +190,7 @@ namespace Game.Core
 
         /// <summary>
         /// Commit an exact item transfer without notifying observers until both inventories have
-        /// changed. Public so TradeService (in Game.Presentation) remains the authority for
-        /// item-for-mana exchanges.
+        /// changed. Public so Game.Core.TradeService remains the authority for item-for-mana exchanges.
         /// </summary>
         public bool TryTransferItemTo(
             InventoryModel destination,

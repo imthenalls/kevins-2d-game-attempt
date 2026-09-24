@@ -53,6 +53,20 @@ namespace Game.Core
             return 0;
         }
 
+        /// <summary>
+        /// Adds a key by raw id, bypassing the KeyItem/Unique item rules. Used to seed NPC-owned
+        /// keys from plain id lists. Returns the amount that could not be accepted.
+        /// </summary>
+        public int AddKey(string itemId, int quantity = 1)
+        {
+            if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
+                return Math.Max(0, quantity);
+
+            keys[itemId] = CountKey(itemId) + quantity;
+            Changed?.Invoke();
+            return 0;
+        }
+
         /// <summary>Removes the given quantity, returning false when it is not held.</summary>
         public bool RemoveKey(string itemId, int quantity = 1)
         {

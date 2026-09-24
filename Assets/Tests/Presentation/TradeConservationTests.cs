@@ -19,7 +19,7 @@ namespace Game.Tests
         private sealed class FakeParticipant : ITradeParticipant
         {
             public string TradeParticipantId { get; set; }
-            public Wallet TradeWallet { get; set; }
+            public ManaAccount TradeWallet { get; set; }
             public InventoryModel TradeInventory { get; set; }
         }
 
@@ -43,8 +43,8 @@ namespace Game.Tests
             sellerWallet = MakeWallet(balance: 0, capacity: 1000);
             buyerWallet = MakeWallet(balance: 100, capacity: 1000);
 
-            seller = new FakeParticipant { TradeParticipantId = "npc", TradeWallet = sellerWallet, TradeInventory = sellerInventory };
-            buyer = new FakeParticipant { TradeParticipantId = "player", TradeWallet = buyerWallet, TradeInventory = buyerInventory };
+            seller = new FakeParticipant { TradeParticipantId = "npc", TradeWallet = sellerWallet.AccountModel, TradeInventory = sellerInventory };
+            buyer = new FakeParticipant { TradeParticipantId = "player", TradeWallet = buyerWallet.AccountModel, TradeInventory = buyerInventory };
         }
 
         [TearDown]

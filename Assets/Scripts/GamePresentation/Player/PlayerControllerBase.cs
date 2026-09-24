@@ -50,6 +50,6 @@ public abstract class PlayerControllerBase : MonoBehaviour, IEntityController, I
     public virtual string DisplayName => gameObject.name;
 
     public virtual string TradeParticipantId => "player";
-    public virtual Wallet TradeWallet => ManaWallet;
+    public virtual ManaAccount TradeWallet => ManaWallet != null ? ManaWallet.AccountModel : null;
     public virtual InventoryModel TradeInventory => InventoryUI.Model;
 }

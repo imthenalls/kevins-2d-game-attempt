@@ -4,20 +4,19 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// An NPC-owned key inventory. Implements <see cref="IKeyHolder"/> so doors and locks resolve
-/// the interacting NPC's own keys instead of the player's. Keys are indexed by ItemData.itemId
-/// and are independent of the NPC's trade inventory.
+/// Unity facade over the engine-free <see cref="Keyring"/> for an NPC. It owns the serialized
+/// starting keys and the change event; all key storage and the KeyItem/Unique rules live in
+/// Game.Data and are unit-tested there.
+///
+/// Implements <see cref="IKeyHolder"/> so doors and locks resolve the interacting NPC's own keys.
 ///
 /// Unity setup:
-///   1. Add to an NPC GameObject (typically the root, where SlidingDoor.ResolveKeyHolder can
-///      find it via GetComponentInParent).
-///   2. Optionally list Starting Key Ids the NPC owns on spawn. These ids should match items
-///      flagged ItemFlags.KeyItem in ItemDatabase.
-///   3. Grant or remove keys at runtime with AddKey / RemoveKey (for example from quest actions).
+///   1. Add to an NPC GameObject (typically the root).
+///   2. Optionally list Starting Key Ids the NPC owns on spawn.
+///   3. Grant or remove keys at runtime with AddKey / RemoveKey.
 ///
-/// Runtime API:
-///   HasKey(id, quantity), RemoveKey(id, quantity), AddKey(item/id, quantity),
-///   CountKey(id), Clear(), GetEntries(), and OnKeysChanged.
+/// Runtime API: HasKey, RemoveKey, AddKey(item/id, quantity), CountKey, Clear, GetEntries,
+/// and OnKeysChanged.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class NpcKeyring : MonoBehaviour, IKeyHolder
@@ -25,68 +24,41 @@ public sealed class NpcKeyring : MonoBehaviour, IKeyHolder
     [Tooltip("Key item ids this NPC owns when the scene starts.")]
     [SerializeField] private List<string> startingKeyIds = new List<string>();
 
-    private readonly Dictionary<string, int> keys = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    private readonly Keyring keyring = new Keyring();
 
     public event Action OnKeysChanged;
 
     private void Awake()
     {
+        keyring.Changed += HandleChanged;
+
         for (int i = 0; i < startingKeyIds.Count; i++)
         {
             string id = startingKeyIds[i];
             if (!string.IsNullOrWhiteSpace(id))
-                keys[id] = CountKey(id) + 1;
+                keyring.AddKey(id);
         }
     }
 
-    public bool HasKey(string itemId, int quantity = 1) =>
-        quantity > 0 && !string.IsNullOrWhiteSpace(itemId) &&
-        keys.TryGetValue(itemId, out int owned) && owned >= quantity;
+    private void OnDestroy() => keyring.Changed -= HandleChanged;
 
-    public int CountKey(string itemId) =>
-        !string.IsNullOrWhiteSpace(itemId) && keys.TryGetValue(itemId, out int owned) ? owned : 0;
+    private void HandleChanged() => OnKeysChanged?.Invoke();
 
-    /// <summary>Adds keys by raw id. Returns the amount that could not be accepted.</summary>
-    public int AddKey(string itemId, int quantity = 1)
-    {
-        if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
-            return Mathf.Max(0, quantity);
+    public bool HasKey(string itemId, int quantity = 1) => keyring.HasKey(itemId, quantity);
 
-        keys[itemId] = CountKey(itemId) + quantity;
-        OnKeysChanged?.Invoke();
-        return 0;
-    }
+    public int CountKey(string itemId) => keyring.CountKey(itemId);
+
+    public bool CanAddKey(ItemData item, int quantity = 1) => keyring.CanAddKey(item, quantity);
 
     /// <summary>Adds a key item, validating the KeyItem flag and Unique rule. Returns the leftover.</summary>
-    public int AddKey(ItemData item, int quantity = 1)
-    {
-        if (item == null || quantity <= 0 || (item.flags & ItemFlags.KeyItem) == 0)
-            return quantity;
-        if ((item.flags & ItemFlags.Unique) != 0 && HasKey(item.itemId))
-            return quantity;
+    public int AddKey(ItemData item, int quantity = 1) => keyring.AddKey(item, quantity);
 
-        return AddKey(item.itemId, quantity);
-    }
+    /// <summary>Adds keys by raw id. Returns the amount that could not be accepted.</summary>
+    public int AddKey(string itemId, int quantity = 1) => keyring.AddKey(itemId, quantity);
 
-    public bool RemoveKey(string itemId, int quantity = 1)
-    {
-        if (!HasKey(itemId, quantity))
-            return false;
+    public bool RemoveKey(string itemId, int quantity = 1) => keyring.RemoveKey(itemId, quantity);
 
-        int remaining = keys[itemId] - quantity;
-        if (remaining > 0)
-            keys[itemId] = remaining;
-        else
-            keys.Remove(itemId);
-        OnKeysChanged?.Invoke();
-        return true;
-    }
+    public IEnumerable<KeyValuePair<string, int>> GetEntries() => keyring.GetEntries();
 
-    public IEnumerable<KeyValuePair<string, int>> GetEntries() => keys;
-
-    public void Clear()
-    {
-        keys.Clear();
-        OnKeysChanged?.Invoke();
-    }
+    public void Clear() => keyring.Clear();
 }

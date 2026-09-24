@@ -80,7 +80,7 @@ Migrate top-down. Update this table as items land.
 | Status | Where | State to move |
 |---|---|---|
 | 🟨 | `NPCs/NpcController.cs` | `NpcBehaviorState` / `NpcType` enums moved to `Game.Core` ✅ (shared by all adapters, not Presentation). Transient `behaviorState`, movement-lock memory and `AggroRange` stay on the MonoBehaviour (not saveable). |
-| ⬜ | `NPCs/NpcKeyring.cs` | Duplicate of `Game.Core.Keyring` — make it a facade |
+| ✅ | `NPCs/NpcKeyring.cs` | Facade over `Game.Core.Keyring` (raw `AddKey(id)` seed overload added to Core) |
 | ⬜ | `Entity/EntityStats.cs` | Fallback HP/MP authority + stat-bonus accumulation |
 | ⬜ | `GameManagement/SceneRulesManager.cs` | Active rule set + original-value restore stack |
 
@@ -89,7 +89,7 @@ Migrate top-down. Update this table as items land.
 |---|---|---|
 | ⬜ | `GameManagement/SceneRules.cs` + `SceneRulesManager` | Damage multipliers, DOT/HOT, death policy |
 | ⬜ | `World/SlidingDoor.cs` | Key/lock/auto-close policy |
-| ⬜ | `Economy/TradeService.cs` | Trade validation + atomic commit (move the service + `TradeResult`) |
+| ✅ | `Economy/TradeService.cs` | Moved to `Game.Core.TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`). Operates on `ManaAccount`/`InventoryModel`; the Shell bridges `OnTradeCompleted` to `QuestEventBus` via `TradeQuestBridge`. |
 | ⬜ | `Portals/PortalManager.cs` | `IsKeySatisfied` access policy + cooldown |
 | ⬜ | `World/EnemyLootDrop.cs` | Randomized loot generation |
 | ⬜ | `World/LootContainer.cs` | Looted-flag policy |
@@ -104,6 +104,8 @@ Legend: ⬜ todo, 🟨 in progress, ✅ done.
 pathfinder/melee/dash/attack/wander components and the behavior manager/idle/receiver are now thin
 facades over them. Engine-free tests:
 `Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
+
+Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), and the raw `Keyring.AddKey(id)` seed path. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 
 ## Known-good (do not "fix")
 

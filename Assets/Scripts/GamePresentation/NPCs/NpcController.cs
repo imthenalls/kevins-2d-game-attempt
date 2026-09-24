@@ -69,7 +69,7 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
     public InventoryModel Inventory { get; private set; }
     public Wallet ManaWallet { get; private set; }
     public string TradeParticipantId => npcId;
-    public Wallet TradeWallet => ManaWallet;
+    public ManaAccount TradeWallet => ManaWallet != null ? ManaWallet.AccountModel : null;
     public InventoryModel TradeInventory => Inventory;
 
     /// <summary>False while behavior state is Disabled (movement lock).</summary>

@@ -52,6 +52,9 @@ public class Wallet : MonoBehaviour
     /// <summary>Unused mana storage.</summary>
     public int RemainingCapacity => Account().RemainingCapacity;
 
+    /// <summary>The engine-free mana account this wallet forwards to (TradeService operates on it).</summary>
+    public ManaAccount AccountModel => Account();
+
     /// <summary>Chronological transaction history, oldest to newest.</summary>
     public List<WalletTransaction> TransactionHistory => Account().TransactionHistory;
 
