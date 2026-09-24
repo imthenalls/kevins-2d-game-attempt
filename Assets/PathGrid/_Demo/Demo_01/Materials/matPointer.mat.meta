@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9e9cbdb9476d50549b7a8f4a1946835e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/_Demo/Demo_01/Materials/matPointer.mat
+  uploadId: 651291

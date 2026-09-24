@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b5237d0e855234040a97d699b421ecc0
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/Prefabs/deadEndTile.prefab
+  uploadId: 651291

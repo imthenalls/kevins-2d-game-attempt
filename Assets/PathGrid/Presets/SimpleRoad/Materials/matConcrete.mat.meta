@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3a6f3a87439529d44b55971108957c32
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/Materials/matConcrete.mat
+  uploadId: 651291

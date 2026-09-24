@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: aaf2407b1609a1c498ecb556fee40937
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/Prefabs/straightTile.prefab
+  uploadId: 651291

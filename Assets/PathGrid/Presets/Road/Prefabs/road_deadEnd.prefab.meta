@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cbc73831a934fb14d9285a30ae7ba912
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Prefabs/road_deadEnd.prefab
+  uploadId: 651291

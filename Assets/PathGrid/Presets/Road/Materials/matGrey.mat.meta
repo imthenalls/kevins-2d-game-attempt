@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5f7efd46c4c935a4eab67b233f981ff5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Materials/matGrey.mat
+  uploadId: 651291

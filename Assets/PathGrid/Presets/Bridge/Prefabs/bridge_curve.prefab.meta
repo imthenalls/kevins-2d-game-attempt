@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 14179c89b3e247c4b9dd7e155a3035b7
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/Prefabs/bridge_curve.prefab
+  uploadId: 651291

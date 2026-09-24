@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 9dd33b82c03921f4f87c674b5edb854b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/_Demo/Global/PreviewBlockFailed.prefab
+  uploadId: 651291

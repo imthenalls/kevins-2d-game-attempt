@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5d34ae1e5ae64cb47a5e6ecfffb6611b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/_Demo/Demo_01/Materials/matWater.mat
+  uploadId: 651291

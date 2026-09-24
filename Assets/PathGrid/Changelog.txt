@@ -1,0 +1,11 @@
+1.0.1
+---
+
+Bugfix:
+- Fixed issue where it was not possible to add the pointer gameObject to the PathGridInputSystem inspector.
+- Fixed null reference exception in AStar pathfinding demo scene.
+
+1.0 
+---
+
+Initial release

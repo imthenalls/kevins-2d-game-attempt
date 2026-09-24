@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 4d016bd5a33f06847afa2343d52aa8c3
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Readme.txt
+  uploadId: 651291

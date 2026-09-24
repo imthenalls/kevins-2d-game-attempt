@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6c5ebf09097ee4143a1d887fb7944d91
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Prefabs/road_single.prefab
+  uploadId: 651291

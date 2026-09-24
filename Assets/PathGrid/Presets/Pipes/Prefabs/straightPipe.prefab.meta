@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 193b5652814d85b4aac6aa1ba8e767c0
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Pipes/Prefabs/straightPipe.prefab
+  uploadId: 651291

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c7c716ab72598e64598c301f87cc08bd
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Pipes/Prefabs/threeWayPipe.prefab
+  uploadId: 651291

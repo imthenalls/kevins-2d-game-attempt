@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f564a0f5689a8124a83a5225646d49a5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Pipes/Materials/matPipe.mat
+  uploadId: 651291

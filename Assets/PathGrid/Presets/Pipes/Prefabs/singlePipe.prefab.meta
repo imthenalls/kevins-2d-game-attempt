@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b6d0aa6a5a03b144595d27688f0fa976
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Pipes/Prefabs/singlePipe.prefab
+  uploadId: 651291

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b7a21010834fd904f96df4e4bcb4f168
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/Prefabs/bridge_deadEnd.prefab
+  uploadId: 651291

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 68d0bd42c15d3854ab5b3c875afaa22e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/SimpleRoadPreset.asset
+  uploadId: 651291

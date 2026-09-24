@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ac42d5a7475e8b745827432314c93c89
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Materials/matBlack.mat
+  uploadId: 651291

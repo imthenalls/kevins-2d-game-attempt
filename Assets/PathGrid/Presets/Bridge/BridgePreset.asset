@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35ddd7f7bd35c1b48aeff76ae5b2f805, type: 3}
+  m_Name: BridgePreset
+  m_EditorClassIdentifier: 
+  pathType: 2
+  single: {fileID: 312278613508332826, guid: bb6d839fdf18050468e89bbcd73622d2, type: 3}
+  straight: {fileID: 1729077216928590542, guid: 7c94e830d5b7a974faa0cf9a47d98981, type: 3}
+  curve: {fileID: 4042401765765551049, guid: 14179c89b3e247c4b9dd7e155a3035b7, type: 3}
+  threeway: {fileID: 1741552839951075013, guid: aaa46b840fae6524cb132a1d770417c6, type: 3}
+  crossway: {fileID: 3861920277928627154, guid: 6bb818dcbc657d843b17ef770a0285b9, type: 3}
+  deadEnd: {fileID: 5952078766813312373, guid: b7a21010834fd904f96df4e4bcb4f168, type: 3}
+  yPosition: 0
+  straightRotationOffset: 0
+  curveRotationOffset: 0
+  threewayRotationOffset: 0
+  deadEndRotationOffset: 0

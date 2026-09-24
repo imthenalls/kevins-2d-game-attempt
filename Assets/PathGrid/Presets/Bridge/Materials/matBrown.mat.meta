@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4f76c3d5ee2cda24bb54dd813ec46aca
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/Materials/matBrown.mat
+  uploadId: 651291

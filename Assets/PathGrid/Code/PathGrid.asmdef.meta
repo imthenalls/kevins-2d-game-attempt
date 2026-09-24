@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6782cca7d0679a04ea0a377e3d4862bb
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Code/PathGrid.asmdef
+  uploadId: 651291

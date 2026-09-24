@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c42176ef74e257f4986f2a65a59bcc80
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/_Demo/Demo_00/Demo_00.unity
+  uploadId: 651291

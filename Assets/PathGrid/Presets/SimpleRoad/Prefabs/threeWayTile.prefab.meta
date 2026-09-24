@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a284ee53841e7114689c00ecfe251172
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/Prefabs/threeWayTile.prefab
+  uploadId: 651291

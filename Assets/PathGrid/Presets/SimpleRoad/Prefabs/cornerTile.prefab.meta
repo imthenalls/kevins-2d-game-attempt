@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c6179b68c29fda64db82e7084e7eb299
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/Prefabs/cornerTile.prefab
+  uploadId: 651291

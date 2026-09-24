@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 829013bbd1316a543b6d8f090459078d
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Prefabs/road_straight.prefab
+  uploadId: 651291

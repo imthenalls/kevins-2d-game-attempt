@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ed424fe0015da024fba7fcac9ea1749b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/SimpleRoad/Prefabs/singleTile.prefab
+  uploadId: 651291

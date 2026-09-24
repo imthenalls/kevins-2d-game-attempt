@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 32753b588b4ea5d4c9f20012bfabbd38
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/Materials/matWhite.mat
+  uploadId: 651291

@@ -52,6 +52,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/DATA_VALIDATION.md](Documents/DATA_VALIDATION.md) | Editor validator for string-id data: blank/duplicate ids, dangling item/quest/node/portal references, dialogue links, and per-scene NPC ids |
 | [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md) | Audit of the Data/Presentation split: enforcement mechanisms, what is separated, remaining authoritative state in Presentation, and migration order |
 | [Documents/ARCHITECTURE_GUARDRAILS.md](Documents/ARCHITECTURE_GUARDRAILS.md) | **Read before adding any MonoBehaviour.** Core owns state *and decisions*; pre-merge checklist, thin-facade pattern, and the tracked debt of logic still in Presentation |
+| [Documents/PROJECT_ASSETS.md](Documents/PROJECT_ASSETS.md) | Third-party Store packages in the project (NaughtyAttributes, PathGrid): what they are, their APIs, and how to use them in the Shell |
 | [Documents/NPC_STRESS_TEST.md](Documents/NPC_STRESS_TEST.md) | Disposable 25/50/100-NPC wandering + pathfinding performance harness (Tools > Stress) and its results |
 | [Documents/TOWN_SCENE.md](Documents/TOWN_SCENE.md) | Placeholder town scene built from coloured tiles: roads, solid buildings with a single passable entrance, park, and the tilemap-build gotcha |
 | [Documents/GAME_BOOTSTRAP.md](Documents/GAME_BOOTSTRAP.md) | Persistent `Game Systems` layer (session, save, portals, quests, world state) created before any scene; what a scene still needs |

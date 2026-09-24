@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: aaa46b840fae6524cb132a1d770417c6
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/Prefabs/bridge_threeway.prefab
+  uploadId: 651291

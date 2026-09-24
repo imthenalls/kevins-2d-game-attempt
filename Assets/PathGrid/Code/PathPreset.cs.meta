@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 35ddd7f7bd35c1b48aeff76ae5b2f805
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Code/PathPreset.cs
+  uploadId: 651291

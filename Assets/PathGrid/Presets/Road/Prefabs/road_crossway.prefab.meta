@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 751b933f80194bc428b9ca8390aa756d
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Prefabs/road_crossway.prefab
+  uploadId: 651291

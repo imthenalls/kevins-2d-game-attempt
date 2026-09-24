@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 890a9a1f0dd9f3342adfe3b2d0c4f0b9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/_Demo/Global/matPreviewBlockFailed.mat
+  uploadId: 651291

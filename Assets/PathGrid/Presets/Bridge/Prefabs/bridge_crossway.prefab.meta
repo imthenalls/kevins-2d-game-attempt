@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6bb818dcbc657d843b17ef770a0285b9
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/Prefabs/bridge_crossway.prefab
+  uploadId: 651291

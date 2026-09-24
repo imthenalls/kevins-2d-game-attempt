@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c696a6a7b81841948b17abb71b5471a0
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Documentation.url
+  uploadId: 651291

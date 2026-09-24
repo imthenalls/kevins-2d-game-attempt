@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d5569a371cbabfc429f5dfb49ee89630
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Bridge/BridgePreset.asset
+  uploadId: 651291

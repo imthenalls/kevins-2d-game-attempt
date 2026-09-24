@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 14d56d0b6930be14ba58474d88262752
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277374
+  packageName: PathGrid
+  packageVersion: 1.0.1
+  assetPath: Assets/PathGrid/Presets/Road/Materials/matWhite.mat
+  uploadId: 651291
