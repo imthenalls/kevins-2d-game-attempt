@@ -200,5 +200,20 @@
       "sellValue": 0,
       "flags": ["Unique", "QuestItem"],
       "iconPath": ""
-    }  ]
+    },
+    { "id": "house_key_4_14", "name": "House Key (4,14)", "description": "The owner's key for the house at cell (4,14).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_12_14", "name": "House Key (12,14)", "description": "The owner's key for the house at cell (12,14).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_20_14", "name": "House Key (20,14)", "description": "The owner's key for the house at cell (20,14).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_4_4", "name": "House Key (4,4)", "description": "The owner's key for the house at cell (4,4).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_35_14", "name": "House Key (35,14)", "description": "The owner's key for the house at cell (35,14).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_43_14", "name": "House Key (43,14)", "description": "The owner's key for the house at cell (43,14).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_51_14", "name": "House Key (51,14)", "description": "The owner's key for the house at cell (51,14).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_35_4", "name": "House Key (35,4)", "description": "The owner's key for the house at cell (35,4).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_4_24", "name": "House Key (4,24)", "description": "The owner's key for the house at cell (4,24).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_12_24", "name": "House Key (12,24)", "description": "The owner's key for the house at cell (12,24).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_4_34", "name": "House Key (4,34)", "description": "The owner's key for the house at cell (4,34).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_35_24", "name": "House Key (35,24)", "description": "The owner's key for the house at cell (35,24).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_53_24", "name": "House Key (53,24)", "description": "The owner's key for the house at cell (53,24).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" },
+    { "id": "house_key_35_36", "name": "House Key (35,36)", "description": "The owner's key for the house at cell (35,36).", "type": "Misc", "isEquip": false, "maxStackSize": 1, "sellValue": 0, "flags": ["Unique", "KeyItem"], "iconPath": "" }
+  ]
 }

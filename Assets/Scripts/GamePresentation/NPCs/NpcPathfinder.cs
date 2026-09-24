@@ -1,10 +1,11 @@
 using System.Collections.Generic;
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Grid A* pathfinding for NPCs. Works directly on the isometric Grid cells and treats any
-/// solid (non-trigger) collider as an obstacle, so walls, closed gates, and props are avoided
-/// automatically. Returns world-space waypoints for a behavior to follow.
+/// Thin Unity facade over the engine-free <see cref="GridPathfinder"/>. This component only samples
+/// the world (which cells are blocked) by implementing <see cref="IWalkabilityGrid"/> with
+/// <c>Physics2D.OverlapPoint</c>; the A* algorithm lives in Game.Data and is unit-tested there.
 ///
 /// Unity setup:
 ///   1. Add to an NPC GameObject that has a Rigidbody2D and NpcBehaviorManager.
@@ -13,10 +14,10 @@ using UnityEngine;
 ///
 /// Runtime API:
 ///   FindPath(start, goal) returns a List&lt;Vector2&gt; of waypoints (without the start cell),
-///   or null when no path is found. Call from a behavior's Enter and follow in Tick.
+///   or null when no path is found.
 /// </summary>
 [DisallowMultipleComponent]
-public class NpcPathfinder : MonoBehaviour
+public class NpcPathfinder : MonoBehaviour, IWalkabilityGrid
 {
     [SerializeField] private LayerMask obstacleLayers = ~0;
     [Tooltip("How many cells beyond the start/goal bounding box to search.")]
@@ -29,12 +30,6 @@ public class NpcPathfinder : MonoBehaviour
     private Collider2D[] ownColliders;
     private readonly List<Collider2D> overlap = new List<Collider2D>();
 
-    private static readonly Vector3Int[] Directions =
-    {
-        new Vector3Int(1, 0, 0), new Vector3Int(-1, 0, 0),
-        new Vector3Int(0, 1, 0), new Vector3Int(0, -1, 0)
-    };
-
     private void Awake() => ownColliders = GetComponentsInChildren<Collider2D>();
 
     /// <summary>Overrides the auto-detected grid.</summary>
@@ -44,7 +39,11 @@ public class NpcPathfinder : MonoBehaviour
     public bool IsWalkableWorld(Vector2 world)
     {
         EnsureGrid();
-        return grid != null && IsWalkable(grid.WorldToCell(world));
+        if (grid == null)
+            return false;
+
+        Vector3Int cell = grid.WorldToCell(world);
+        return IsWalkable(cell.x, cell.y);
     }
 
     /// <summary>The grid cell for a world position (diagnostics).</summary>
@@ -64,7 +63,15 @@ public class NpcPathfinder : MonoBehaviour
             return false;
         }
 
-        return TryFindWalkable(grid.WorldToCell(world), radius, out cell);
+        Vector3Int origin = grid.WorldToCell(world);
+        if (TryFindWalkable(origin.x, origin.y, radius, out int wx, out int wy))
+        {
+            cell = new Vector3Int(wx, wy, 0);
+            return true;
+        }
+
+        cell = origin;
+        return false;
     }
 
     /// <summary>Finds a cell path between two world positions, or null when none exists.</summary>
@@ -74,73 +81,45 @@ public class NpcPathfinder : MonoBehaviour
         if (grid == null)
             return null;
 
-        // Snap start to the nearest walkable cell so a body clipping a wall still gets a path.
-        // The goal is used as-is so the agent paths to the gate cell from its own side; the goal
-        // cell is allowed to be blocked (it is the gate).
-        if (!TryFindWalkable(grid.WorldToCell(start), startSnapRadius, out Vector3Int startCell))
-            return null;
+        Vector3Int startCell = grid.WorldToCell(start);
         Vector3Int goalCell = grid.WorldToCell(goal);
 
-        if (startCell == goalCell)
-            return new List<Vector2> { grid.GetCellCenterWorld(goalCell) };
+        List<(int x, int y)> cells = GridPathfinder.FindPath(
+            this, startCell.x, startCell.y, goalCell.x, goalCell.y, searchPadding, maxNodes, startSnapRadius);
 
-        int minX = Mathf.Min(startCell.x, goalCell.x) - searchPadding;
-        int maxX = Mathf.Max(startCell.x, goalCell.x) + searchPadding;
-        int minY = Mathf.Min(startCell.y, goalCell.y) - searchPadding;
-        int maxY = Mathf.Max(startCell.y, goalCell.y) + searchPadding;
+        if (cells == null)
+            return null;
 
-        var open = new List<Vector3Int> { startCell };
-        var cameFrom = new Dictionary<Vector3Int, Vector3Int>();
-        var gScore = new Dictionary<Vector3Int, float> { [startCell] = 0f };
-        var fScore = new Dictionary<Vector3Int, float> { [startCell] = Heuristic(startCell, goalCell) };
-        var closed = new HashSet<Vector3Int>();
-        int expanded = 0;
+        var path = new List<Vector2>(cells.Count);
+        for (int i = 0; i < cells.Count; i++)
+            path.Add(grid.GetCellCenterWorld(new Vector3Int(cells[i].x, cells[i].y, 0)));
 
-        while (open.Count > 0 && expanded < maxNodes)
-        {
-            int bestIndex = 0;
-            float bestF = fScore[open[0]];
-            for (int i = 1; i < open.Count; i++)
-            {
-                float f = fScore[open[i]];
-                if (f < bestF) { bestF = f; bestIndex = i; }
-            }
-
-            Vector3Int current = open[bestIndex];
-            if (current == goalCell)
-                return Reconstruct(cameFrom, current);
-
-            open.RemoveAt(bestIndex);
-            closed.Add(current);
-            expanded++;
-
-            for (int d = 0; d < Directions.Length; d++)
-            {
-                Vector3Int next = current + Directions[d];
-                if (next.x < minX || next.x > maxX || next.y < minY || next.y > maxY)
-                    continue;
-                if (closed.Contains(next))
-                    continue;
-                if (next != goalCell && !IsWalkable(next))
-                    continue;
-
-                float tentative = gScore[current] + 1f;
-                if (gScore.TryGetValue(next, out float existing) && tentative >= existing)
-                    continue;
-
-                cameFrom[next] = current;
-                gScore[next] = tentative;
-                fScore[next] = tentative + Heuristic(next, goalCell);
-                if (!open.Contains(next))
-                    open.Add(next);
-            }
-        }
-
-        return null;
+        return path;
     }
 
-    // Searches outward in square rings for the closest walkable cell.
-    private bool TryFindWalkable(Vector3Int center, int maxRadius, out Vector3Int cell)
+    // ── IWalkabilityGrid (Unity sampling) ──────────────────────────────────────
+
+    public bool IsWalkable(int cellX, int cellY)
+    {
+        EnsureGrid();
+        if (grid == null)
+            return false;
+
+        Vector3 center = grid.GetCellCenterWorld(new Vector3Int(cellX, cellY, 0));
+        var filter = new ContactFilter2D { useLayerMask = true, layerMask = obstacleLayers, useTriggers = true };
+        int count = Physics2D.OverlapPoint(center, filter, overlap);
+        for (int i = 0; i < count; i++)
+        {
+            Collider2D contact = overlap[i];
+            if (contact == null || contact.isTrigger || IsOwn(contact))
+                continue;
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool TryFindWalkable(int cellX, int cellY, int maxRadius, out int walkableCellX, out int walkableCellY)
     {
         for (int radius = 0; radius <= maxRadius; radius++)
         {
@@ -151,17 +130,18 @@ public class NpcPathfinder : MonoBehaviour
                     if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) != radius)
                         continue;
 
-                    Vector3Int candidate = center + new Vector3Int(dx, dy, 0);
-                    if (IsWalkable(candidate))
+                    if (IsWalkable(cellX + dx, cellY + dy))
                     {
-                        cell = candidate;
+                        walkableCellX = cellX + dx;
+                        walkableCellY = cellY + dy;
                         return true;
                     }
                 }
             }
         }
 
-        cell = center;
+        walkableCellX = cellX;
+        walkableCellY = cellY;
         return false;
     }
 
@@ -186,42 +166,6 @@ public class NpcPathfinder : MonoBehaviour
         grid = nearest;
     }
 
-    private List<Vector2> Reconstruct(Dictionary<Vector3Int, Vector3Int> cameFrom, Vector3Int current)
-    {
-        var cells = new List<Vector3Int> { current };
-        while (cameFrom.TryGetValue(current, out Vector3Int previous))
-        {
-            current = previous;
-            cells.Add(current);
-        }
-
-        cells.Reverse();
-        var path = new List<Vector2>(cells.Count);
-        for (int i = 0; i < cells.Count; i++)
-            path.Add(grid.GetCellCenterWorld(cells[i]));
-
-        // Drop the start cell so the follower doesn't walk backward first.
-        if (path.Count > 1)
-            path.RemoveAt(0);
-        return path;
-    }
-
-    private bool IsWalkable(Vector3Int cell)
-    {
-        Vector3 center = grid.GetCellCenterWorld(cell);
-        var filter = new ContactFilter2D { useLayerMask = true, layerMask = obstacleLayers, useTriggers = true };
-        int count = Physics2D.OverlapPoint(center, filter, overlap);
-        for (int i = 0; i < count; i++)
-        {
-            Collider2D contact = overlap[i];
-            if (contact == null || contact.isTrigger || IsOwn(contact))
-                continue;
-            return false;
-        }
-
-        return true;
-    }
-
     private bool IsOwn(Collider2D candidate)
     {
         for (int i = 0; i < ownColliders.Length; i++)
@@ -232,7 +176,4 @@ public class NpcPathfinder : MonoBehaviour
 
         return false;
     }
-
-    private static float Heuristic(Vector3Int a, Vector3Int b) =>
-        Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
 }

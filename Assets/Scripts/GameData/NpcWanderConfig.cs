@@ -15,6 +15,9 @@ namespace Game.Core
         public float ArrivalThreshold = 0.2f;
         public float WallLookAhead = 0.3f;
 
+        /// <summary>Idle pause between destinations, in seconds (3D wanderer).</summary>
+        public float IdleSeconds = 1.5f;
+
         /// <summary>
         /// When true and the NPC has an NpcPathfinder, wander picks a reachable destination and
         /// follows a grid path (falling back to straight-line movement when no path exists).

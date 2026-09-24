@@ -23,7 +23,7 @@ using UnityEngine;
 ///   — works with any quest objective whose eventType is "ItemCollected"
 ///     and targetId matches this item's itemId.
 /// </summary>
-[RequireComponent(typeof(Collider2D))]
+[DisallowMultipleComponent]
 public class ItemPickup : MonoBehaviour
 {
     [Header("Config (Game.Data)")]
@@ -38,17 +38,23 @@ public class ItemPickup : MonoBehaviour
 
     private void Awake()
     {
-        GetComponent<Collider2D>().isTrigger = true;
+        // Works in 2D and 3D scenes: force whichever collider is present to be a trigger.
+        if (TryGetComponent(out Collider2D col2)) col2.isTrigger = true;
+        if (TryGetComponent(out Collider col3)) col3.isTrigger = true;
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerEnter2D(Collider2D other) => TryCollect(other != null ? other.gameObject : null);
+
+    private void OnTriggerEnter(Collider other) => TryCollect(other != null ? other.gameObject : null);
+
+    private void TryCollect(GameObject collector)
     {
-        if (item == null) return;
+        if (item == null || collector == null) return;
 
         // Layer check first — avoids GetComponent calls for non-player objects
-        if (((1 << other.gameObject.layer) & playerLayers) == 0) return;
+        if (((1 << collector.layer) & playerLayers) == 0) return;
 
-        int taken = InventoryHelper.GiveItem(item, config.Quantity, other.gameObject);
+        int taken = InventoryHelper.GiveItem(item, config.Quantity, collector);
 
         if (taken <= 0) return; // inventory full — item stays on the ground
 

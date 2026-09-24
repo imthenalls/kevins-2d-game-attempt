@@ -80,19 +80,33 @@ public static class EnemyLootDrop
                 : npc.DisplayName + " Loot";
 
         var dropObject = new GameObject(dropName);
-        dropObject.transform.position = npc.transform.position;
+        bool is3D = npc.GetComponent<Rigidbody2D>() == null;
 
         int interactableLayer = LayerMask.NameToLayer("Interactable");
         dropObject.layer = interactableLayer >= 0 ? interactableLayer : npc.gameObject.layer;
+
+        // In 3D the sprite is billboarded and lifted to sit on the ground plane.
+        dropObject.transform.position = npc.transform.position + (is3D ? Vector3.up * 0.4f : Vector3.zero);
 
         var renderer = dropObject.AddComponent<SpriteRenderer>();
         renderer.sprite = GetPileSprite();
         renderer.color = Color.white;
         CopySortingFromNpc(npc, renderer);
 
-        var collider = dropObject.AddComponent<CircleCollider2D>();
-        collider.isTrigger = true;
-        collider.radius = 0.55f;
+        if (is3D)
+        {
+            renderer.sortingOrder = 200;
+            dropObject.AddComponent<BillboardSprite>();
+            var box = dropObject.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            box.size = new Vector3(1.1f, 1.1f, 1.1f);
+        }
+        else
+        {
+            var collider = dropObject.AddComponent<CircleCollider2D>();
+            collider.isTrigger = true;
+            collider.radius = 0.55f;
+        }
 
         var pile = dropObject.AddComponent<RuntimeEnemyLootPile>();
         pile.Initialize(npc.Inventory, dropName, 2.25f);
@@ -203,7 +217,6 @@ public static class EnemyLootDrop
 /// Runtime API:
 ///   Initialize(InventoryModel, string, float) binds the owned loot inventory.
 /// </summary>
-[RequireComponent(typeof(Collider2D))]
 [RequireComponent(typeof(SpriteRenderer))]
 public sealed class RuntimeEnemyLootPile : MonoBehaviour, IInteractable
 {
@@ -224,7 +237,7 @@ public sealed class RuntimeEnemyLootPile : MonoBehaviour, IInteractable
 
     public bool CanInteract(Vector3 worldPosition) =>
         !emptied && inventory != null
-        && Vector2.Distance(transform.position, worldPosition) <= interactionRange;
+        && Vector3.Distance(transform.position, worldPosition) <= interactionRange;
 
     public string GetDisplayName() => displayName;
 

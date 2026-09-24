@@ -45,6 +45,37 @@ public static class Town3DSceneBuilder
     private static Scene scene;
     private static Sprite squareSprite;
 
+    private static readonly Dictionary<(int x, int y), Transform> DoorApproaches = new();
+
+    /// <summary>An axis-aligned rectangle of room cells: origin (X, Z), size (W, D).</summary>
+    private readonly struct Rect
+    {
+        public readonly int X, Z, W, D;
+        public Rect(int x, int z, int w, int d) { X = x; Z = z; W = w; D = d; }
+    }
+
+    /// <summary>
+    /// One entrance per building, in the same order as <see cref="Buildings"/>. Rooms are placed south
+    /// of town, sized and shaped differently (some L-shaped from two rectangles).
+    /// </summary>
+    private static readonly Rect[][] Rooms =
+    {
+        new[] { new Rect(2, -14, 8, 6) },
+        new[] { new Rect(14, -13, 6, 5) },
+        new[] { new Rect(24, -15, 10, 7) },
+        new[] { new Rect(40, -14, 5, 5), new Rect(45, -14, 4, 3) },
+        new[] { new Rect(54, -14, 7, 6) },
+        new[] { new Rect(2, -28, 9, 8) },
+        new[] { new Rect(16, -30, 6, 10) },
+        new[] { new Rect(28, -27, 12, 6), new Rect(28, -21, 4, 4) },
+        new[] { new Rect(48, -30, 5, 9) },
+        new[] { new Rect(2, -44, 7, 7) },
+        new[] { new Rect(14, -46, 8, 9), new Rect(22, -46, 4, 4) },
+        new[] { new Rect(30, -44, 6, 6) },
+        new[] { new Rect(42, -46, 10, 8) },
+        new[] { new Rect(58, -44, 8, 6), new Rect(58, -38, 3, 3) },
+    };
+
     [MenuItem("Tools/Worlds/Rebuild Town Scene (3D)")]
     public static void Build()
     {
@@ -58,6 +89,7 @@ public static class Town3DSceneBuilder
 
         scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         ConfigurePlaceholderLighting();
+        DoorApproaches.Clear();
 
         var identity = new GameObject("Town Scene Identity");
         identity.AddComponent<WorldSceneIdentity>();
@@ -67,9 +99,12 @@ public static class Town3DSceneBuilder
         BuildGround();
         BuildRoads();
         BuildPark();
+        BuildInteriorGround();
         BuildBuildings();
+        BuildInteriors();
         BuildPerimeterWalls();
         BuildTownNpcs();
+        BuildTownEnemies();
         BuildCamera();
         BuildSun();
 
@@ -167,17 +202,217 @@ public static class Town3DSceneBuilder
             // 'S' buildings face the street on their +z edge; 'N' buildings on their -z edge.
             float doorX = doorCellX + 0.5f;
             float doorZ = b.side == 'S' ? b.y + b.d + 0.25f : b.y - 0.25f;
+            string doorId = "door_" + b.x + "_" + b.y;
 
-            var marker = new GameObject("Door");
-            marker.transform.SetParent(root.transform, false);
-            marker.transform.localScale = new Vector3(0.7f, 1.3f, 1f);
-            marker.transform.position = new Vector3(doorX, 0.65f, doorZ);
-            var doorRenderer = marker.AddComponent<SpriteRenderer>();
+            var door = new GameObject("Door");
+            door.transform.SetParent(root.transform, false);
+            door.transform.position = new Vector3(doorX, 0f, doorZ);
+
+            var doorCollider = door.AddComponent<BoxCollider>();
+            doorCollider.isTrigger = true;
+            doorCollider.size = new Vector3(1.4f, 1.8f, 1.3f);
+            doorCollider.center = new Vector3(0f, 0.9f, 0f);
+
+            var portal = door.AddComponent<PortalTrigger3D>();
+            SetStringField(portal, "portalId", doorId);
+            SetStringField(portal, "destinationPortalId", "int_" + b.x + "_" + b.y);
+            // The owner's key opens this door; travelers with a key holder must carry it.
+            SetStringField(portal, "requiredKeyId", "house_key_" + b.x + "_" + b.y);
+
+            // The approach is where a traveler is placed when returning from the room (outside).
+            float approachZ = b.side == 'S' ? doorZ + 1.0f : doorZ - 1.0f;
+            var approach = new GameObject("Approach");
+            approach.transform.SetParent(door.transform, false);
+            approach.transform.position = new Vector3(doorX, 0f, approachZ);
+            SetObjectField(portal, "exitPoint", approach.transform);
+            DoorApproaches[(b.x, b.y)] = approach.transform;
+
+            var doorVisual = new GameObject("DoorVisual");
+            doorVisual.transform.SetParent(door.transform, false);
+            doorVisual.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+            doorVisual.transform.localScale = new Vector3(0.7f, 1.3f, 1f);
+            var doorRenderer = doorVisual.AddComponent<SpriteRenderer>();
             doorRenderer.sprite = squareSprite;
             doorRenderer.color = new Color(1.00f, 0.41f, 0.71f);
             doorRenderer.sortingOrder = 60;
-            marker.AddComponent<BillboardSprite>();
+            doorVisual.AddComponent<BillboardSprite>();
         }
+    }
+
+    private static void BuildInteriorGround()
+    {
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+        ground.name = "Interior Ground";
+        ground.transform.position = new Vector3(GridW * 0.5f, -0.02f, -30f);
+        ground.transform.localScale = new Vector3(GridW / 10f, 1f, 7f);
+        ground.GetComponent<MeshRenderer>().sharedMaterial =
+            EnsureMaterial("InteriorGrass", new Color(0.20f, 0.45f, 0.22f), unlit: true);
+    }
+
+    private static void BuildInteriors()
+    {
+        var root = new GameObject("Interiors");
+        Material floor = EnsureMaterial("RoomFloor", new Color(0.58f, 0.52f, 0.42f), unlit: true);
+        Material wall = EnsureMaterial("Wall", new Color(0.35f, 0.29f, 0.24f), unlit: false);
+        int wallsLayer = Mathf.Max(0, LayerMask.NameToLayer("Walls"));
+
+        for (int i = 0; i < Buildings.Count && i < Rooms.Length; i++)
+        {
+            var b = Buildings[i];
+            Rect[] rects = Rooms[i];
+            var cells = CellsFrom(rects);
+            string roomName = "Room_" + b.x + "_" + b.y;
+
+            var room = new GameObject(roomName);
+            room.transform.SetParent(root.transform, false);
+
+            CreateCellMesh(roomName + "Floor", cells, 0.03f, floor, room.transform);
+            BuildRoomWalls(room.transform, cells, wallsLayer, wall);
+            BuildRoomDoor(room.transform, b, rects[0]);
+        }
+    }
+
+    private static HashSet<Vector2Int> CellsFrom(Rect[] rects)
+    {
+        var cells = new HashSet<Vector2Int>();
+        foreach (Rect r in rects)
+        {
+            for (int x = r.X; x < r.X + r.W; x++)
+                for (int z = r.Z; z < r.Z + r.D; z++)
+                    cells.Add(new Vector2Int(x, z));
+        }
+
+        return cells;
+    }
+
+    private static void BuildRoomDoor(Transform room, (int x, int y, int w, int d, char side) b, Rect main)
+    {
+        float centerX = main.X + main.W * 0.5f;
+        float northWallZ = main.Z + main.D;
+
+        var door = new GameObject("Room Door");
+        door.transform.SetParent(room, false);
+        door.transform.position = new Vector3(centerX, 0f, northWallZ - 0.6f);
+
+        var collider = door.AddComponent<BoxCollider>();
+        collider.isTrigger = true;
+        collider.size = new Vector3(1.4f, 1.8f, 1.2f);
+        collider.center = new Vector3(0f, 0.8f, 0f);
+
+        var portal = door.AddComponent<PortalTrigger3D>();
+        SetStringField(portal, "portalId", "int_" + b.x + "_" + b.y);
+        SetStringField(portal, "destinationPortalId", "door_" + b.x + "_" + b.y);
+
+        var exit = new GameObject("ExitPoint");
+        exit.transform.SetParent(door.transform, false);
+        exit.transform.position = new Vector3(centerX, 0f, northWallZ - 2.6f);
+        SetObjectField(portal, "exitPoint", exit.transform);
+
+        var visual = new GameObject("RoomDoorVisual");
+        visual.transform.SetParent(door.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+        visual.transform.localScale = new Vector3(0.7f, 1.3f, 1f);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(1.00f, 0.41f, 0.71f);
+        renderer.sortingOrder = 60;
+        visual.AddComponent<BillboardSprite>();
+    }
+
+    // Builds enclosing walls around an arbitrary cell set, merging collinear edges into single boxes.
+    private static void BuildRoomWalls(Transform parent, HashSet<Vector2Int> cells, int layer, Material material)
+    {
+        var north = new Dictionary<int, List<int>>();
+        var south = new Dictionary<int, List<int>>();
+        var east = new Dictionary<int, List<int>>();
+        var west = new Dictionary<int, List<int>>();
+
+        foreach (Vector2Int c in cells)
+        {
+            if (!cells.Contains(new Vector2Int(c.x, c.y + 1))) AddEdge(north, c.y + 1, c.x);
+            if (!cells.Contains(new Vector2Int(c.x, c.y - 1))) AddEdge(south, c.y, c.x);
+            if (!cells.Contains(new Vector2Int(c.x + 1, c.y))) AddEdge(east, c.x + 1, c.y);
+            if (!cells.Contains(new Vector2Int(c.x - 1, c.y))) AddEdge(west, c.x, c.y);
+        }
+
+        const float thickness = 0.3f;
+        foreach (var kv in north)
+        {
+            foreach (var run in MergeRuns(kv.Value))
+            {
+                AddWall(parent, layer, material,
+                    new Vector3((run.a + run.b + 1) * 0.5f, WallHeight * 0.5f, kv.Key),
+                    new Vector3(run.b - run.a + 1, WallHeight, thickness));
+            }
+        }
+        foreach (var kv in south)
+        {
+            foreach (var run in MergeRuns(kv.Value))
+            {
+                AddWall(parent, layer, material,
+                    new Vector3((run.a + run.b + 1) * 0.5f, WallHeight * 0.5f, kv.Key),
+                    new Vector3(run.b - run.a + 1, WallHeight, thickness));
+            }
+        }
+        foreach (var kv in east)
+        {
+            foreach (var run in MergeRuns(kv.Value))
+            {
+                AddWall(parent, layer, material,
+                    new Vector3(kv.Key, WallHeight * 0.5f, (run.a + run.b + 1) * 0.5f),
+                    new Vector3(thickness, WallHeight, run.b - run.a + 1));
+            }
+        }
+        foreach (var kv in west)
+        {
+            foreach (var run in MergeRuns(kv.Value))
+            {
+                AddWall(parent, layer, material,
+                    new Vector3(kv.Key, WallHeight * 0.5f, (run.a + run.b + 1) * 0.5f),
+                    new Vector3(thickness, WallHeight, run.b - run.a + 1));
+            }
+        }
+    }
+
+    private static void AddEdge(Dictionary<int, List<int>> map, int key, int value)
+    {
+        if (!map.TryGetValue(key, out List<int> list))
+        {
+            list = new List<int>();
+            map[key] = list;
+        }
+        list.Add(value);
+    }
+
+    private static List<(int a, int b)> MergeRuns(List<int> values)
+    {
+        values.Sort();
+        var runs = new List<(int a, int b)>();
+        int i = 0;
+        while (i < values.Count)
+        {
+            int start = values[i];
+            int end = start;
+            while (i + 1 < values.Count && values[i + 1] == end + 1)
+            {
+                i++;
+                end = values[i];
+            }
+            runs.Add((start, end));
+            i++;
+        }
+        return runs;
+    }
+
+    private static void SetStringArray(Object target, string field, string[] values)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p == null) return;
+        p.arraySize = values.Length;
+        for (int i = 0; i < values.Length; i++)
+            p.GetArrayElementAtIndex(i).stringValue = values[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void BuildPerimeterWalls()
@@ -186,22 +421,22 @@ public static class Town3DSceneBuilder
         int wallsLayer = Mathf.Max(0, LayerMask.NameToLayer("Walls"));
         Material wall = EnsureMaterial("Wall", new Color(0.35f, 0.29f, 0.24f), unlit: false);
 
-        AddWall(root, wallsLayer, wall, new Vector3(-0.5f, WallHeight * 0.5f, GridH * 0.5f),
+        AddWall(root.transform, wallsLayer, wall, new Vector3(-0.5f, WallHeight * 0.5f, GridH * 0.5f),
             new Vector3(1f, WallHeight, GridH + 2f));
-        AddWall(root, wallsLayer, wall, new Vector3(GridW + 0.5f, WallHeight * 0.5f, GridH * 0.5f),
+        AddWall(root.transform, wallsLayer, wall, new Vector3(GridW + 0.5f, WallHeight * 0.5f, GridH * 0.5f),
             new Vector3(1f, WallHeight, GridH + 2f));
-        AddWall(root, wallsLayer, wall, new Vector3(GridW * 0.5f, WallHeight * 0.5f, -0.5f),
+        AddWall(root.transform, wallsLayer, wall, new Vector3(GridW * 0.5f, WallHeight * 0.5f, -0.5f),
             new Vector3(GridW + 2f, WallHeight, 1f));
-        AddWall(root, wallsLayer, wall, new Vector3(GridW * 0.5f, WallHeight * 0.5f, GridH + 0.5f),
+        AddWall(root.transform, wallsLayer, wall, new Vector3(GridW * 0.5f, WallHeight * 0.5f, GridH + 0.5f),
             new Vector3(GridW + 2f, WallHeight, 1f));
     }
 
-    private static void AddWall(GameObject parent, int layer, Material material, Vector3 position, Vector3 scale)
+    private static void AddWall(Transform parent, int layer, Material material, Vector3 position, Vector3 scale)
     {
         GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
         wall.name = "Wall";
         wall.layer = layer;
-        wall.transform.SetParent(parent.transform, false);
+        wall.transform.SetParent(parent, false);
         wall.transform.position = position;
         wall.transform.localScale = scale;
         wall.GetComponent<MeshRenderer>().sharedMaterial = material;
@@ -264,6 +499,196 @@ public static class Town3DSceneBuilder
         visual.AddComponent<BillboardSprite>();
 
         SetObjectField(controller, "visualTransform", visual.transform);
+
+        var interaction = player.AddComponent<PlayerInteractionController>();
+        int npcMask = 1 << Mathf.Max(0, LayerMask.NameToLayer("Npc"));
+        int interactableLayer = LayerMask.NameToLayer("Interactable");
+        int interactableMask = npcMask | (interactableLayer >= 0 ? 1 << interactableLayer : 0);
+        SetIntField(interaction, "npcLayers", npcMask);
+        SetIntField(interaction, "interactableLayers", interactableMask);
+        SetNestedFloat(interaction, "config", "InteractionSearchRadius", 2.5f);
+
+        player.AddComponent<CombatReceiver>();
+        AddWeaponRig(player, usePlayerInput: true, damage: 12, range: 1.7f, duration: 0.3f, cooldown: 0.45f);
+    }
+
+    // Adds the equipment, attacker and billboarded 3D weapon rig shared by the player and enemies.
+    private static void AddWeaponRig(GameObject entity, bool usePlayerInput, int damage, float range, float duration, float cooldown)
+    {
+        var equipment = entity.AddComponent<EquipmentManager>();
+        SetNestedString(equipment, "config", "StartingWeaponItemId", "iron_sword");
+
+        var attacker = entity.AddComponent<CombatAttacker>();
+        SetNestedBool(attacker, "config", "UsePlayerInput", usePlayerInput);
+        SetNestedInt(attacker, "config", "AttackDamage", damage);
+        SetNestedFloat(attacker, "config", "AttackRange", range);
+        SetNestedFloat(attacker, "config", "AttackDuration", duration);
+        SetNestedFloat(attacker, "config", "AttackCooldown", cooldown);
+
+        var pivot = new GameObject("WeaponPivot");
+        pivot.transform.SetParent(entity.transform, false);
+        pivot.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+
+        var visual = new GameObject("WeaponVisual");
+        visual.transform.SetParent(pivot.transform, false);
+        visual.transform.localScale = Vector3.one * 0.3f;
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sortingOrder = 110;
+        visual.AddComponent<BillboardSprite>();
+
+        var weapon = visual.AddComponent<EquippedWeaponVisual3D>();
+        SetObjectField(weapon, "equipmentManager", equipment);
+        SetObjectField(weapon, "combatAttacker", attacker);
+        SetObjectField(weapon, "swingPivot", pivot.transform);
+        SetObjectField(weapon, "weaponRenderer", renderer);
+    }
+
+    private static void BuildTownEnemies()
+    {
+        int npcLayer = Mathf.Max(0, LayerMask.NameToLayer("Npc"));
+        int wallMask = 1 << Mathf.Max(0, LayerMask.NameToLayer("Walls"));
+
+        var cells = new[]
+        {
+            new Vector2Int(24, 38),
+            new Vector2Int(47, 33),
+        };
+
+        var root = new GameObject("Town Enemies");
+
+        for (int i = 0; i < cells.Length; i++)
+        {
+            var enemy = new GameObject("Town Bandit " + (i + 1));
+            enemy.layer = npcLayer;
+            enemy.transform.SetParent(root.transform, false);
+            enemy.transform.position = CellToWorld(cells[i].x, cells[i].y);
+
+            enemy.AddComponent<Rigidbody>();
+            var collider = enemy.AddComponent<CapsuleCollider>();
+            collider.height = 1.4f;
+            collider.radius = 0.35f;
+            collider.center = new Vector3(0f, 0.7f, 0f);
+
+            var npc = enemy.AddComponent<NpcController>();
+            SetStringField(npc, "npcId", "town_bandit_" + (i + 1));
+            SetStringField(npc, "displayName", "Bandit");
+            SetEnumField(npc, "npcType", (int)NpcType.Enemy);
+            SetNestedInt(npc, "config", "EnemyMaxHp", 40);
+            SetNestedFloat(npc, "config", "InteractionRange", 2.5f);
+
+            enemy.AddComponent<NpcStateView>();
+            var wanderer = enemy.AddComponent<NpcWander3D>();
+            SetIntField(wanderer, "wallLayers", wallMask);
+            SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 6f);
+            SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
+
+            AddWeaponRig(enemy, usePlayerInput: false, damage: 8, range: 1.6f, duration: 0.35f, cooldown: 0.9f);
+            enemy.AddComponent<NpcProximityMelee3D>();
+
+            var visual = new GameObject("NpcVisual");
+            visual.transform.SetParent(enemy.transform, false);
+            visual.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+            visual.transform.localScale = Vector3.one * 0.85f;
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = squareSprite;
+            renderer.color = new Color(0.85f, 0.20f, 0.20f);
+            renderer.sortingOrder = 55;
+            visual.AddComponent<BillboardSprite>();
+        }
+
+        BuildDashEnemy(root.transform, npcLayer, wallMask);
+        BuildBruteEnemy(root.transform, npcLayer, wallMask);
+    }
+
+    // A slow, high-HP melee brute for variety.
+    private static void BuildBruteEnemy(Transform root, int npcLayer, int wallMask)
+    {
+        var brute = new GameObject("Town Brute");
+        brute.layer = npcLayer;
+        brute.transform.SetParent(root, false);
+        brute.transform.position = CellToWorld(20, 10);
+
+        brute.AddComponent<Rigidbody>();
+        var capsule = brute.AddComponent<CapsuleCollider>();
+        capsule.height = 1.8f;
+        capsule.radius = 0.5f;
+        capsule.center = new Vector3(0f, 0.9f, 0f);
+
+        var npc = brute.AddComponent<NpcController>();
+        SetStringField(npc, "npcId", "town_brute");
+        SetStringField(npc, "displayName", "Brute");
+        SetEnumField(npc, "npcType", (int)NpcType.Enemy);
+        SetNestedInt(npc, "config", "EnemyMaxHp", 90);
+        SetNestedFloat(npc, "config", "AggroRange", 9f);
+        SetNestedFloat(npc, "config", "InteractionRange", 2.5f);
+        brute.AddComponent<NpcStateView>();
+
+        var wanderer = brute.AddComponent<NpcWander3D>();
+        SetIntField(wanderer, "wallLayers", wallMask);
+        SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 5f);
+        SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.2f);
+
+        AddWeaponRig(brute, usePlayerInput: false, damage: 16, range: 1.8f, duration: 0.45f, cooldown: 1.2f);
+
+        var melee = brute.AddComponent<NpcProximityMelee3D>();
+        SetFloatField(melee, "chaseSpeed", 1.8f);
+
+        var visual = new GameObject("NpcVisual");
+        visual.transform.SetParent(brute.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+        visual.transform.localScale = Vector3.one * 1.15f;
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.55f, 0.10f, 0.10f);
+        renderer.sortingOrder = 56;
+        visual.AddComponent<BillboardSprite>();
+    }
+
+    // A dash-melee variant: it flashes a warning, then dashes straight at the player.
+    private static void BuildDashEnemy(Transform root, int npcLayer, int wallMask)
+    {
+        var dasher = new GameObject("Town Dasher");
+        dasher.layer = npcLayer;
+        dasher.transform.SetParent(root, false);
+        dasher.transform.position = CellToWorld(42, 10);
+
+        dasher.AddComponent<Rigidbody>();
+        var capsule = dasher.AddComponent<CapsuleCollider>();
+        capsule.height = 1.4f;
+        capsule.radius = 0.35f;
+        capsule.center = new Vector3(0f, 0.7f, 0f);
+
+        var npc = dasher.AddComponent<NpcController>();
+        SetStringField(npc, "npcId", "town_dasher");
+        SetStringField(npc, "displayName", "Dasher");
+        SetEnumField(npc, "npcType", (int)NpcType.Enemy);
+        SetNestedInt(npc, "config", "EnemyMaxHp", 50);
+        SetNestedFloat(npc, "config", "AggroRange", 14f);
+        SetNestedFloat(npc, "config", "InteractionRange", 2.5f);
+        dasher.AddComponent<NpcStateView>();
+
+        AddWeaponRig(dasher, usePlayerInput: false, damage: 10, range: 1.6f, duration: 0.3f, cooldown: 0.9f);
+
+        var visual = new GameObject("NpcVisual");
+        visual.transform.SetParent(dasher.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+        visual.transform.localScale = Vector3.one * 0.85f;
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.72f, 0.18f, 0.85f);
+        renderer.sortingOrder = 55;
+        visual.AddComponent<BillboardSprite>();
+
+        var dash = dasher.AddComponent<NpcDashMelee3D>();
+        SetObjectField(dash, "bodyCollider", capsule);
+        SetObjectField(dash, "bodyRenderer", renderer);
+        SetIntField(dash, "obstacleLayers", wallMask);
+        SetNestedFloat(dash, "config", "WarningDuration", 0.5f);
+        SetNestedFloat(dash, "config", "ApproachSpeed", 2.8f);
+        SetNestedFloat(dash, "config", "DashRange", 7f);
+        SetNestedFloat(dash, "config", "DashSpeed", 14f);
+        SetNestedFloat(dash, "config", "StoppingDistance", 1.1f);
+        SetNestedFloat(dash, "config", "RecoveryDuration", 1.1f);
     }
 
     private static int BuildTownNpcs()
@@ -273,10 +698,10 @@ public static class Town3DSceneBuilder
 
         var cells = new[]
         {
-            new Vector2Int(1, 8), new Vector2Int(1, 30),
-            new Vector2Int(62, 8), new Vector2Int(62, 30),
-            new Vector2Int(16, 1), new Vector2Int(45, 1),
-            new Vector2Int(16, 42), new Vector2Int(45, 42),
+            new Vector2Int(1, 8), new Vector2Int(1, 22), new Vector2Int(1, 30), new Vector2Int(1, 38),
+            new Vector2Int(62, 8), new Vector2Int(62, 22), new Vector2Int(62, 30), new Vector2Int(62, 38),
+            new Vector2Int(16, 1), new Vector2Int(30, 1), new Vector2Int(45, 1),
+            new Vector2Int(16, 42), new Vector2Int(30, 42), new Vector2Int(45, 42),
         };
 
         var root = new GameObject("Town NPCs");
@@ -297,11 +722,35 @@ public static class Town3DSceneBuilder
             var controller = npc.AddComponent<NpcController>();
             SetStringField(controller, "npcId", "town_npc_" + (i + 1));
             SetStringField(controller, "displayName", "Villager " + (i + 1));
+            SetNestedFloat(controller, "config", "InteractionRange", 2.5f);
+
+            var dialogue = npc.AddComponent<NpcDialogue>();
+            SetStringField(dialogue, "dialogueId", (i % 2 == 0) ? "town_villager_a" : "town_villager_b");
+            npc.AddComponent<NpcStateView>();
 
             var wanderer = npc.AddComponent<NpcWander3D>();
             SetIntField(wanderer, "wallLayers", wallMask);
             SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 8f);
             SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
+
+            // Give the first NPCs a home: they commute to a specific building's door and back.
+            if (i < Buildings.Count)
+            {
+                var b = Buildings[i];
+                var pathfinder = npc.AddComponent<NpcPathfinder3D>();
+                SetIntField(pathfinder, "obstacleLayers", wallMask);
+
+                string keyId = "house_key_" + b.x + "_" + b.y;
+                var schedule = npc.AddComponent<NpcSchedule3D>();
+                SetStringField(schedule, "homeDoorPortalId", "door_" + b.x + "_" + b.y);
+                SetStringField(schedule, "homeInteriorPortalId", "int_" + b.x + "_" + b.y);
+                SetStringField(schedule, "homeKeyId", keyId);
+                SetNestedFloat(schedule, "movementConfig", "MoveSpeed", 1.8f);
+                if (DoorApproaches.TryGetValue((b.x, b.y), out Transform approach))
+                    SetObjectField(schedule, "homeEntrance", approach);
+
+                // The key is a real item; NpcInventoryDatabase seeds it into this villager's inventory.
+            }
 
             var visual = new GameObject("NpcVisual");
             visual.transform.SetParent(npc.transform, false);
@@ -322,7 +771,7 @@ public static class Town3DSceneBuilder
     private static Vector3 CellToWorld(int cx, int cy) =>
         new Vector3((cx + 0.5f) * CellSize, 0f, (cy + 0.5f) * CellSize);
 
-    private static void CreateCellMesh(string name, HashSet<Vector2Int> cells, float height, Material material)
+    private static void CreateCellMesh(string name, HashSet<Vector2Int> cells, float height, Material material, Transform parent = null)
     {
         var vertices = new List<Vector3>(cells.Count * 4);
         var triangles = new List<int>(cells.Count * 6);
@@ -348,6 +797,8 @@ public static class Town3DSceneBuilder
         mesh.RecalculateBounds();
 
         var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        if (parent != null)
+            go.transform.SetParent(parent, false);
         go.GetComponent<MeshFilter>().sharedMesh = mesh;
         go.GetComponent<MeshRenderer>().sharedMaterial = material;
 
@@ -416,6 +867,13 @@ public static class Town3DSceneBuilder
         if (p != null) { p.intValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 
+    private static void SetFloatField(Object target, string field, float value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
     private static void SetNestedFloat(Object target, string parentField, string childField, float value)
     {
         var so = new SerializedObject(target);
@@ -423,6 +881,33 @@ public static class Town3DSceneBuilder
         if (p == null) return;
         SerializedProperty q = p.FindPropertyRelative(childField);
         if (q != null) { q.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedInt(Object target, string parentField, string childField, int value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.intValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedBool(Object target, string parentField, string childField, bool value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.boolValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedString(Object target, string parentField, string childField, string value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.stringValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 
     private static void SetEnumField(Object target, string field, int value)

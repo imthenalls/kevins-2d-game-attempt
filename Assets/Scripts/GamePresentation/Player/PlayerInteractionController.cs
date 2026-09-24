@@ -37,7 +37,9 @@ public class PlayerInteractionController : MonoBehaviour
     [SerializeField] private LayerMask interactableLayers = Physics2D.DefaultRaycastLayers;
     [SerializeField] private DialogueUIController dialogueUI;
     [SerializeField] private PlayerControllerBase playerController;
-    private readonly List<Collider2D> overlapResults = new List<Collider2D>();
+    private readonly List<Collider2D> overlap2D = new List<Collider2D>();
+    private readonly List<Component> candidates = new List<Component>();
+    private static readonly Collider[] Overlap3D = new Collider[32];
     private NpcDialogue activeDialogue;
     private DialogueNodeDefinition activeNode;
     private int selectedChoiceIndex;
@@ -107,16 +109,40 @@ public class PlayerInteractionController : MonoBehaviour
         }
     }
 
+    // 2D scenes use Physics2D (the player has a Rigidbody2D); 3D planar-isometric scenes use Physics.
+    private bool Is3D => !TryGetComponent<Rigidbody2D>(out _);
+
+    // Fills results with collider components near the player on the layer mask, using 2D or 3D
+    // physics to match the scene so the same interaction logic works in both.
+    private void CollectTargets(int layerMask, List<Component> results)
+    {
+        results.Clear();
+
+        if (Is3D)
+        {
+            int count = Physics.OverlapSphereNonAlloc(
+                transform.position, config.InteractionSearchRadius, Overlap3D,
+                layerMask, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < count; i++)
+                results.Add(Overlap3D[i]);
+            return;
+        }
+
+        var filter = new ContactFilter2D { useLayerMask = true, layerMask = layerMask, useTriggers = true };
+        int hits = Physics2D.OverlapCircle(transform.position, config.InteractionSearchRadius, filter, overlap2D);
+        for (int i = 0; i < hits; i++)
+            results.Add(overlap2D[i]);
+    }
+
     private void TryStartNearestDialogue()
     {
-        var npcFilter = new ContactFilter2D { useLayerMask = true, layerMask = npcLayers, useTriggers = true };
-        int hitCount = Physics2D.OverlapCircle(transform.position, config.InteractionSearchRadius, npcFilter, overlapResults);
-    NpcDialogue nearestDialogue = null;
-    float nearestDistanceSqr = float.MaxValue;
+        CollectTargets(npcLayers, candidates);
+        NpcDialogue nearestDialogue = null;
+        float nearestDistanceSqr = float.MaxValue;
 
-    for (int i = 0; i < hitCount; i++)
+        for (int i = 0; i < candidates.Count; i++)
         {
-            Collider2D hit = overlapResults[i];
+            Component hit = candidates[i];
             if (hit == null)
             {
                 continue;
@@ -334,20 +360,18 @@ public class PlayerInteractionController : MonoBehaviour
 
     private void TryStartNearestInteractable()
     {
-        var interactableFilter = new ContactFilter2D { useLayerMask = true, layerMask = interactableLayers, useTriggers = true };
-        int hitCount = Physics2D.OverlapCircle(
-            transform.position, config.InteractionSearchRadius, interactableFilter, overlapResults);
+        CollectTargets(interactableLayers, candidates);
 
         IInteractable nearest         = null;
         float         nearestDistSqr  = float.MaxValue;
 
-        for (int i = 0; i < hitCount; i++)
+        for (int i = 0; i < candidates.Count; i++)
         {
-            if (overlapResults[i] == null) continue;
-            var candidate = overlapResults[i].GetComponentInParent<IInteractable>();
+            if (candidates[i] == null) continue;
+            var candidate = candidates[i].GetComponentInParent<IInteractable>();
             if (candidate == null || !candidate.CanInteract(transform.position)) continue;
 
-            float distSqr = (overlapResults[i].transform.position - transform.position).sqrMagnitude;
+            float distSqr = (candidates[i].transform.position - transform.position).sqrMagnitude;
             if (distSqr < nearestDistSqr)
             {
                 nearestDistSqr = distSqr;

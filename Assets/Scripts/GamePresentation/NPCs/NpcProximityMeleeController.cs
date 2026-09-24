@@ -1,3 +1,4 @@
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
@@ -67,7 +68,12 @@ public class NpcProximityMeleeController : MonoBehaviour
 
         Vector2 toPlayer = player.transform.position - transform.position;
         float range = attacker.AttackRange;
-        if (toPlayer.sqrMagnitude > range * range)
+
+        // The engage/attack decision lives in Game.Core (engine-free, shared with 3D).
+        // Multiplier 1 keeps the 2D behavior: out of range drops combat (movement is behavior-driven).
+        MeleeEngagement decision = MeleeEngagementPolicy.Evaluate(toPlayer.magnitude, range, 1f);
+
+        if (decision == MeleeEngagement.Disengage)
         {
             LeaveCombatState();
             return;

@@ -32,5 +32,38 @@
           "maxQuantity": 1
         }
       ]
-    }  ]
+    },
+    {
+      "npcId": "town_bandit_1",
+      "dropName": "Bandit Loot",
+      "items": [
+        {
+          "itemId": "gold_coin",
+          "minQuantity": 4,
+          "maxQuantity": 9
+        },
+        {
+          "itemId": "health_potion",
+          "minQuantity": 0,
+          "maxQuantity": 2
+        }
+      ]
+    },
+    {
+      "npcId": "town_bandit_2",
+      "dropName": "Bandit Loot",
+      "items": [
+        {
+          "itemId": "gold_coin",
+          "minQuantity": 4,
+          "maxQuantity": 9
+        },
+        {
+          "itemId": "rusty_coin",
+          "minQuantity": 1,
+          "maxQuantity": 3
+        }
+      ]
+    }
+  ]
 }

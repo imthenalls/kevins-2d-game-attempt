@@ -47,8 +47,7 @@ public static class Isometric3DSceneView
         bounds = default;
         bool hasContent = false;
 
-        Renderer[] renderers = Object.FindObjectsByType<Renderer>(
-            FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Renderer[] renderers = Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude);
 
         foreach (Renderer renderer in renderers)
         {

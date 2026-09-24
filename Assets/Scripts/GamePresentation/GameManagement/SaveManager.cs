@@ -195,6 +195,15 @@ public class SaveManager : MonoBehaviour
                 entry.maxHp = snapshot.MaxHp;
             }
 
+            // Home schedule (NpcSchedule3D) is saved from the pure-C# model too.
+            if (GameSessionHost.Session != null &&
+                GameSessionHost.Session.NpcSchedules.TryCapture(npc.NpcId, out NpcScheduleSnapshot schedule))
+            {
+                entry.hasSchedule = true;
+                entry.schedulePhase = (int)schedule.Phase;
+                entry.scheduleSeconds = schedule.SecondsRemaining;
+            }
+
             if (npc.Inventory != null)
             {
                 for (int i = 0; i < npc.Inventory.SlotCount; i++)
@@ -378,6 +387,13 @@ public class SaveManager : MonoBehaviour
                 {
                     Debug.LogWarning($"[SaveManager] NPC not found in scene: '{entry.npcId}'");
                     continue;
+                }
+
+                // Home schedule (NpcSchedule3D): restore phase/timer before the body is placed.
+                if (entry.hasSchedule && GameSessionHost.Session != null)
+                {
+                    GameSessionHost.Session.NpcSchedules.Apply(
+                        new NpcScheduleSnapshot(entry.npcId, (NpcSchedulePhase)entry.schedulePhase, entry.scheduleSeconds));
                 }
 
                 // Model-backed NPCs restore through the pure-C# model; the bound NpcStateView

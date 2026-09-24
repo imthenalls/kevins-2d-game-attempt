@@ -23,7 +23,7 @@ namespace Game.Tests
             Assert.IsNotNull(PortalManager.Instance, "GameBootstrap should provide a persistent PortalManager.");
 
             Assert.IsTrue(
-                PortalManager.Instance.TryFindPortal("world_b_portal", out PortalTrigger2D portal),
+                PortalManager.Instance.TryFindPortal("world_b_portal", out IPortalRoute portal),
                 "The hub portal should exist and be findable by id.");
             Assert.AreEqual("WorldB", portal.DestinationScene);
             Assert.IsFalse(PortalManager.Instance.TryFindPortal("no_such_portal_xyz", out _));

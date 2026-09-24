@@ -1,4 +1,5 @@
 using System;
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
@@ -98,9 +99,10 @@ public class CombatReceiver : MonoBehaviour
     /// </summary>
     public void ReceiveHit(DamageInfo info)
     {
-        if (!combatEnabled || invincible || !Stats.IsAlive) return;
+        // Damage rules live in Game.Core (engine-free, unit-tested).
+        if (!DamagePolicy.CanReceive(combatEnabled, invincible, Stats.IsAlive)) return;
 
-        Stats.TakeDamage(Mathf.RoundToInt(info.Amount * DamageMultiplier));
+        Stats.TakeDamage(DamagePolicy.Resolve(info.Amount, DamageMultiplier));
         OnHit?.Invoke(info, Stats);
     }
 
@@ -116,8 +118,10 @@ public class CombatReceiver : MonoBehaviour
         if (_npcController != null && _npcController.NpcType == NpcType.Enemy)
         {
             _npcController.SetBehaviorState(NpcBehaviorState.Disabled);
-            if (TryGetComponent(out Rigidbody2D body))
-                body.linearVelocity = Vector2.zero;
+            if (TryGetComponent(out Rigidbody2D body2D))
+                body2D.linearVelocity = Vector2.zero;
+            else if (TryGetComponent(out Rigidbody body3D))
+                body3D.linearVelocity = Vector3.zero;
 
             EnemyLootDrop.Spawn(_npcController);
             _npcController.HideDefeatedBody();

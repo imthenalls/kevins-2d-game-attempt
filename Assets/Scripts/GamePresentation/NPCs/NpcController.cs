@@ -118,7 +118,15 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
             return false;
         }
 
-        return Vector2.Distance(InteractionPosition, worldPosition) <= config.InteractionRange;
+        // Planar distance on the scene's gameplay plane: XY for a 2D NPC (Rigidbody2D),
+        // XZ for a 3D planar-isometric NPC (Rigidbody). Y is height in 3D, so it is ignored.
+        Vector3 delta = InteractionPosition - worldPosition;
+        bool is3D = !TryGetComponent(out Rigidbody2D _);
+        float sqr = is3D
+            ? delta.x * delta.x + delta.z * delta.z
+            : delta.x * delta.x + delta.y * delta.y;
+
+        return sqr <= config.InteractionRange * config.InteractionRange;
     }
 
     public void SetBehaviorState(NpcBehaviorState newState)
@@ -136,6 +144,9 @@ public class NpcController : MonoBehaviour, IEntityController, ITradeParticipant
             spriteRenderer.enabled = false;
 
         foreach (Collider2D bodyCollider in GetComponentsInChildren<Collider2D>(true))
+            bodyCollider.enabled = false;
+
+        foreach (Collider bodyCollider in GetComponentsInChildren<Collider>(true))
             bodyCollider.enabled = false;
     }
 

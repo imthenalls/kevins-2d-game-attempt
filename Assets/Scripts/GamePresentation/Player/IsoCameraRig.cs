@@ -37,6 +37,8 @@ public sealed class IsoCameraRig : MonoBehaviour
     [SerializeField] private float smooth = 12f;
 
     private Camera cameraComponent;
+    private bool snapped;
+    private Vector3 lastFocus;
 
     /// <summary>The rotation every billboard should copy to stay upright and face this camera.</summary>
     public Quaternion BillboardRotation => transform.rotation;
@@ -45,7 +47,12 @@ public sealed class IsoCameraRig : MonoBehaviour
     {
         cameraComponent = GetComponent<Camera>();
         ApplyProjection();
-        ApplyRigImmediate();
+
+        // Snap immediately when the target is already present; otherwise snap on the first frame a
+        // target is found (the player may be activated a frame after the rig is added).
+        snapped = TryResolveTarget(out _);
+        if (snapped)
+            ApplyRigImmediate();
     }
 
     private void LateUpdate()
@@ -54,6 +61,17 @@ public sealed class IsoCameraRig : MonoBehaviour
             cameraComponent = GetComponent<Camera>();
 
         ApplyProjection();
+
+        if (!snapped)
+        {
+            if (!TryResolveTarget(out _))
+                return;
+
+            ApplyRigImmediate();
+            snapped = true;
+            return;
+        }
+
         ApplyRig(smooth);
     }
 
@@ -76,7 +94,11 @@ public sealed class IsoCameraRig : MonoBehaviour
         transform.rotation = rotation;
         Vector3 desired = focus - rotation * Vector3.forward * distance;
 
-        transform.position = smoothing <= 0f
+        // Snap when the target jumped (scene load, spawn placement, portal) and smooth otherwise.
+        bool teleported = (focus - lastFocus).sqrMagnitude > 1f;
+        lastFocus = focus;
+
+        transform.position = (smoothing <= 0f || teleported)
             ? desired
             : Vector3.Lerp(transform.position, desired, 1f - Mathf.Exp(-smoothing * Time.deltaTime));
     }
@@ -89,6 +111,7 @@ public sealed class IsoCameraRig : MonoBehaviour
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
         transform.rotation = rotation;
         transform.position = focus - rotation * Vector3.forward * distance;
+        lastFocus = focus;
     }
 
     private bool TryResolveTarget(out Vector3 focus)

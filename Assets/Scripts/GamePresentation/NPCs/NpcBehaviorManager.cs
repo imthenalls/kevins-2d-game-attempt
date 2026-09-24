@@ -1,3 +1,4 @@
+using Game.Core;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,6 +21,8 @@ public class NpcBehaviorManager : MonoBehaviour
     private readonly List<INpcBehavior> _valid = new List<INpcBehavior>();
     private INpcBehavior _current;
     private NpcController _npcController;
+    private NpcBehaviorScheduler _scheduler;
+    private float[] _weights;
 
     private void Awake()
     {
@@ -30,6 +33,9 @@ public class NpcBehaviorManager : MonoBehaviour
             if (mb is INpcBehavior b)
                 _valid.Add(b);
         }
+
+        _scheduler = new NpcBehaviorScheduler(Random.Range(1, int.MaxValue));
+        _weights = new float[_valid.Count];
 
         if (_valid.Count == 0)
             Debug.LogWarning("[NpcBehaviorManager] No INpcBehavior components found on this GameObject.", this);
@@ -68,18 +74,11 @@ public class NpcBehaviorManager : MonoBehaviour
     {
         if (_valid.Count == 0) return null;
 
-        float total = 0f;
-        foreach (INpcBehavior b in _valid) total += b.Weight;
-
-        float roll = Random.Range(0f, total);
-        float cumulative = 0f;
+        // Weighted selection lives in Game.Core (engine-free, unit-tested).
         for (int i = 0; i < _valid.Count; i++)
-        {
-            cumulative += _valid[i].Weight;
-            if (roll < cumulative)
-                return _valid[i];
-        }
+            _weights[i] = _valid[i].Weight;
 
-        return _valid[_valid.Count - 1];
+        int index = _scheduler.PickNext(_weights);
+        return index >= 0 ? _valid[index] : null;
     }
 }

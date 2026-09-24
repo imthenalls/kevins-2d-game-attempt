@@ -2,29 +2,29 @@ using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Drives a melee enemy through approach, a visible warning, a straight dash, sword swing,
-/// and recovery. Sweeps its body collider before moving so walls stop even fast dashes.
+/// Thin Unity facade over the engine-free <see cref="NpcDashMeleeModel"/>. Drives a melee enemy
+/// through approach, a visible warning (body flashes), a straight dash, a sword swing, and recovery.
+/// The phase machine lives in Game.Data; this component only samples geometry, aims the sprite,
+/// moves the body safely (casting its collider so walls stop the dash), and applies the tint/attack.
+///
 /// Unity setup:
 ///   1. Attach to an Enemy NpcController with a zero-gravity Rigidbody2D, solid Collider2D,
 ///      and CombatAttacker with Use Player Input off. Do not add another movement AI.
-///   2. Assign Body Collider, Body Renderer, and an Aim Pivot containing the body and
-///      EquippedWeaponVisual. The pivot's unrotated sword arc points up.
-///   3. Configure warning duration/color, approach speed, dash range/speed, stopping
-///      distance, recovery, obstacle layers, and world-space Arena Bounds.
-///   4. Player is optional; it is found automatically. The spawner sets Arena Bounds.
-/// Runtime API: Phase reports attack state; SetArenaBounds limits pursuit to the room.
+///   2. Assign Body Collider, Body Renderer, and an Aim Pivot containing the body and weapon.
+///   3. The spawner sets Arena Bounds via SetArenaBounds.
+///
+/// Runtime API: Phase reports the current attack phase (from the model).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NpcController), typeof(Rigidbody2D), typeof(CombatAttacker))]
 public sealed class NpcDashMeleeController : MonoBehaviour
 {
-    public enum AttackPhase { Approach, Warning, Dash, Swing, Recovery }
-
     [Header("References")]
     [SerializeField] private PlayerController2D player;
     [SerializeField] private Collider2D bodyCollider;
     [SerializeField] private SpriteRenderer bodyRenderer;
     [SerializeField] private Transform aimPivot;
+
     [Header("Config (Game.Data)")]
     [SerializeField] private NpcDashMeleeConfig config = new NpcDashMeleeConfig();
 
@@ -38,12 +38,13 @@ public sealed class NpcDashMeleeController : MonoBehaviour
     private NpcController npc;
     private Rigidbody2D body;
     private CombatAttacker attacker;
+    private NpcDashMeleeModel model;
     private Color restingColor;
     private readonly RaycastHit2D[] hits = new RaycastHit2D[32];
-    private Vector2 dashDirection;
-    private float dashRemaining;
-    private float phaseTime;
-    public AttackPhase Phase { get; private set; }
+
+    /// <summary>Current attack phase, owned by the Core model.</summary>
+    public NpcDashPhase Phase => model != null ? model.Phase : NpcDashPhase.Approach;
+
     public float WarningDuration => config.WarningDuration;
 
     private void Awake()
@@ -54,6 +55,8 @@ public sealed class NpcDashMeleeController : MonoBehaviour
         if (bodyCollider == null) bodyCollider = GetComponent<Collider2D>();
         if (bodyRenderer == null) bodyRenderer = GetComponentInChildren<SpriteRenderer>();
         if (bodyRenderer != null) restingColor = bodyRenderer.color;
+
+        model = new NpcDashMeleeModel(config);
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
 
@@ -79,48 +82,44 @@ public sealed class NpcDashMeleeController : MonoBehaviour
 
         npc.SetBehaviorState(NpcBehaviorState.Combat);
         body.linearVelocity = Vector2.zero;
-        phaseTime += Time.fixedDeltaTime;
+
         Vector2 toPlayer = (Vector2)player.transform.position - body.position;
-        switch (Phase)
+        float distance = toPlayer.magnitude;
+        float directionX = distance > 0.001f ? toPlayer.x / distance : 0f;
+        float directionY = distance > 0.001f ? toPlayer.y / distance : 0f;
+
+        NpcDashDecision decision = model.Tick(
+            Time.fixedDeltaTime, distance, npc.AggroRange, directionX, directionY,
+            attacker.AttackDuration, attacker.isActiveAndEnabled);
+
+        // Aim only while lining up; the dash direction is committed by the model.
+        if (model.Phase == NpcDashPhase.Approach || model.Phase == NpcDashPhase.Warning)
+            Aim(toPlayer);
+
+        if (decision.WarningActive)
         {
-            case AttackPhase.Approach:
-                Aim(toPlayer);
-                if (toPlayer.magnitude <= config.DashRange)
-                {
-                    Enter(AttackPhase.Warning);
-                    if (bodyRenderer != null) bodyRenderer.color = WarningColor;
-                }
-                else if (toPlayer.magnitude <= npc.AggroRange)
-                    MoveSafely(toPlayer.normalized, config.ApproachSpeed * Time.fixedDeltaTime);
+            if (bodyRenderer != null) bodyRenderer.color = WarningColor;
+        }
+        else
+        {
+            RestoreColor();
+        }
+
+        Vector2 direction = new Vector2(decision.DirectionX, decision.DirectionZ);
+
+        switch (decision.Intent)
+        {
+            case NpcDashIntent.Approach:
+                MoveSafely(direction, decision.Distance);
                 break;
-            case AttackPhase.Warning:
-                Aim(toPlayer);
-                if (phaseTime + 0.0001f >= config.WarningDuration)
-                {
-                    // Aim is committed here; dodging afterward does not steer the dash.
-                    dashDirection = toPlayer.normalized;
-                    dashRemaining = Mathf.Clamp(toPlayer.magnitude - config.StoppingDistance, 0f, config.DashRange);
-                    RestoreColor();
-                    Enter(AttackPhase.Dash);
-                }
+
+            case NpcDashIntent.Dash:
+                float moved = MoveSafely(direction, decision.Distance);
+                model.ReportDashMoved(moved, decision.Distance);
                 break;
-            case AttackPhase.Dash:
-                float step = Mathf.Min(dashRemaining, config.DashSpeed * Time.fixedDeltaTime);
-                float moved = MoveSafely(dashDirection, step);
-                dashRemaining -= moved;
-                if (dashRemaining <= 0.01f || moved + 0.001f < step)
-                {
-                    // Swing on the following physics tick, after the final movement.
-                    Enter(AttackPhase.Swing);
-                }
-                break;
-            case AttackPhase.Swing:
-                if (phaseTime <= Time.fixedDeltaTime + 0.0001f) attacker.TryAttack();
-                if (phaseTime >= attacker.AttackDuration + Time.fixedDeltaTime)
-                    Enter(AttackPhase.Recovery);
-                break;
-            case AttackPhase.Recovery:
-                if (phaseTime >= config.RecoveryDuration) Enter(AttackPhase.Approach);
+
+            case NpcDashIntent.Attack:
+                attacker.TryAttack();
                 break;
         }
     }
@@ -152,15 +151,19 @@ public sealed class NpcDashMeleeController : MonoBehaviour
             aimPivot.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f);
     }
 
-    private void Enter(AttackPhase phase) { Phase = phase; phaseTime = 0f; }
-    private void RestoreColor() { if (bodyRenderer != null) bodyRenderer.color = restingColor; }
+    private void RestoreColor()
+    {
+        if (bodyRenderer != null) bodyRenderer.color = restingColor;
+    }
+
     private void ResetAttack()
     {
         if (body != null) body.linearVelocity = Vector2.zero;
+        model?.Reset();
         RestoreColor();
-        Enter(AttackPhase.Approach);
         if (npc != null && npc.BehaviorState == NpcBehaviorState.Combat)
             npc.SetBehaviorState(NpcBehaviorState.Idle);
     }
+
     private void OnDisable() => ResetAttack();
 }

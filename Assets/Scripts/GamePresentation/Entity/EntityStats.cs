@@ -62,15 +62,24 @@ public class EntityStats : MonoBehaviour
 
     private bool _configured;
 
-    private void Awake()
+    private void Awake() => EnsureInitialized();
+
+    /// <summary>
+    /// Initializes HP/MP and binds a Wallet if one is present. Safe to call repeatedly and from
+    /// another component's Awake that may run before this one (Unity Awake order is not guaranteed).
+    /// </summary>
+    public void EnsureInitialized()
     {
+        if (_awakeInitialized)
+            return;
+
+        _awakeInitialized = true;
+
         if (!_configured)
         {
             _hp = Mathf.Clamp(config.StartingHp, 0, config.MaxHp);
             _mp = Mathf.Clamp(config.StartingMp, 0, config.MaxMp);
         }
-
-        _awakeInitialized = true;
 
         if (TryGetComponent<Wallet>(out var wallet))
             BindManaWallet(wallet);

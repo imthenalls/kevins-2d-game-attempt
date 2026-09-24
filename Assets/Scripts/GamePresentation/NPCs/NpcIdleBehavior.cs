@@ -17,21 +17,16 @@ public class NpcIdleBehavior : MonoBehaviour, INpcBehavior
 
     public float Weight => config.Weight;
 
-    private float _timer;
-    private float _duration;
+    // The idle duration rule lives in Game.Core (engine-free, unit-tested).
+    private IdleTimer _timer;
 
-    public void OnEnter()
-    {
-        _duration = Random.Range(config.MinDuration, config.MaxDuration);
-        _timer = 0f;
-    }
+    private void Awake() => _timer = new IdleTimer(Random.Range(1, int.MaxValue));
 
-    public void Tick()
-    {
-        _timer += Time.deltaTime;
-    }
+    public void OnEnter() => _timer.Begin(config.MinDuration, config.MaxDuration);
+
+    public void Tick() => _timer.Tick(Time.deltaTime);
 
     public void OnExit() { }
 
-    public bool IsComplete() => _timer >= _duration;
+    public bool IsComplete() => _timer.IsComplete;
 }

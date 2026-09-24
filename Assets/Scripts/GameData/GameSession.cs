@@ -7,12 +7,15 @@ namespace Game.Core
     ///
     /// Unity setup: none — plain C#. See GameSessionHost for the Unity bootstrap.
     ///
-    /// Runtime API: Npcs (repository) and NpcStates (command service).
+    /// Runtime API: Npcs (repository), NpcStates (command service), and the NPC schedule
+    /// repository/service (NpcScheduleRepo / NpcSchedules).
     /// </summary>
     public sealed class GameSession
     {
         public NpcStateRepository Npcs { get; }
         public NpcStateService NpcStates { get; }
+        public NpcScheduleRepository NpcScheduleRepo { get; }
+        public NpcScheduleService NpcSchedules { get; }
 
         /// <summary>
         /// Authoritative player health, shared across avatars and scene loads. Null until the first
@@ -31,6 +34,8 @@ namespace Game.Core
         {
             Npcs = new NpcStateRepository();
             NpcStates = new NpcStateService(Npcs);
+            NpcScheduleRepo = new NpcScheduleRepository();
+            NpcSchedules = new NpcScheduleService(NpcScheduleRepo);
         }
 
         /// <summary>

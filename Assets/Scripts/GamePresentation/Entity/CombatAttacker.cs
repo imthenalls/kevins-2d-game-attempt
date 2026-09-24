@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Game.Core;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
@@ -7,17 +6,18 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Melee attack component shared by the player and NPCs.
+/// Melee attack component shared by the player and NPCs. Thin facade over the engine-free
+/// <see cref="AttackModel"/>: this component only reads input, resolves the equipped weapon's
+/// presence, and delivers damage; the cooldown, hit window, input buffer, once-per-swing hit
+/// registry and recoil flag live in Game.Data and are unit-tested there.
 ///
 /// Player: enable Use Player Input — Update reads keyboard/gamepad and calls TryAttack().
 /// NPC: disable Use Player Input — an AI behavior script calls TryAttack() directly.
 ///
-/// Tuning lives in the pure-C# Game.Core.CombatAttackerConfig (Game.Data assembly); this
-/// component keeps only the Unity hit-mask (LayerMask) and reads the config. Set Target Layers to
-/// the layer(s) this entity is allowed to hit. Attack Range remains the NPC AI engagement
-/// distance; actual damage requires the moving equipped-weapon hitbox to overlap a CombatReceiver
-/// collider while the swing is active. Player input is ignored when the Weapon equipment slot is
-/// empty. Player input can queue one follow-up during the configured final fraction of a swing.
+/// Unity setup:
+///   1. Add to an entity with EntityStats.
+///   2. Keep the hit LayerMask (Target Layers) here; tuning is on the nested CombatAttackerConfig.
+///   3. Optionally add CombatReceiver / EquipmentManager for the player's weapon requirement.
 /// </summary>
 [DisallowMultipleComponent]
 public class CombatAttacker : MonoBehaviour
@@ -37,63 +37,48 @@ public class CombatAttacker : MonoBehaviour
     /// <summary>Fired when the weapon-contact hit that just landed kills its target.</summary>
     public event Action OnKillLanded;
 
-    private readonly HashSet<CombatReceiver> _hitTargetsThisSwing =
-        new HashSet<CombatReceiver>();
+    private AttackModel model;
     private EquipmentManager _equipmentManager;
     private CombatReceiver _selfReceiver;
-    private float _cooldownTimer;
-    private float _attackAnimationTimer;
-    private bool _hasBufferedAttack;
-    private bool _weaponHitWindowOpen;
-    private bool _recoilAppliedThisSwing;
+    private PlayerControllerBase _playerController;
 
     /// <summary>Configured visual duration for listeners animating this attack.</summary>
-    public float AttackDuration => config.AttackDuration;
+    public float AttackDuration => model.AttackDuration;
 
     /// <summary>Legacy delay retained for compatibility with existing visual listeners.</summary>
     public float AttackWindup => config.AttackWindup;
 
     /// <summary>World-space distance used by melee AI to decide when to attack.</summary>
-    public float AttackRange => config.AttackRange;
+    public float AttackRange => model.AttackRange;
 
     /// <summary>True while the current swing may deal weapon-contact damage.</summary>
-    public bool IsWeaponHitWindowOpen => _weaponHitWindowOpen;
+    public bool IsWeaponHitWindowOpen => model.IsWeaponHitWindowOpen;
 
     private void Awake()
     {
+        model = new AttackModel(config);
         _equipmentManager = GetComponent<EquipmentManager>();
         _selfReceiver = GetComponent<CombatReceiver>();
+        _playerController = GetComponent<PlayerControllerBase>();
     }
 
     private void Update()
     {
-        if (_cooldownTimer > 0f)
-            _cooldownTimer -= Time.deltaTime;
+        bool hasWeapon = HasRequiredPlayerWeapon();
 
-        if (_attackAnimationTimer > 0f)
+        if (model.Tick(Time.deltaTime, hasWeapon))
+            OnAttackStarted?.Invoke();
+
+        // Ignore player attack input while movement is locked (dialogue, inventory, cutscene).
+        if (config.UsePlayerInput && WasAttackPressedThisFrame() &&
+            (_playerController == null || _playerController.MovementEnabled))
         {
-            _attackAnimationTimer -= Time.deltaTime;
-            if (_attackAnimationTimer <= 0f)
-            {
-                _attackAnimationTimer = 0f;
-                _weaponHitWindowOpen = false;
-
-                if (_hasBufferedAttack && HasRequiredPlayerWeapon())
-                    BeginAttack();
-                else
-                    _hasBufferedAttack = false;
-            }
+            if (model.HandleInput(hasWeapon))
+                OnAttackStarted?.Invoke();
         }
-
-        if (config.UsePlayerInput && WasAttackPressedThisFrame())
-            HandlePlayerAttackInput();
     }
 
-    private void OnDisable()
-    {
-        _weaponHitWindowOpen = false;
-        _hasBufferedAttack = false;
-    }
+    private void OnDisable() => model.Reset();
 
     /// <summary>
     /// Attempts an attack. Player-controlled attackers require an equipped Weapon item.
@@ -101,11 +86,11 @@ public class CombatAttacker : MonoBehaviour
     /// </summary>
     public void TryAttack()
     {
-        if (!isActiveAndEnabled || _cooldownTimer > 0f || _attackAnimationTimer > 0f ||
-            !HasRequiredPlayerWeapon())
+        if (!isActiveAndEnabled)
             return;
 
-        BeginAttack();
+        if (model.TryBegin(HasRequiredPlayerWeapon()))
+            OnAttackStarted?.Invoke();
     }
 
     /// <summary>
@@ -114,13 +99,11 @@ public class CombatAttacker : MonoBehaviour
     /// </summary>
     public bool TryApplyWeaponHit(CombatReceiver receiver)
     {
-        if (!_weaponHitWindowOpen || receiver == null || !receiver.Stats.IsAlive)
-            return false;
-        if (!config.CanHitSelf && receiver == _selfReceiver)
+        if (receiver == null || !receiver.Stats.IsAlive)
             return false;
         if ((targetLayers.value & (1 << receiver.gameObject.layer)) == 0)
             return false;
-        if (!_hitTargetsThisSwing.Add(receiver))
+        if (!model.TryRegisterHit(receiver, config.CanHitSelf, _selfReceiver))
             return false;
 
         int totalDamage = config.AttackDamage;
@@ -132,50 +115,10 @@ public class CombatAttacker : MonoBehaviour
         if (!receiver.Stats.IsAlive)
             OnKillLanded?.Invoke();
 
-        if (!_recoilAppliedThisSwing && config.SelfRecoilDamage > 0 && _selfReceiver != null)
-        {
-            _recoilAppliedThisSwing = true;
+        if (config.SelfRecoilDamage > 0 && _selfReceiver != null && model.TryConsumeRecoil())
             _selfReceiver.ReceiveHit(new DamageInfo(config.SelfRecoilDamage, gameObject));
-        }
 
         return true;
-    }
-
-    // Starts one attack and resets the per-swing damage and input-buffer state.
-    private void BeginAttack()
-    {
-        _hasBufferedAttack = false;
-        _hitTargetsThisSwing.Clear();
-        _recoilAppliedThisSwing = false;
-        _cooldownTimer = Mathf.Max(config.AttackCooldown, config.AttackDuration);
-        _attackAnimationTimer = config.AttackDuration;
-        _weaponHitWindowOpen = true;
-        OnAttackStarted?.Invoke();
-    }
-
-    // Starts immediately when ready, or queues one follow-up during the final buffer window.
-    private void HandlePlayerAttackInput()
-    {
-        if (!HasRequiredPlayerWeapon())
-        {
-            _hasBufferedAttack = false;
-            return;
-        }
-
-        if (_cooldownTimer <= 0f && _attackAnimationTimer <= 0f)
-        {
-            BeginAttack();
-            return;
-        }
-
-        if (_attackAnimationTimer <= 0f || _hasBufferedAttack)
-            return;
-
-        float duration = Mathf.Max(0.01f, config.AttackDuration);
-        float normalizedProgress = 1f - Mathf.Clamp01(_attackAnimationTimer / duration);
-        float bufferStart = 1f - Mathf.Clamp01(config.AttackBufferWindow);
-        if (normalizedProgress >= bufferStart)
-            _hasBufferedAttack = true;
     }
 
     // Player attack input is armed only by an actual item in the Weapon equipment slot.

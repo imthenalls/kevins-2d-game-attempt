@@ -187,6 +187,11 @@ public class WorldPositionSaveEntry
         public int  cellX;
         public int  cellY;
 
+        // Home-schedule state (NpcSchedule3D): phase + seconds remaining, so "who is home" survives.
+        public bool  hasSchedule;
+        public int   schedulePhase;
+        public float scheduleSeconds;
+
         // Inventory (populated only when the NPC has an InventoryModel)
         public List<InventorySlotEntry> inventorySlots = new();
     }

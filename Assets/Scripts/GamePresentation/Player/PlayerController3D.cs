@@ -66,6 +66,20 @@ public class PlayerController3D : PlayerControllerBase
     public int CurrentDashCharges => currentDashCharges;
     public int MaxDashCharges => settings.MaxDashCharges;
 
+    /// <summary>Yaw (degrees) the player is aiming/facing, derived from the last movement input.</summary>
+    public float FacingYaw
+    {
+        get
+        {
+            Vector3 direction = WorldDirection(lastMovementDirection);
+            if (direction.sqrMagnitude < 0.0001f)
+                direction = WorldDirection(Vector2.up);
+
+            // Unity +Y euler: positive yaw turns local +X toward -Z, so negate the z component.
+            return Mathf.Atan2(-direction.z, direction.x) * Mathf.Rad2Deg;
+        }
+    }
+
     private Color TrailColor =>
         new Color(settings.DashTrailR, settings.DashTrailG, settings.DashTrailB, settings.DashTrailA);
 
@@ -97,6 +111,7 @@ public class PlayerController3D : PlayerControllerBase
         rb       = GetComponent<Rigidbody>();
         stats    = GetComponent<EntityStats>();
         combatReceiver = GetComponent<CombatReceiver>();
+        stats.EnsureInitialized();
 
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;

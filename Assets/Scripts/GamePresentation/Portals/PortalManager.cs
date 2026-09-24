@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Executes same-scene and cross-scene portal travel. Portal routes are authored
-/// entirely on PortalTrigger2D components; this manager does not load portal JSON.
+/// Executes same-scene and cross-scene portal travel for both 2D and 3D portals. Portal routes are
+/// authored entirely on portal components (<see cref="PortalTrigger2D"/> / <see cref="PortalTrigger3D"/>,
+/// surfaced through <see cref="IPortalRoute"/>); this manager does not load portal JSON.
 /// </summary>
 public class PortalManager : MonoBehaviour
 {
@@ -45,27 +46,28 @@ public class PortalManager : MonoBehaviour
         }
     }
 
-    public bool TryUsePortal(PortalTrigger2D sourcePortal, Transform traveler)
+    public bool TryUsePortal(IPortalRoute sourcePortal, Transform traveler)
     {
         if (sourcePortal == null || traveler == null)
-        {
             return false;
-        }
 
         if (string.IsNullOrWhiteSpace(sourcePortal.DestinationPortalId))
         {
             Debug.LogWarning(
                 $"Portal '{sourcePortal.PortalId}' has no Destination Portal Id.",
-                sourcePortal);
+                sourcePortal.Self);
             return false;
         }
 
         if (!sourcePortal.IsUnlocked())
         {
             Debug.Log($"Portal '{sourcePortal.PortalId}' is locked by world-state flag " +
-                      $"'{sourcePortal.RequiredUnlockFlag}'.", sourcePortal);
+                      $"'{sourcePortal.RequiredUnlockFlag}'.", sourcePortal.Self);
             return false;
         }
+
+        if (!IsKeySatisfied(sourcePortal, traveler))
+            return false;
 
         return TryTeleportToPortal(
             sourcePortal.DestinationPortalId,
@@ -75,12 +77,10 @@ public class PortalManager : MonoBehaviour
             sourcePortal.DestinationWorld);
     }
 
-    /// <summary>
-    /// Uses a source portal by ID. Useful for quest or scripted activation.
-    /// </summary>
+    /// <summary>Uses a source portal by ID. Useful for quest or scripted activation.</summary>
     public bool TryUsePortal(string sourcePortalId, Transform traveler)
     {
-        if (!TryFindPortal(sourcePortalId, out PortalTrigger2D sourcePortal))
+        if (!TryFindPortal(sourcePortalId, out IPortalRoute sourcePortal))
         {
             Debug.LogWarning($"Source portal '{sourcePortalId}' was not found in the active scene.");
             return false;
@@ -101,15 +101,11 @@ public class PortalManager : MonoBehaviour
         WorldLayer destinationWorld = WorldLayer.WorldA)
     {
         if (traveler == null || string.IsNullOrWhiteSpace(destinationPortalId))
-        {
             return false;
-        }
 
         EntityId travelerId = traveler.GetEntityId();
         if (!IsTravelerReady(travelerId))
-        {
             return false;
-        }
 
         string activeScene = SceneManager.GetActiveScene().name;
         bool sameScene = string.IsNullOrWhiteSpace(destinationScene) ||
@@ -117,7 +113,7 @@ public class PortalManager : MonoBehaviour
 
         if (sameScene)
         {
-            if (!TryFindPortal(destinationPortalId, out PortalTrigger2D destinationPortal))
+            if (!TryFindPortal(destinationPortalId, out IPortalRoute destinationPortal))
             {
                 Debug.LogWarning(
                     $"Destination portal '{destinationPortalId}' was not found in scene '{activeScene}'.");
@@ -128,7 +124,7 @@ public class PortalManager : MonoBehaviour
             {
                 Debug.LogWarning(
                     $"Destination portal '{destinationPortalId}' has no Exit Point.",
-                    destinationPortal);
+                    destinationPortal.Self);
                 return false;
             }
 
@@ -151,33 +147,26 @@ public class PortalManager : MonoBehaviour
         MarkTravelerCooldown(travelerId);
 
         if (SceneLoader.Instance != null)
-        {
             SceneLoader.Instance.LoadScene(pendingScene);
-        }
         else
-        {
             SceneManager.LoadScene(pendingScene);
-        }
 
         return true;
     }
 
-    public bool TryFindPortal(string portalId, out PortalTrigger2D portal)
+    public bool TryFindPortal(string portalId, out IPortalRoute portal)
     {
         portal = null;
         if (string.IsNullOrWhiteSpace(portalId))
-        {
             return false;
-        }
 
-        PortalTrigger2D[] portals =
-            FindObjectsByType<PortalTrigger2D>(FindObjectsInactive.Include);
-
-        for (int i = 0; i < portals.Length; i++)
+        Scene active = SceneManager.GetActiveScene();
+        List<IPortalRoute> portals = FindAllPortals();
+        for (int i = 0; i < portals.Count; i++)
         {
-            PortalTrigger2D candidate = portals[i];
+            IPortalRoute candidate = portals[i];
             if (candidate != null &&
-                candidate.gameObject.scene == SceneManager.GetActiveScene() &&
+                candidate.Self.gameObject.scene == active &&
                 string.Equals(candidate.PortalId, portalId, StringComparison.OrdinalIgnoreCase))
             {
                 portal = candidate;
@@ -188,32 +177,41 @@ public class PortalManager : MonoBehaviour
         return false;
     }
 
-    private bool TeleportTraveler(Transform traveler, PortalTrigger2D destinationPortal)
+    private bool TeleportTraveler(Transform traveler, IPortalRoute destinationPortal)
     {
         if (traveler == null || destinationPortal == null)
-        {
             return false;
-        }
 
         if (destinationPortal.ExitPoint == null)
         {
             Debug.LogWarning(
                 $"Destination portal '{destinationPortal.PortalId}' has no Exit Point.",
-                destinationPortal);
+                destinationPortal.Self);
             return false;
         }
 
         Vector3 targetPosition = destinationPortal.ArrivalPosition;
-        targetPosition.z = traveler.position.z;
-        traveler.position = targetPosition;
 
-        if (config.ResetVelocityOnTeleport)
+        if (traveler.TryGetComponent(out Rigidbody2D body2D))
         {
-            Rigidbody2D body = traveler.GetComponent<Rigidbody2D>();
-            if (body != null)
-            {
-                body.linearVelocity = new Vector2(config.ExitVelocityX, config.ExitVelocityY);
-            }
+            targetPosition.z = traveler.position.z;
+            traveler.position = targetPosition;
+            body2D.position = targetPosition;
+            if (config.ResetVelocityOnTeleport)
+                body2D.linearVelocity = new Vector2(config.ExitVelocityX, config.ExitVelocityY);
+        }
+        else if (traveler.TryGetComponent(out Rigidbody body3D))
+        {
+            targetPosition.y = body3D.position.y;
+            traveler.position = targetPosition;
+            body3D.position = targetPosition;
+            body3D.linearVelocity = config.ResetVelocityOnTeleport
+                ? new Vector3(config.ExitVelocityX, 0f, config.ExitVelocityY)
+                : Vector3.zero;
+        }
+        else
+        {
+            traveler.position = targetPosition;
         }
 
         MarkTravelerCooldown(traveler.GetEntityId());
@@ -250,7 +248,7 @@ public class PortalManager : MonoBehaviour
             return;
         }
 
-        if (!TryFindPortal(destinationPortalId, out PortalTrigger2D destinationPortal))
+        if (!TryFindPortal(destinationPortalId, out IPortalRoute destinationPortal))
         {
             Debug.LogWarning(
                 $"Destination portal '{destinationPortalId}' was not found in scene '{scene.name}'.");
@@ -260,8 +258,71 @@ public class PortalManager : MonoBehaviour
         TeleportTraveler(traveler, destinationPortal);
     }
 
-    private bool IsTravelerReady(EntityId travelerId)
+    private static List<IPortalRoute> FindAllPortals()
     {
+        var portals = new List<IPortalRoute>();
+
+        foreach (PortalTrigger2D portal in
+            FindObjectsByType<PortalTrigger2D>(FindObjectsInactive.Include))
+        {
+            portals.Add(portal);
+        }
+
+        foreach (PortalTrigger3D portal in
+            FindObjectsByType<PortalTrigger3D>(FindObjectsInactive.Include))
+        {
+            portals.Add(portal);
+        }
+
+        return portals;
+    }
+
+    // A route that names a key only blocks travelers that actually carry a key holder; entities with
+    // no key holder (the player, until the keyring is attached to the body) pass through.
+    private static bool IsKeySatisfied(IPortalRoute sourcePortal, Transform traveler)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePortal.RequiredKeyId))
+            return true;
+
+        IKeyHolder holder = traveler.GetComponentInParent<IKeyHolder>();
+
+        // The player's keyring is a persistent singleton, not on the player body.
+        if (holder == null && traveler.GetComponent<PlayerControllerBase>() != null)
+            holder = PlayerKeyring.Instance;
+
+        if (holder != null && holder.HasKey(sourcePortal.RequiredKeyId))
+            return true;
+
+        // Keys can also be real items held in an NPC's inventory.
+        NpcController npc = traveler.GetComponentInParent<NpcController>();
+        if (npc != null && InventoryHasKey(npc.Inventory, sourcePortal.RequiredKeyId))
+            return true;
+
+        Debug.Log($"Portal '{sourcePortal.PortalId}' is locked; '{traveler.name}' lacks key " +
+                  $"'{sourcePortal.RequiredKeyId}'.");
+        return false;
+    }
+
+    // True when the inventory holds an item with the given id.
+    private static bool InventoryHasKey(InventoryModel inventory, string itemId)
+    {
+        if (inventory == null || string.IsNullOrWhiteSpace(itemId))
+            return false;
+
+        for (int i = 0; i < inventory.SlotCount; i++)
+        {
+            InventorySlot slot = inventory.GetSlot(i);
+            if (!slot.IsEmpty && slot.item != null &&
+                string.Equals(slot.item.ItemId, itemId, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsTravelerReady(EntityId travelerId)    {
         return !travelerReadyTime.TryGetValue(travelerId, out float readyTime) ||
                Time.time >= readyTime;
     }

@@ -22,7 +22,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 [DisallowMultipleComponent]
-public class PortalTrigger2D : MonoBehaviour
+public class PortalTrigger2D : MonoBehaviour, IPortalRoute
 {
     [Header("Config (Game.Data)")]
     [SerializeField] private PortalTriggerConfig config = new PortalTriggerConfig();
@@ -41,6 +41,8 @@ public class PortalTrigger2D : MonoBehaviour
     [SerializeField] private WorldLayer destinationWorld = WorldLayer.WorldA;
     [Tooltip("Optional WorldStateManager flag required to use this route.")]
     [SerializeField] private string requiredUnlockFlag;
+    [Tooltip("Optional key item id the traveler must hold (via IKeyHolder) to use this route.")]
+    [SerializeField] private string requiredKeyId;
 
     [Header("Arrival")]
     [Tooltip("Exact position where travelers arrive at this portal.")]
@@ -59,10 +61,12 @@ public class PortalTrigger2D : MonoBehaviour
     public bool ChangesWorld => changesWorld;
     public WorldLayer DestinationWorld => destinationWorld;
     public string RequiredUnlockFlag => requiredUnlockFlag;
+    public string RequiredKeyId => requiredKeyId;
     public Transform ExitPoint => exitPoint;
     public List<string> AdditionalIncomingSources => additionalIncomingSources;
     public float TravelCooldown => config.TravelCooldown;
     public Vector3 ArrivalPosition => exitPoint != null ? exitPoint.position : transform.position;
+    public Component Self => this;
 
     private void Reset()
     {
@@ -76,6 +80,7 @@ public class PortalTrigger2D : MonoBehaviour
         destinationScene = destinationScene != null ? destinationScene.Trim() : string.Empty;
         destinationPortalId = destinationPortalId != null ? destinationPortalId.Trim() : string.Empty;
         requiredUnlockFlag = requiredUnlockFlag != null ? requiredUnlockFlag.Trim() : string.Empty;
+        requiredKeyId = requiredKeyId != null ? requiredKeyId.Trim() : string.Empty;
 
         if (additionalIncomingSources == null)
         {
@@ -119,6 +124,37 @@ public class PortalTrigger2D : MonoBehaviour
         if (waitingWorldTraveler == other)
         {
             waitingWorldTraveler = null;
+        }
+    }
+
+    // Keeps the pending world-traveler set while the traveler stands inside, so G works even if the
+    // traveler never produced an enter event (for example, it spawned already inside the trigger).
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        if (changesWorld && CanUseTrigger(other))
+            waitingWorldTraveler = other;
+    }
+
+    // Contact portals: a traveler already inside when the trigger starts (spawned on the portal)
+    // never fires OnTriggerEnter2D, so send it through once here.
+    private void Start()
+    {
+        if (changesWorld)
+            return;
+
+        Collider2D col = GetComponent<Collider2D>();
+        if (col == null)
+            return;
+
+        Bounds bounds = col.bounds;
+        Collider2D[] hits = Physics2D.OverlapBoxAll(bounds.center, bounds.size, 0f);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (hits[i] != null && hits[i] != col && CanUseTrigger(hits[i]))
+            {
+                TryTravel(hits[i]);
+                return;
+            }
         }
     }
 

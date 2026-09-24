@@ -10,20 +10,28 @@
     {
       "npcId": "trainer_sword_giver",
       "items": [
-        {
-          "itemId": "iron_sword",
-          "quantity": 1
-        }
+        { "itemId": "iron_sword", "quantity": 1 }
       ]
     },
     {
       "npcId": "npc_a",
       "items": [
-        {
-          "itemId": "golden_key",
-          "quantity": 1
-        }
+        { "itemId": "golden_key", "quantity": 1 }
       ]
-    }
+    },
+    { "npcId": "town_npc_1", "items": [ { "itemId": "house_key_4_14", "quantity": 1 } ] },
+    { "npcId": "town_npc_2", "items": [ { "itemId": "house_key_12_14", "quantity": 1 } ] },
+    { "npcId": "town_npc_3", "items": [ { "itemId": "house_key_20_14", "quantity": 1 } ] },
+    { "npcId": "town_npc_4", "items": [ { "itemId": "house_key_4_4", "quantity": 1 } ] },
+    { "npcId": "town_npc_5", "items": [ { "itemId": "house_key_35_14", "quantity": 1 } ] },
+    { "npcId": "town_npc_6", "items": [ { "itemId": "house_key_43_14", "quantity": 1 } ] },
+    { "npcId": "town_npc_7", "items": [ { "itemId": "house_key_51_14", "quantity": 1 } ] },
+    { "npcId": "town_npc_8", "items": [ { "itemId": "house_key_35_4", "quantity": 1 } ] },
+    { "npcId": "town_npc_9", "items": [ { "itemId": "house_key_4_24", "quantity": 1 } ] },
+    { "npcId": "town_npc_10", "items": [ { "itemId": "house_key_12_24", "quantity": 1 } ] },
+    { "npcId": "town_npc_11", "items": [ { "itemId": "house_key_4_34", "quantity": 1 } ] },
+    { "npcId": "town_npc_12", "items": [ { "itemId": "house_key_35_24", "quantity": 1 } ] },
+    { "npcId": "town_npc_13", "items": [ { "itemId": "house_key_53_24", "quantity": 1 } ] },
+    { "npcId": "town_npc_14", "items": [ { "itemId": "house_key_35_36", "quantity": 1 } ] }
   ]
 }

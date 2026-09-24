@@ -85,7 +85,7 @@
         {
           "id": "start",
           "speakerName": "NPC",
-          "text": "That hallway door is locked. Take this key—you'll need it to get through.",
+          "text": "That hallway door is locked. Take this key - you'll need it to get through.",
           "nextNodeId": "give_key",
           "endConversation": false,
           "choices": []
@@ -94,6 +94,88 @@
           "id": "give_key",
           "speakerName": "NPC",
           "text": "Keep it safe. It should unlock the door between these rooms.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    },
+    {
+      "dialogueId": "town_villager_a",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Villager",
+          "text": "Lovely day in town, isn't it?",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "It really is.",
+              "nextNodeId": "warm",
+              "endConversation": false
+            },
+            {
+              "text": "I'm just passing through.",
+              "nextNodeId": "pass",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "warm",
+          "speakerName": "Villager",
+          "text": "Stop by the park if you get a chance.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "pass",
+          "speakerName": "Villager",
+          "text": "Safe travels, then.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    },
+    {
+      "dialogueId": "town_villager_b",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Villager",
+          "text": "You look new around here. Need anything?",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "Where am I?",
+              "nextNodeId": "where",
+              "endConversation": false
+            },
+            {
+              "text": "I'm fine, thanks.",
+              "nextNodeId": "fine",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "where",
+          "speakerName": "Villager",
+          "text": "This is the town. Four blocks, a park, and a lot of doors.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "fine",
+          "speakerName": "Villager",
+          "text": "Suit yourself.",
           "nextNodeId": "",
           "endConversation": true,
           "choices": []

@@ -2,17 +2,17 @@ using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Planar-isometric NPC wanderer for 3D scenes. Picks a random point within the wander radius on the
-/// XZ plane, walks to it, and repeats — avoiding walls with a sphere cast. This is the 3D counterpart
-/// of <c>NpcWanderBehavior</c> (which is Physics2D); it deliberately avoids grid pathfinding so it
-/// needs no tilemap. Reuses the authoritative Game.Data tuning configs.
+/// Planar-isometric NPC wanderer for 3D scenes. Thin facade over the engine-free
+/// <see cref="WanderModel"/>: this component only samples geometry (blocked candidates, walls ahead)
+/// and applies velocity; idle timing, candidate generation, arrival and stall decisions live in
+/// Game.Data and are unit-tested there.
 ///
 /// Unity setup:
 ///   1. Add to an NPC root with a Rigidbody (Use Gravity off) and a CapsuleCollider.
 ///   2. Add NpcController for identity (id, type, dialogue).
 ///   3. Put the sprite on a child with BillboardSprite.
 ///   4. Set Wall Layers to the Walls layer (buildings and perimeter walls).
-///   5. Set Wander Radius on the nested Wander Config, and Move Speed on the Behavior Config.
+///   5. Tune Wander Radius / Idle Seconds on the nested Wander Config and Move Speed on the Behavior Config.
 ///
 /// Runtime API: none.
 /// </summary>
@@ -29,16 +29,10 @@ public class NpcWander3D : MonoBehaviour
     [Tooltip("Layers that block movement (buildings, walls).")]
     [SerializeField] private LayerMask wallLayers = ~0;
 
-    [Tooltip("Pause between destinations, in seconds.")]
-    [SerializeField, Min(0f)] private float idleSeconds = 1.5f;
-
     private Rigidbody body;
     private CapsuleCollider bodyCollider;
-    private Vector3 target;
-    private bool hasTarget;
-    private float idleRemaining;
-    private Vector3 lastPosition;
-    private float stalledTime;
+    private NpcController controller;
+    private WanderModel model;
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
@@ -46,102 +40,99 @@ public class NpcWander3D : MonoBehaviour
     {
         body = GetComponent<Rigidbody>();
         bodyCollider = GetComponent<CapsuleCollider>();
+        controller = GetComponent<NpcController>();
         body.useGravity = false;
         body.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
-        idleRemaining = Random.Range(0f, idleSeconds);
-        lastPosition = body.position;
+
+        model = new WanderModel(
+            wanderConfig.WanderRadius, wanderConfig.ArrivalThreshold,
+            behaviorConfig.StallTimeout, wanderConfig.IdleSeconds,
+            Random.Range(1, int.MaxValue));
+        model.BeginIdle();
     }
 
     private void Update()
     {
-        if (idleRemaining > 0f)
+        // Hold still while talking (dialogue, cutscene) or otherwise not idle.
+        if (controller != null && controller.BehaviorState != NpcBehaviorState.Idle)
         {
             Stop();
-            idleRemaining -= Time.deltaTime;
             return;
         }
 
-        if (!hasTarget)
+        if (model.IsIdle)
         {
-            if (!TryPickTarget(out target))
+            Stop();
+            model.TickIdle(Time.deltaTime);
+            return;
+        }
+
+        if (!model.HasTarget)
+        {
+            if (!TryAcquireTarget())
             {
+                model.BeginIdle();
                 Stop();
-                idleRemaining = idleSeconds;
                 return;
             }
-
-            hasTarget = true;
-            lastPosition = body.position;
-            stalledTime = 0f;
         }
 
-        Vector3 delta = target - body.position;
-        delta.y = 0f;
-
-        if (delta.magnitude <= wanderConfig.ArrivalThreshold)
+        Vector3 position = body.position;
+        WanderDecision decision = model.Evaluate(position.x, position.z, Time.deltaTime);
+        if (decision != WanderDecision.Moving)
         {
-            Arrive();
+            model.AbortTarget();
+            model.BeginIdle();
+            Stop();
             return;
         }
 
-        Vector3 direction = delta.normalized;
-        if (HitsWall(direction, delta.magnitude))
+        if (!model.TryGetDirection(position.x, position.z, out float dirX, out float dirZ))
         {
-            Arrive();
+            model.AbortTarget();
+            model.BeginIdle();
+            Stop();
+            return;
+        }
+
+        Vector3 direction = new Vector3(dirX, 0f, dirZ);
+        if (HitsWall(direction, model.DistanceToTarget(position.x, position.z)))
+        {
+            model.AbortTarget();
+            model.BeginIdle();
+            Stop();
             return;
         }
 
         body.linearVelocity = direction * behaviorConfig.MoveSpeed;
-
-        if ((body.position - lastPosition).sqrMagnitude >= 0.0004f)
-        {
-            lastPosition = body.position;
-            stalledTime = 0f;
-        }
-        else
-        {
-            stalledTime += Time.deltaTime;
-            if (stalledTime >= behaviorConfig.StallTimeout)
-                Arrive();
-        }
     }
 
-    private void Arrive()
+    // Tries up to the model's candidate budget, accepting the first unobstructed destination.
+    private bool TryAcquireTarget()
     {
-        hasTarget = false;
-        Stop();
-        idleRemaining = idleSeconds;
+        Vector3 origin = body.position;
+        while (model.TryNextCandidate(origin.x, origin.z, out float candidateX, out float candidateZ))
+        {
+            float dx = candidateX - origin.x;
+            float dz = candidateZ - origin.z;
+            float distance = Mathf.Sqrt(dx * dx + dz * dz);
+            if (distance < 0.01f)
+                continue;
+
+            if (!HitsWall(new Vector3(dx / distance, 0f, dz / distance), distance))
+            {
+                model.BeginTarget(candidateX, candidateZ, origin.x, origin.z);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void Stop()
     {
         if (body != null)
             body.linearVelocity = Vector3.zero;
-    }
-
-    // Tries random directions within the wander radius, returning the first unobstructed target.
-    private bool TryPickTarget(out Vector3 result)
-    {
-        Vector3 origin = body.position;
-        for (int i = 0; i < 8; i++)
-        {
-            Vector2 offset = Random.insideUnitCircle * wanderConfig.WanderRadius;
-            Vector3 candidate = origin + new Vector3(offset.x, 0f, offset.y);
-            Vector3 direction = candidate - origin;
-            direction.y = 0f;
-            float distance = direction.magnitude;
-            if (distance < 0.01f)
-                continue;
-
-            if (!HitsWall(direction / distance, distance))
-            {
-                result = candidate;
-                return true;
-            }
-        }
-
-        result = origin;
-        return false;
     }
 
     // Sphere-casts the body ahead so it stops before pushing into a wall or building.
