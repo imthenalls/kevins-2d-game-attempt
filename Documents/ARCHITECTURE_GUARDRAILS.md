@@ -74,7 +74,7 @@ Migrate top-down. Update this table as items land.
 |---|---|---|
 | ✅ | `Entity/CombatAttacker.cs` | Cooldown, input buffer, once-per-swing hit registry, recoil → `Game.Core.AttackModel` |
 | ✅ | `Entity/CombatReceiver.cs` | Damage gate + scaling + enemy-death rule → `Game.Core.DamagePolicy` (`CanReceive`, `Resolve`, `DropsLootOnDeath`); the facade applies the side effects (loot/hide/event). |
-| ⬜ | `Inventory/Equipment/EquippedWeaponVisual3D.cs` | Which receivers a swing hits (hit-cone selection) |
+| ✅ | `Inventory/Equipment/EquippedWeaponVisual3D.cs` | Reach/cone hit selection → `Game.Core.WeaponSwingPolicy`; the facade keeps the 3D overlap query. |
 
 ### Tier 3 — State on MonoBehaviours
 | Status | Where | State to move |
@@ -105,7 +105,7 @@ pathfinder/melee/dash/attack/wander components and the behavior manager/idle/rec
 facades over them. Engine-free tests:
 `Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
 
-Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, `DoorLockPolicy`, and `PortalAccessPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
+Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, `DoorLockPolicy`, `PortalAccessPolicy`, and `WeaponSwingPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 
 **Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. No authoritative gameplay state remains on a MonoBehaviour.
 

@@ -146,14 +146,14 @@ public class EquippedWeaponVisual3D : MonoBehaviour
             if (receiver == null)
                 continue;
 
-            Vector3 toTarget = receiver.transform.position - origin;
-            toTarget.y = 0f;
-            if (toTarget.sqrMagnitude > reach * reach)
-                continue;
-
-            float targetYaw = Mathf.Atan2(-toTarget.z, toTarget.x) * Mathf.Rad2Deg;
-            if (Mathf.Abs(Mathf.DeltaAngle(currentBladeYaw, targetYaw)) <= config.HitConeDegrees)
+            Vector3 target = receiver.transform.position;
+            // The reach/cone selection rule lives in Game.Core.
+            if (WeaponSwingPolicy.IsInSwingCone(
+                    origin.x, origin.z, target.x, target.z,
+                    currentBladeYaw, reach, config.HitConeDegrees))
+            {
                 boundAttacker.TryApplyWeaponHit(receiver);
+            }
         }
     }
 
