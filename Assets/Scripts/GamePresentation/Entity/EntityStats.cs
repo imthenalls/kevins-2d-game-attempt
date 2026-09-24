@@ -177,15 +177,16 @@ public class EntityStats : MonoBehaviour
         config.StartingMp = mp;
         _configured = true;
 
-        if (_fallbackHealth != null)
-        {
-            _fallbackHealth.SetMaxHp(hp);
-            _fallbackHealth.SetHp(hp);
-        }
-        else if (_healthModel != null)
+        // Update whichever HP model is active (a bound model takes precedence over the fallback).
+        if (_healthModel != null)
         {
             _healthModel.SetMaxHp(hp);
             _healthModel.SetHp(hp);
+        }
+        if (_fallbackHealth != null && _fallbackHealth != _healthModel)
+        {
+            _fallbackHealth.SetMaxHp(hp);
+            _fallbackHealth.SetHp(hp);
         }
 
         if (_manaPool != null)

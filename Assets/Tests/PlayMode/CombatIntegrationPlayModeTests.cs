@@ -1,4 +1,5 @@
 using System.Collections;
+using Game.Core;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -96,6 +97,36 @@ namespace Game.Tests
             receiver.ReceiveHit(new DamageInfo(50, null));
 
             Assert.AreEqual(50, stats.Hp);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Configure_Updates_A_Bound_Health_Model()
+        {
+            // Mirrors an enemy: a saveable model is bound (NpcStateView) before NpcController's
+            // Configure runs. Configure must reach the bound model, not just the private fallback.
+            var model = new HealthModel(100, 100);
+            stats.BindHealthModel(model);
+
+            stats.Configure(40, 5);
+
+            Assert.AreEqual(40, model.MaxHp, "bound model maxHp must be configured");
+            Assert.AreEqual(40, model.Hp, "bound model hp must be configured");
+            Assert.AreEqual(40, stats.MaxHp);
+            Assert.AreEqual(40, stats.Hp);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Bound_Model_Adopts_Configured_Values()
+        {
+            stats.Configure(40, 5);
+
+            var model = new HealthModel(stats.MaxHp, stats.Hp);
+            stats.BindHealthModel(model);
+
+            Assert.AreEqual(40, stats.MaxHp);
+            Assert.AreEqual(40, stats.Hp);
             yield return null;
         }
     }
