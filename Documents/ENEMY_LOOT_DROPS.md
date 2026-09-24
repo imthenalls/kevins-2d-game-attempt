@@ -26,6 +26,12 @@ No new component or prefab must be added manually.
 Runtime piles use a 2.25-world-unit interaction range so the player does not need to stand
 directly on top of the bag.
 
+**3D scenes:** the pile is dimension-aware. When the defeated NPC is a 3D body (no `Rigidbody2D`),
+`EnemyLootDrop.Spawn` creates a billboarded `SpriteRenderer` + `BillboardSprite`, a 3D trigger
+`BoxCollider`, and lifts it to `y + 0.4` so it sits on the ground plane. `RuntimeEnemyLootPile`
+works with either collider type and measures range with `Vector3.Distance` (equal to XY distance in
+2D and XZ distance in 3D). See [ISOMETRIC_3D.md](ISOMETRIC_3D.md).
+
 `NpcController` prepares the inventory automatically. `CombatReceiver` spawns the pile and
 hides the defeated body automatically.
 

@@ -30,15 +30,19 @@ nothing in it can reference UnityEngine. It contains plain C# only:
 | `NpcStateRepository` | Owns models, keyed by stable `npcId`, so they outlive any view. |
 | `NpcStateService` | Command/service API: `ApplyDamage`, `Heal`, `MoveToCell`, `TryCapture`, `Apply`. |
 | `NpcStateSnapshot` | Immutable save boundary value (no scene references). |
+| `NpcScheduleState` | Authoritative home-schedule phase + seconds remaining for one NPC. |
+| `NpcScheduleRepository` / `NpcScheduleService` | Own the schedule models per `npcId` and expose `SetPhase`, `TryCapture`, `Apply`. |
+| `NpcScheduleSnapshot` | Immutable save boundary value for the schedule. |
 | `IHealthModel` | Interface a Unity facade delegates to. |
-| `GameSession` | Scoped root that owns the repository + service. |
+| `GameSession` | Scoped root that owns the repositories + services. |
 
 ### Unity side — `Game.Presentation` (`Assets/Scripts/GamePresentation/`)
 
 | Type | Responsibility |
 |---|---|
 | `GameSessionHost` | Composition root. Creates the `GameSession` (DontDestroyOnLoad); no large global static state. |
-| `NpcStateView` | Adapter on the NPC. Registers the model by `npcId`, binds `EntityStats`, mirrors physics movement into the model as a command, and repositions the body from the model. |
+| `NpcStateView` | Adapter on the NPC. Registers the model by `npcId`, binds `EntityStats`, mirrors physics movement into the model as a command, and repositions the body from the model. Dimension-aware: a 2D NPC (`Rigidbody2D`) maps through the scene `Grid` on XY; a 3D NPC (`Rigidbody`) maps cells on XZ using `Cell Size` (no Grid). |
+| `NpcSchedule3D` | Facade over `NpcScheduleState`: wanders, walks to the home door, teleports in/out, and locks/unlocks the door, issuing model commands. Phase/timer are read from and written to the model. |
 | `EntityStats` | Optional facade: when bound to an `IHealthModel`, `Hp`/`MaxHp` read from the model and `TakeDamage`/`Heal`/`SetHp`/`IncreaseMaxHp`/`DecreaseMaxHp` delegate to it. Unbound entities behave exactly as before. |
 | `SaveManager` / `SaveData` | Convert `NpcState` ↔ `NpcSaveEntry` (`hasModelState`, `cellX`, `cellY`, `hp`, `maxHp`). |
 

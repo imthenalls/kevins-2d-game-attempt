@@ -38,6 +38,7 @@ forced to be a trigger.
 | Changes World | Switches the active world, character, and inventory after travel |
 | Destination World | World A or World B when Changes World is enabled |
 | Required Unlock Flag | Optional true WorldStateManager flag required for travel |
+| Required Key Id | Optional key item id; a traveler carrying an `IKeyHolder` must hold it (enforced by `PortalManager.TryUsePortal`) |
 
 Portals with **Changes World** enabled require the player to stand inside the trigger and
 press **G**. Leaving the trigger cancels the pending interaction. Portals with **Changes

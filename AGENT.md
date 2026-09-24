@@ -47,9 +47,11 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/TWO_WORLD_SYSTEM.md](Documents/TWO_WORLD_SYSTEM.md) | Two world layers, portal character switching, remembered positions, scoped inventories, and save integration |
 | [Documents/PLAYER_AVATARS.md](Documents/PLAYER_AVATARS.md) | Separate World A/World B avatar profiles, shared stats, per-world abilities, and generated player prefabs |
 | [Documents/ISOMETRIC_CONVERSION.md](Documents/ISOMETRIC_CONVERSION.md) | MMBN-style isometric presentation: fixed camera, 2:1 diamond tilemaps, upright sprites, Y-sort, and the Overworld rename |
+| [Documents/ISOMETRIC_3D.md](Documents/ISOMETRIC_3D.md) | 3D planar-isometric migration: PlayerControllerBase/3D, IsoCameraRig, billboarded sprites, 3D portals, Town interiors, and the NPC home schedule |
 | [Documents/TILEMAP_RULES.md](Documents/TILEMAP_RULES.md) | Grid/Tilemap alignment rules: transforms must be at origin, place content via cells, and use the alignment validator |
 | [Documents/DATA_VALIDATION.md](Documents/DATA_VALIDATION.md) | Editor validator for string-id data: blank/duplicate ids, dangling item/quest/node/portal references, dialogue links, and per-scene NPC ids |
 | [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md) | Audit of the Data/Presentation split: enforcement mechanisms, what is separated, remaining authoritative state in Presentation, and migration order |
+| [Documents/ARCHITECTURE_GUARDRAILS.md](Documents/ARCHITECTURE_GUARDRAILS.md) | **Read before adding any MonoBehaviour.** Core owns state *and decisions*; pre-merge checklist, thin-facade pattern, and the tracked debt of logic still in Presentation |
 | [Documents/NPC_STRESS_TEST.md](Documents/NPC_STRESS_TEST.md) | Disposable 25/50/100-NPC wandering + pathfinding performance harness (Tools > Stress) and its results |
 | [Documents/TOWN_SCENE.md](Documents/TOWN_SCENE.md) | Placeholder town scene built from coloured tiles: roads, solid buildings with a single passable entrance, park, and the tilemap-build gotcha |
 | [Documents/GAME_BOOTSTRAP.md](Documents/GAME_BOOTSTRAP.md) | Persistent `Game Systems` layer (session, save, portals, quests, world state) created before any scene; what a scene still needs |
@@ -109,7 +111,11 @@ logic to a plain-C# Core type. Examples: `Wallet` → `ManaAccount`, `WorldState
 
 Rules for new systems:
 
-1. Put state and rules in a plain C# type under `Assets/Scripts/GameData/` (namespace `Game.Core`).
+1. Put state **and decisions/rules** in a plain C# type under `Assets/Scripts/GameData/`
+   (namespace `Game.Core`). AI movement/attack choices, phase machines, cooldowns, pathfinding, and
+   lock/trade/loot/spawn policy are decisions — not presentation. A MonoBehaviour that "decides"
+   as well as "drives" violates the architecture. Run the checklist in
+   [Documents/ARCHITECTURE_GUARDRAILS.md](Documents/ARCHITECTURE_GUARDRAILS.md) before adding one.
 2. Put the MonoBehaviour adapter in `Assets/Scripts/GamePresentation/`.
 3. Tuning lives in a `[Serializable]` config class in `GameData` (see Repository Layout rule 6);
    Unity value types are stored in pure form (KeyCode as int, Color as RGBA floats).
@@ -143,6 +149,23 @@ and `WorldCharacter.SetActiveForWorld` activates only the character whose world 
 2. Default to script-only changes for gameplay updates.
 3. If a task would require scene edits, stop and ask for confirmation first.
 4. Do not use Unity **UI or computer-use automation** to drive the Editor. Use the API-based automation in **Unity Editor Automation** below instead.
+
+## Commit Policy
+
+**Commit the change made in response to a prompt.** After completing a request (code, data, docs, or
+config), commit the work before finishing the response — do not leave changes uncommitted unless the
+user says not to.
+
+1. Review first: `git status`, `git diff`, and `git log --oneline -5` to match the repo's style.
+2. Stage only the files that belong to this change; never stage unrelated edits, generated `Temp/`
+   output, or secrets.
+3. Write a concise imperative commit message (a short summary line; a body only when it adds
+   information).
+4. Run `Tools/verify-all.ps1` (or at minimum the compile check + relevant tests) for gameplay
+   changes before committing.
+5. Do not amend an existing commit, force-push, or create empty commits unless explicitly asked.
+6. If a change must **not** be committed (an experiment, or the user asked to hold off), say so
+   explicitly in the response instead of silently leaving the working tree dirty.
 
 ## Unity Editor Automation
 
