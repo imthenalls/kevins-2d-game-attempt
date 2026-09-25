@@ -528,7 +528,7 @@ public static class Town3DSceneBuilder
 
         var pivot = new GameObject("WeaponPivot");
         pivot.transform.SetParent(entity.transform, false);
-        pivot.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+        pivot.transform.localPosition = new Vector3(0f, 0.35f, 0f);
 
         var visual = new GameObject("WeaponVisual");
         visual.transform.SetParent(pivot.transform, false);
@@ -542,6 +542,8 @@ public static class Town3DSceneBuilder
         SetObjectField(weapon, "combatAttacker", attacker);
         SetObjectField(weapon, "swingPivot", pivot.transform);
         SetObjectField(weapon, "weaponRenderer", renderer);
+        SetNestedFloat(weapon, "config", "RestYaw", 90f);
+        SetNestedFloat(weapon, "config", "SpriteRoll", 150f);
     }
 
     private static void BuildTownEnemies()
