@@ -25,6 +25,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/SCENE_RULES.md](Documents/SCENE_RULES.md) | Per-scene gameplay overrides: inventory lock, combat toggles, DOT, movement lock || [Documents/EQUIPMENT.md](Documents/EQUIPMENT.md) | Equipment slots: EquipmentManager, EquipmentModel, ItemData bonus fields, EntityStats integration |
 | [Documents/WEAPON_SWING.md](Documents/WEAPON_SWING.md) | Equipped weapon swing animation, CombatAttacker timing, scene wiring, and tuning |
 | [Documents/NPC_MELEE_AI.md](Documents/NPC_MELEE_AI.md) | Wandering melee NPC behavior, proximity engagement, sword attacks, and scene wiring |
+| [Documents/NPC_DASH_AI.md](Documents/NPC_DASH_AI.md) | Telegraph-dash enemy (2D + 3D): state machine, tuning, and the self-hit / stuck-on-buildings / line-of-sight / pathfinding fixes |
 | [Documents/NPC_HEALTH_BARS.md](Documents/NPC_HEALTH_BARS.md) | Automatic enemy HP bars, Inspector tuning, and combat behavior |
 | [Documents/CHARACTER_STATISTICS.md](Documents/CHARACTER_STATISTICS.md) | CharacterStatistics component: attack/kill/damage/item/money tracking, per-stat events, CombatAttacker integration |
 | [Documents/WALLET.md](Documents/WALLET.md) | Spendable currency balance, add/spend/subtract API, transaction history, and save integration |
