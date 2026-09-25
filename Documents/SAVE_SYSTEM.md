@@ -19,7 +19,7 @@ The save system serializes all meaningful game state to a single JSON file on di
 | Canonical player mana balance, capacity, and transaction history | `Wallet` |
 | Inventory-enabled NPC mana balance, capacity, and history | NPC `Wallet` |
 | Completed market transaction ledger | `TradeService` |
-| World facts | `WorldStateDB` |
+| World facts | `WorldStateManager` |
 | Active quest states (node + objective counts) | `QuestManager` |
 | Inventory slots (index, item, quantity) | `InventoryUI.Model` |
 | Player keyring entries | `PlayerKeyring` |
@@ -46,13 +46,11 @@ The save file is written to `Application.persistentDataPath/save.json` (on Windo
 
 ---
 
-### 2. Move ItemData assets into Resources/Items/
+### 2. Make item ids resolvable
 
-The inventory restore uses `Resources.Load<ItemData>("Items/<assetName>")`. Without this, items will not be found on load.
-
-1. In the **Project window**, create the folder path `Assets/Resources/Items/` if it doesn't exist.
-2. Move (or copy) every `ItemData` ScriptableObject asset into that folder.
-3. The asset's **filename** (without `.asset`) is what gets saved — keep names unique and don't rename them after shipping a save.
+The inventory restore resolves saved items by id through `ItemDatabase` (populated from
+`StreamingAssets/items.json`), with a `Resources.Load<ItemData>` fallback. Items not found there are
+skipped with a console warning.
 
 ---
 
@@ -91,15 +89,21 @@ void Update()
 
 ## How Load Works (step by step)
 
-1. Reads `save.json` from disk and deserializes it into a `SaveData` object.
-2. **Immediately** restores `WorldStateDB` facts and active quest state — these need to be in place before any scene objects evaluate conditions on `Awake`/`Start`.
-3. Registers a one-shot callback on `SceneLoader.OnLoadComplete`.
-4. Calls `SceneLoader.Instance.LoadScene(data.currentScene)` — this triggers the normal fade transition.
-5. Once the scene finishes loading, the callback fires and restores:
-   - Player position (`transform.position`)
-   - Player HP via `EntityStats.Configure()` → `SetHp()`
+1. Reads `save.json` from disk and deserializes it into a `SaveData` object. If the main file is
+   corrupt, falls back to `save.json.bak` (the previous good save).
+2. **Validates** the save before applying anything: supported version, a scene that exists in the
+   build, and non-negative stat values. An invalid save is rejected with a clear error and changes
+   nothing.
+3. **Immediately** restores `WorldStateManager` facts and active quest state — these need to be in
+   place before any scene objects evaluate conditions on `Awake`/`Start`.
+4. Registers a one-shot callback on `SceneLoader.OnLoadComplete`.
+5. Calls `SceneLoader.Instance.LoadScene(data.currentScene)` — this triggers the normal fade transition.
+6. Once the scene finishes loading, the callback fires and restores:
+   - Player position (`transform.position` / logical grid cell)
+   - Player HP from the saved **base maximum** + re-applied equipment bonuses (without healing), then the saved current HP
    - Canonical mana balance, capacity, and retained transaction history via `Wallet.LoadSaveData()`
    - Inventory slots (clears all first, then sets saved slots, then calls `ForceRefresh()` to update the UI)
+   - Equipment, NPC state (position/stats/inventory/wallet), keyring, hotbar, and pending rewards
 
 ---
 
@@ -140,6 +144,41 @@ single inventory into World A. See [TWO_WORLD_SYSTEM.md](TWO_WORLD_SYSTEM.md).
 Save version 6 stores per-world avatar ability IDs. The shared HP and Wallet snapshot is loaded
 into `WorldTravelState` before the saved scene appears, then applied to that world's avatar.
 
+Save version 7 stores the player's logical grid position (cell + local offset) via `hasPlayerCell`,
+so a save can restore the exact cell rather than converting legacy world floats.
+
+## Equipment Bonus Restoration (version 8)
+
+Version 8 separates the player's **base** maximum HP/MP (`playerBaseMaxHp` / `playerBaseMaxMp`) from
+equipment bonuses. Previously the save stored only the *final* maximum (base + bonuses), and loading
+re-applied the bonuses a second time while also healing.
+
+Loading now:
+
+1. Restores the base maximum.
+2. Re-equips the saved items with `EquipmentManager.SetRestoring(true)`, which raises the maximums
+   without healing current HP or touching the mana wallet (`EntityStats.ApplyStatBonus(healDelta: false)`).
+3. Sets the saved current HP/MP once, clamped to the recalculated maximums.
+
+Older saves (version < 8) migrate by subtracting the saved equipment's bonuses from the saved totals
+to recover the base. Normal gameplay equipping is unchanged — the restore-only path is isolated behind
+the `SetRestoring` flag.
+
+## Pending Rewards
+
+Quest rewards that cannot fit in the player's inventory are no longer dropped. `PendingRewardManager`
+retains the undelivered quantity (keyed by quest + item) and a `ClaimRewards` quest action retries
+delivery later. Pending rewards are stored in `SaveData.pendingRewards` and restored on load, so an
+undelivered reward survives a restart. Delivery reuses `InventoryHelper.GiveItem`, so keyring routing
+and item world restrictions are respected.
+
+## Safe Save / Corruption Recovery
+
+`Save()` serializes the full save to `save.json.tmp`, copies the previous `save.json` to
+`save.json.bak`, then replaces the main file with the temp file. `Load()` validates the main file and
+falls back to the backup when it is corrupt, so a failed or interrupted write never destroys the last
+usable save.
+
 ## Trade Save Integration
 
 `NpcSaveEntry.wallet` stores the Wallet for inventory-enabled NPC participants. Empty saved NPC inventories are cleared correctly on load, so selling the final item remains persistent.
@@ -174,7 +213,7 @@ if (File.Exists(path))
 
 ## Caveats
 
-- **Items must be in `Resources/Items/`** — see step 2 above. Any item not found there will be skipped with a warning in the console.
+- **Items must be resolvable by id** — via `ItemDatabase` (from `items.json`) or the `Resources.Load` fallback. Any item not found will be skipped with a warning in the console.
 - **Quest `onEnterActions` do not re-fire on load** — this is intentional. `QuestInstance.FromSave` restores node/objective state directly without replaying entry actions (which might grant items, set facts, etc. a second time).
 - **Save is not automatic** — call `Save()` explicitly at checkpoints, scene transitions, or via a save menu. There is no autosave by default.
 - **Only one save slot** — the file is always `save.json`. Multiple slots would require parameterizing the filename.

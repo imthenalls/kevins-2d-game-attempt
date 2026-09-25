@@ -325,11 +325,17 @@ Example format:
 
 ## Game Basics
 
-This project is a **2D top-down** game.
+This project mixes **2D top-down** scenes (Overworld, World B, training) with a **3D
+planar-isometric Town** (see [Documents/ISOMETRIC_3D.md](Documents/ISOMETRIC_3D.md)). The coordinate
+and physics rules differ:
+
+- **2D scenes**: top-down on the X/Y plane, `Rigidbody2D` + `Collider2D`, `PlayerController2D`.
+- **3D Town**: gameplay on the **XZ** plane with Y up (`Rigidbody` with `FreezePositionY`), billboarded
+  sprites, an `IsoCameraRig`, and `PlayerController3D`. There is no verticality; Y is height only.
 
 ### Core Rules
-1. Perspective: **Top-down** (player moves on X/Y plane)
-2. Dimension: **2D**
+1. Perspective: **Top-down** (player moves on X/Y plane in 2D scenes; X/Z in the 3D Town)
+2. Dimension: **2D**, with one **3D planar-isometric** scene (Town)
 
 ### Player Setup (Top-Down)
 - Add `Rigidbody2D` to Player

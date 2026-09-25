@@ -74,17 +74,24 @@ This sequence exercises nearly every major system in the repository.
 
 ### 3. Add Integration Coverage
 
-Prioritize tests for (status as of the inventory decouple):
+Prioritize tests for (status as of the save/quest hardening pass):
 
 - ✅ Inventory stacking, splitting, moving, sorting, and removal (`InventoryModelTests`)
-- ⬜ Equipment bonus application and removal
-- ⬜ Combat damage, invincibility, death, and quest events
-- ⬜ Quest progression across multiple objectives
-- ✅ Save/load round trips (`SaveDataRoundTripTests`)
+- ✅ Equipment bonus application and removal (`EquipmentIntegrationPlayModeTests`, `EquipmentRestorePlayModeTests`)
+- ✅ Combat damage, invincibility, death, and quest events (`CombatIntegrationPlayModeTests`)
+- ✅ Quest progression across multiple objectives (`QuestProgressionTests`)
+- ✅ Save/load round trips (`SaveDataRoundTripTests`, `CompleteSequencePlayModeTests`)
 - ⬜ Hotbar save restoration
-- ⬜ Portal destination resolution
-- ⬜ World-state restoration after scene loading
+- ✅ Portal destination resolution (`SystemIntegrationPlayModeTests`)
+- ✅ World-state restoration after scene loading (`SystemIntegrationPlayModeTests`)
 - ✅ Engine-free config defaults and the `ItemData`↔`IItem` contract
+
+Additional coverage added since:
+
+- ✅ Quest chaining (follow-up starts once) — `QuestChainingPlayModeTests`
+- ✅ Undelivered quest rewards retained as pending — `PendingRewardPlayModeTests`
+- ✅ Trade-state / ledger / wallet persistence — `TradePersistenceTests`
+- ✅ Save validation and corruption recovery — `SaveSafetyPlayModeTests`
 
 A Play Mode test now loads the real scenes and asserts the session boots and NPC models register
 (`SceneIntegrationPlayModeTests`); a full interaction flow is still outstanding.
@@ -113,14 +120,14 @@ Still outstanding:
 
 ### 5. Stabilize Saving
 
-Before producing substantial content:
+Done (see [SAVE_SYSTEM.md](SAVE_SYSTEM.md)):
 
-- Add a save-format version.
-- Define how older saves handle newly added fields.
-- Handle corrupt or partially written save files.
-- Write to a temporary file and replace `save.json` only after serialization succeeds.
-- Add a new-game/reset-save flow.
-- Test loading after a scene or item has been renamed.
+- ✅ Save-format version (currently 8), with per-version migration.
+- ✅ Older saves migrate by subtracting equipment bonuses / merging legacy mana.
+- ✅ Corrupt or partially written save files: validation + `save.json.bak` recovery.
+- ✅ Write to a temporary file and replace `save.json` only after serialization succeeds.
+- ⬜ Add a new-game/reset-save flow.
+- ⬜ Test loading after a scene or item has been renamed.
 
 ### 6. Focus on Content and Game Feel
 

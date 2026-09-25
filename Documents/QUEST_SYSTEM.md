@@ -103,9 +103,10 @@ Conditions in a single transition are **all AND**. To express OR, use multiple t
 | type | Fields | Description |
 |---|---|---|
 | `SetFact` | `key`, `value` | Write a value into `WorldStateManager` |
-| `GiveItem` | `itemId`, `count` | Add item(s) to player inventory |
+| `GiveItem` | `itemId`, `count` | Add item(s) to player inventory; undeliverable remainder is retained as a pending reward |
 | `RemoveItem` | `itemId`, `count` | Remove item(s) from player inventory |
 | `StartQuest` | `questId` | Activate another quest graph |
+| `ClaimRewards` | — | Retry delivery of any pending (undelivered) quest rewards |
 
 `onEnterActions` run once when a node is entered.
 
@@ -235,6 +236,18 @@ QuestManager : MonoBehaviour (singleton)
    — QuestInNode condition directly checks another QuestInstance's activeNodeIds
    — StartQuestAction activates a new QuestInstance mid-quest
 ```
+
+### Follow-up quests (safe mid-processing starts)
+
+A `StartQuest` action fires while `QuestManager` is still iterating its active quests (during an
+event or the automatic-transition tick). To avoid mutating that list mid-iteration:
+
+- Starts requested during processing are **queued** and flushed after the event/update finishes.
+- Duplicate requests are rejected against both the active list and the pending queue.
+- Each quest is registered **before** its initial actions run (`QuestInstance.Deferred` + `Begin`),
+  so a recursive start cannot create a duplicate or an infinite loop.
+- A quest started mid-event does **not** receive the event that created it; it only processes
+  subsequent events.
 
 ---
 
