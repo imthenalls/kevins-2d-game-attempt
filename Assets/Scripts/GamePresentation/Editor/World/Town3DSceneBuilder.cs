@@ -114,6 +114,7 @@ public static class Town3DSceneBuilder
         spawn.transform.position = CellToWorld(10, 10);
 
         BuildPlayer(spawn.transform.position);
+        BuildTownExitPortal();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
@@ -514,6 +515,39 @@ public static class Town3DSceneBuilder
         SetObjectField(playerFlash, "bodyRenderer", renderer);
         SetColorField(playerFlash, "flashColor", new Color(1f, 0.25f, 0.25f, 1f));
         AddWeaponRig(player, usePlayerInput: true, damage: 12, range: 1.7f, duration: 0.3f, cooldown: 0.45f);
+    }
+
+    // A 3D portal back to the 2D Overworld, placed in the open near the spawn. Its Portal Id must
+    // match the Overworld portal's Destination Portal Id, and vice versa.
+    private static void BuildTownExitPortal()
+    {
+        var portalObject = new GameObject("Town Exit Portal");
+        portalObject.transform.position = CellToWorld(10, 13);
+
+        var collider = portalObject.AddComponent<BoxCollider>();
+        collider.isTrigger = true;
+        collider.size = new Vector3(1.6f, 2f, 1.6f);
+        collider.center = new Vector3(0f, 1f, 0f);
+
+        var visual = new GameObject("PortalVisual");
+        visual.transform.SetParent(portalObject.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 1f, 0f);
+        visual.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.45f, 1f, 0.55f);
+        renderer.sortingOrder = 50;
+        visual.AddComponent<BillboardSprite>();
+
+        var exitPoint = new GameObject("ExitPoint").transform;
+        exitPoint.SetParent(portalObject.transform, false);
+        exitPoint.localPosition = new Vector3(0f, 0f, -2f);
+
+        var portal = portalObject.AddComponent<PortalTrigger3D>();
+        SetStringField(portal, "portalId", "town_exit");
+        SetStringField(portal, "destinationScene", "Overworld");
+        SetStringField(portal, "destinationPortalId", "overworld_town");
+        SetObjectField(portal, "exitPoint", exitPoint);
     }
 
     // Adds the equipment, attacker and billboarded 3D weapon rig shared by the player and enemies.
