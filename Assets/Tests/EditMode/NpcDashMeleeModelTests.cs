@@ -51,6 +51,16 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Approach_Within_DashRange_Without_Line_Of_Sight_Keeps_Approaching()
+        {
+            var m = new NpcDashMeleeModel(Config());
+            NpcDashDecision d = m.Tick(0.1f, 5f, 12f, 1f, 0f, 0.3f, true, hasLineOfSight: false);
+
+            Assert.AreEqual(NpcDashPhase.Approach, m.Phase, "no clear shot means no committed dash");
+            Assert.AreEqual(NpcDashIntent.Approach, d.Intent);
+        }
+
+        [Test]
         public void Approach_Beyond_Range_Moves_Toward_Target()
         {
             var m = new NpcDashMeleeModel(Config());
@@ -86,11 +96,22 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Blocked_Dash_Enters_Swing_Early()
+        public void Fully_Blocked_Dash_Resumes_Approach_Instead_Of_Swinging()
         {
             NpcDashMeleeModel m = AtDash();
             NpcDashDecision d = Tick(m, 5f);
             m.ReportDashMoved(0f, d.Distance); // wall blocked the whole step
+
+            Assert.AreEqual(NpcDashPhase.Approach, m.Phase,
+                "a dash that made no progress must re-approach so navigation can route around");
+        }
+
+        [Test]
+        public void Partially_Blocked_Dash_Still_Swings()
+        {
+            NpcDashMeleeModel m = AtDash();
+            NpcDashDecision d = Tick(m, 5f);
+            m.ReportDashMoved(d.Distance * 0.5f, d.Distance); // mostly moved, then hit a wall
 
             Assert.AreEqual(NpcDashPhase.Swing, m.Phase);
         }

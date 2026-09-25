@@ -93,9 +93,16 @@ public sealed class NpcChaseNavigator : MonoBehaviour
         Vector3 origin = self + Vector3.up * 0.9f;
         Vector3 direction = flat / distance;
 
+        // Sphere-cast with the enemy's body width so a wall corner that would clip the collider
+        // (but not a thin center ray) is treated as blocked and the enemy routes around it.
+        float radius = 0.4f;
+        CapsuleCollider capsule = GetComponentInParent<CapsuleCollider>();
+        if (capsule != null)
+            radius = Mathf.Max(0.05f, capsule.radius * 0.9f);
+
         RaycastHit[] hits = new RaycastHit[8];
-        int count = Physics.RaycastNonAlloc(
-            origin, direction, hits, distance, pathfinder.ObstacleMask, QueryTriggerInteraction.Ignore);
+        int count = Physics.SphereCastNonAlloc(
+            origin, radius, direction, hits, distance, pathfinder.ObstacleMask, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++)
         {
             if (hits[i].collider != null && hits[i].collider.gameObject != gameObject)

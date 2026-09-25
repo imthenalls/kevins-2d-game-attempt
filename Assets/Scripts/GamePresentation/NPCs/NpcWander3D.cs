@@ -55,6 +55,14 @@ public class NpcWander3D : MonoBehaviour
 
     private void Update()
     {
+        // Awake normally builds the model; guard so a component added before its dependencies
+        // (or on an object whose Awake was skipped) cannot spam exceptions every frame.
+        if (model == null)
+        {
+            Stop();
+            return;
+        }
+
         // Hold still while talking (dialogue, cutscene) or otherwise not idle.
         if (controller != null && controller.BehaviorState != NpcBehaviorState.Idle)
         {

@@ -129,5 +129,24 @@ namespace Game.Tests
             Assert.AreEqual(40, stats.Hp);
             yield return null;
         }
+
+        [UnityTest]
+        public IEnumerator Attacker_Cannot_Hit_Its_Own_Receiver()
+        {
+            // The receiver may be added by another component's Awake after the attacker's, so the
+            // attacker must not rely on a cached reference to recognize itself.
+            var attacker = subject.AddComponent<CombatAttacker>();
+            var configField = typeof(CombatAttacker).GetField(
+                "config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var config = (CombatAttackerConfig)configField.GetValue(attacker);
+            config.UsePlayerInput = false; // no EquipmentManager in this fixture
+            yield return null;
+
+            attacker.TryAttack();
+
+            Assert.IsFalse(attacker.TryApplyWeaponHit(receiver), "a swing must never damage its own receiver");
+            Assert.AreEqual(50, stats.Hp, "self-hit must not reduce own HP");
+            yield return null;
+        }
     }
 }

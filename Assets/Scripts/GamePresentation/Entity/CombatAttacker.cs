@@ -64,6 +64,11 @@ public class CombatAttacker : MonoBehaviour
 
     private void Update()
     {
+        // Awake normally builds the model; guard so a component added without its Awake running
+        // cannot spam exceptions every frame during teardown or stress setup.
+        if (model == null)
+            return;
+
         bool hasWeapon = HasRequiredPlayerWeapon();
 
         if (model.Tick(Time.deltaTime, hasWeapon))
@@ -86,7 +91,7 @@ public class CombatAttacker : MonoBehaviour
     /// </summary>
     public void TryAttack()
     {
-        if (!isActiveAndEnabled)
+        if (!isActiveAndEnabled || model == null)
             return;
 
         if (model.TryBegin(HasRequiredPlayerWeapon()))
@@ -99,11 +104,18 @@ public class CombatAttacker : MonoBehaviour
     /// </summary>
     public bool TryApplyWeaponHit(CombatReceiver receiver)
     {
+        if (model == null)
+            return false;
         if (receiver == null || !receiver.Stats.IsAlive)
             return false;
         if ((targetLayers.value & (1 << receiver.gameObject.layer)) == 0)
             return false;
-        if (!model.TryRegisterHit(receiver, config.CanHitSelf, _selfReceiver))
+        // Never hit our own hierarchy, regardless of CanHitSelf bookkeeping.
+        if (receiver.transform.IsChildOf(transform))
+            return false;
+        // Identify self by transform, not just a cached reference: the receiver may be added by
+        // another component's Awake after this one ran, leaving _selfReceiver null.
+        if (!model.TryRegisterHit(receiver, config.CanHitSelf, ResolveSelfReceiver()))
             return false;
 
         int totalDamage = config.AttackDamage;
@@ -119,6 +131,14 @@ public class CombatAttacker : MonoBehaviour
             _selfReceiver.ReceiveHit(new DamageInfo(config.SelfRecoilDamage, gameObject));
 
         return true;
+    }
+
+    // The self receiver is this entity's own CombatReceiver; it may not exist at Awake time.
+    private CombatReceiver ResolveSelfReceiver()
+    {
+        if (_selfReceiver == null)
+            _selfReceiver = GetComponent<CombatReceiver>();
+        return _selfReceiver;
     }
 
     // Player attack input is armed only by an actual item in the Weapon equipment slot.

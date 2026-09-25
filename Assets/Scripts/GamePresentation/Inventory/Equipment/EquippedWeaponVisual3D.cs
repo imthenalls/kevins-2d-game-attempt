@@ -71,6 +71,8 @@ public class EquippedWeaponVisual3D : MonoBehaviour
     {
         if (boundAttacker == null)
             return;
+        if (swingPivot == null)
+            swingPivot = transform.parent != null ? transform.parent : transform;
 
         float baseYaw = ResolveBaseYaw();
         bool windowOpen = boundAttacker.IsWeaponHitWindowOpen;

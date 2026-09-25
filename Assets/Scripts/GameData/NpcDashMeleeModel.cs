@@ -87,14 +87,17 @@ namespace Game.Core
         /// </summary>
         public NpcDashDecision Tick(
             float delta, float distance, float aggroRange,
-            float directionX, float directionZ, float attackDuration, bool canAttack)
+            float directionX, float directionZ, float attackDuration, bool canAttack,
+            bool hasLineOfSight = true)
         {
             PhaseTime += delta;
 
             switch (Phase)
             {
                 case NpcDashPhase.Approach:
-                    if (distance <= config.DashRange)
+                    // Only commit to the dash with a clear shot; otherwise keep approaching so the
+                    // committed straight dash never fires into a wall (the adapter routes around it).
+                    if (distance <= config.DashRange && hasLineOfSight)
                     {
                         Enter(NpcDashPhase.Warning);
                         return new NpcDashDecision(Phase, NpcDashIntent.None, 0f, 0f, 0f, true);
@@ -150,8 +153,17 @@ namespace Game.Core
                 return;
 
             DashRemaining -= moved;
-            if (DashRemaining <= 0.01f || moved + 0.001f < desired)
+            if (DashRemaining <= 0.01f)
+            {
                 Enter(NpcDashPhase.Swing);
+                return;
+            }
+
+            // A wall stopped the committed dash. If it was barely blocked at all, swing where we
+            // stopped; if the dash made little/no progress, resume approach so the navigator can
+            // route around the obstacle instead of re-dashing into it forever.
+            if (moved + 0.001f < desired)
+                Enter(moved <= 0.05f ? NpcDashPhase.Approach : NpcDashPhase.Swing);
         }
 
         private void Enter(NpcDashPhase phase)

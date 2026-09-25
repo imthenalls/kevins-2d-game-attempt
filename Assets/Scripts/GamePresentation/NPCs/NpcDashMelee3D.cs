@@ -106,9 +106,12 @@ public sealed class NpcDashMelee3D : MonoBehaviour
         float directionX = distance > 0.001f ? toPlayer.x / distance : 0f;
         float directionZ = distance > 0.001f ? toPlayer.z / distance : 0f;
 
+        // A committed dash must not fire into a wall; hold approach until the player is in the clear.
+        bool hasLineOfSight = HasLineOfSightTo(player.transform.position);
+
         NpcDashDecision decision = model.Tick(
             Time.fixedDeltaTime, distance, npc.AggroRange, directionX, directionZ,
-            attacker.AttackDuration, attacker.isActiveAndEnabled);
+            attacker.AttackDuration, attacker.isActiveAndEnabled, hasLineOfSight);
 
         if (decision.WarningActive)
         {
@@ -150,7 +153,6 @@ public sealed class NpcDashMelee3D : MonoBehaviour
     {
         if (bodyCollider == null || !bodyCollider.enabled || distance <= 0f)
             return 0f;
-
         const float skin = 0.03f;
         float radius = Mathf.Max(0.05f, bodyCollider.radius * 0.95f);
         Vector3 origin = body.position + Vector3.up * bodyCollider.center.y;
@@ -184,6 +186,33 @@ public sealed class NpcDashMelee3D : MonoBehaviour
     private void RestoreColor()
     {
         if (bodyRenderer != null) bodyRenderer.color = restingColor;
+    }
+
+    // True when nothing on the obstacle layers blocks the straight line to the target. A sphere
+    // cast (body width) is used so a wall corner that would clip the capsule blocks the committed
+    // dash too — a thin center ray would report clear and let the dash jam into the corner.
+    private bool HasLineOfSightTo(Vector3 target)
+    {
+        Vector3 flat = target - body.position;
+        flat.y = 0f;
+        float distance = flat.magnitude;
+        if (distance <= 0.001f)
+            return true;
+
+        float castHeight = bodyCollider != null ? bodyCollider.center.y : 0.7f;
+        float radius = bodyCollider != null ? Mathf.Max(0.05f, bodyCollider.radius * 0.9f) : 0.3f;
+        Vector3 origin = body.position + Vector3.up * castHeight;
+        int count = Physics.SphereCastNonAlloc(
+            origin, radius, flat / distance, Hits, distance, obstacleLayers, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (Hits[i].collider == null || Hits[i].rigidbody == body)
+                continue;
+            return false;
+        }
+
+        return true;
     }
 
     private void ResetAttack()
