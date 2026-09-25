@@ -340,8 +340,17 @@ public class EntityStats : MonoBehaviour
     /// </summary>
     public void ApplyStatBonus(int hp, int mp, int atk, int def)
     {
-        if (hp > 0) IncreaseMaxHp(hp, healDelta: true);
-        if (mp > 0) IncreaseMaxMp(mp, restoreDelta: true);
+        ApplyStatBonus(hp, mp, atk, def, healDelta: true);
+    }
+
+    /// <summary>
+    /// Apply stat bonuses, optionally WITHOUT healing the added HP / restoring the added MP.
+    /// Used by save restore so re-equipping does not inflate current HP/MP.
+    /// </summary>
+    public void ApplyStatBonus(int hp, int mp, int atk, int def, bool healDelta)
+    {
+        if (hp > 0) IncreaseMaxHp(hp, healDelta);
+        if (mp > 0) IncreaseMaxMp(mp, healDelta);
         _bonuses.Add(atk, def);
     }
 

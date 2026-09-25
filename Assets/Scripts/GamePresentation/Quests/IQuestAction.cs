@@ -34,20 +34,32 @@ public class SetFactAction : IQuestAction
 // JSON: { "type": "GiveItem", "itemId": "reward_coin_pouch", "count": 1 }
 // Adds items to the player inventory. itemId must be an ItemData asset name
 // inside a Resources folder (e.g. Assets/Resources/reward_coin_pouch.asset).
+// If the inventory cannot hold everything, the remainder is retained as a pending reward.
 // ---------------------------------------------------------------------------
 public class GiveItemAction : IQuestAction
 {
     private readonly string _itemId;
     private readonly int _count;
+    private readonly string _questId;
 
-    public GiveItemAction(string itemId, int count)
+    public GiveItemAction(string itemId, int count, string questId = "")
     {
         _itemId = itemId;
         _count = count;
+        _questId = questId;
     }
 
     public void Execute()
     {
+        // Route through the pending-reward manager so a full inventory retains the reward instead of
+        // silently discarding it.
+        if (PendingRewardManager.Instance != null)
+        {
+            PendingRewardManager.Instance.GrantReward(_questId, _itemId, _count);
+            return;
+        }
+
+        // Fallback for minimal scenes without the manager: deliver directly.
         var model = InventoryUI.Model;
         if (model == null)
         {
@@ -128,6 +140,20 @@ public class StartQuestAction : IQuestAction
             return;
         }
         QuestManager.Instance.StartQuest(_questId);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ClaimRewards
+// JSON: { "type": "ClaimRewards" }
+// Retries delivery of any pending (undelivered) quest rewards.
+// ---------------------------------------------------------------------------
+public class ClaimRewardsAction : IQuestAction
+{
+    public void Execute()
+    {
+        if (PendingRewardManager.Instance != null)
+            PendingRewardManager.Instance.ClaimPending();
     }
 }
 

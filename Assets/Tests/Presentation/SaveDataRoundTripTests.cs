@@ -51,6 +51,8 @@ namespace Game.Tests
                 playerMp = 17,
                 playerMaxHp = 100,
                 playerMaxMp = 50,
+                playerBaseMaxHp = 90,
+                playerBaseMaxMp = 45,
             };
 
             data.worldPositions.Add(new WorldPositionSaveEntry { world = "WorldA", scene = "Overworld", x = 1f, y = 2f, z = 0f });
@@ -102,6 +104,13 @@ namespace Game.Tests
             data.worldBInventorySlots.Add(new InventorySlotEntry { slotIndex = 2, itemId = "blink", quantity = 1 });
             data.playerKeys.Add(new KeyringSaveEntry { itemId = "golden_key", quantity = 1 });
             data.playerEquipment.Add(new EquipmentSaveEntry { slot = "Weapon", itemId = "iron_sword" });
+            data.pendingRewards.Add(new PendingRewardEntry
+            {
+                rewardId = "q1:health_potion",
+                questId = "q1",
+                itemId = "health_potion",
+                remaining = 2,
+            });
 
             data.npcStates.Add(new NpcSaveEntry
             {
@@ -139,6 +148,8 @@ namespace Game.Tests
             Assert.AreEqual(a.playerMp, b.playerMp);
             Assert.AreEqual(a.playerMaxHp, b.playerMaxHp);
             Assert.AreEqual(a.playerMaxMp, b.playerMaxMp);
+            Assert.AreEqual(a.playerBaseMaxHp, b.playerBaseMaxHp);
+            Assert.AreEqual(a.playerBaseMaxMp, b.playerBaseMaxMp);
 
             Assert.AreEqual(a.worldPositions.Count, b.worldPositions.Count);
             Assert.AreEqual(a.worldPositions[1].scene, b.worldPositions[1].scene);
@@ -167,6 +178,8 @@ namespace Game.Tests
             Assert.AreEqual(a.worldBInventorySlots[0].itemId, b.worldBInventorySlots[0].itemId);
             Assert.AreEqual(a.playerKeys[0].itemId, b.playerKeys[0].itemId);
             Assert.AreEqual(a.playerEquipment[0].slot, b.playerEquipment[0].slot);
+            Assert.AreEqual(a.pendingRewards[0].rewardId, b.pendingRewards[0].rewardId);
+            Assert.AreEqual(a.pendingRewards[0].remaining, b.pendingRewards[0].remaining);
 
             Assert.AreEqual(a.npcStates.Count, b.npcStates.Count);
             Assert.AreEqual(a.npcStates[0].npcId, b.npcStates[0].npcId);

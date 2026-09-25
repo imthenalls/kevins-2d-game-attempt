@@ -25,6 +25,11 @@ public class QuestManager : MonoBehaviour
     private Dictionary<string, QuestGraphData> _allGraphs = new();
     private readonly List<QuestInstance> _activeQuests = new();
 
+    // Starts requested while an event or update tick is still processing are queued and flushed
+    // afterwards, so a quest starting another quest cannot modify the active list mid-iteration.
+    private readonly List<string> _pendingStarts = new();
+    private int _processingDepth;
+
     // -------------------------------------------------------------------------
     // Unity lifecycle
     // -------------------------------------------------------------------------
@@ -48,9 +53,18 @@ public class QuestManager : MonoBehaviour
 
     private void Update()
     {
-        // Drive automatic transitions each frame
-        foreach (var quest in _activeQuests)
-            quest.TryAdvance();
+        BeginProcessing();
+        try
+        {
+            // Drive automatic transitions each frame. Starts requested during TryAdvance are queued
+            // (not added to the active list), so this list is not mutated while enumerating.
+            foreach (var quest in _activeQuests)
+                quest.TryAdvance();
+        }
+        finally
+        {
+            EndProcessing();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -58,7 +72,7 @@ public class QuestManager : MonoBehaviour
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Activates a quest by id. Does nothing if already active.
+    /// Activates a quest by id. Does nothing if already active (or already queued to start).
     /// Call from dialogue, cutscene triggers, or other StartQuestActions.
     /// </summary>
     public void StartQuest(string questId)
@@ -69,14 +83,19 @@ public class QuestManager : MonoBehaviour
             return;
         }
 
-        if (IsQuestActive(questId))
+        if (IsQuestActive(questId) || _pendingStarts.Contains(questId))
         {
             Debug.LogWarning($"[QuestManager] Quest '{questId}' is already active.");
             return;
         }
 
-        _activeQuests.Add(new QuestInstance(graph));
-        Debug.Log($"[QuestManager] Started quest '{questId}'.");
+        if (_processingDepth > 0)
+        {
+            _pendingStarts.Add(questId);
+            return;
+        }
+
+        ActivateQuest(questId, graph);
     }
 
     /// <summary>True if a quest with this id is currently active.</summary>
@@ -136,6 +155,8 @@ public class QuestManager : MonoBehaviour
     public void LoadSaveData(List<QuestSaveEntry> entries)
     {
         _activeQuests.Clear();
+        _pendingStarts.Clear();
+        _processingDepth = 0;
         foreach (var entry in entries)
         {
             if (!_allGraphs.TryGetValue(entry.questId, out var graph))
@@ -176,9 +197,56 @@ public class QuestManager : MonoBehaviour
     // Private
     // -------------------------------------------------------------------------
 
+    // Registers the instance BEFORE running its initial actions, so a recursive StartQuest from the
+    // initial actions sees this quest as active and does not create a duplicate (or loop forever).
+    private void ActivateQuest(string questId, QuestGraphData graph)
+    {
+        var instance = QuestInstance.Deferred(graph);
+        _activeQuests.Add(instance);
+        instance.Begin();
+        Debug.Log($"[QuestManager] Started quest '{questId}'.");
+    }
+
+    private void BeginProcessing() => _processingDepth++;
+
+    private void EndProcessing()
+    {
+        _processingDepth--;
+        if (_processingDepth == 0)
+            FlushPendingStarts();
+    }
+
+    private void FlushPendingStarts()
+    {
+        while (_pendingStarts.Count > 0)
+        {
+            var pending = new List<string>(_pendingStarts);
+            _pendingStarts.Clear();
+
+            foreach (var questId in pending)
+            {
+                if (IsQuestActive(questId))
+                    continue;
+                if (_allGraphs.TryGetValue(questId, out var graph))
+                    ActivateQuest(questId, graph);
+            }
+        }
+    }
+
     private void HandleEvent(string eventType, string targetId, int amount)
     {
-        foreach (var quest in _activeQuests)
-            quest.OnEvent(eventType, targetId, amount);
+        BeginProcessing();
+        try
+        {
+            // Snapshot so a quest started during this event does not receive it (it is queued and
+            // flushed after the loop), and so the list is never mutated mid-iteration.
+            var snapshot = new List<QuestInstance>(_activeQuests);
+            foreach (var quest in snapshot)
+                quest.OnEvent(eventType, targetId, amount);
+        }
+        finally
+        {
+            EndProcessing();
+        }
     }
 }

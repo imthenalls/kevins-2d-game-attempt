@@ -24,22 +24,44 @@ namespace Game.Core
         private readonly HashSet<string> _activeNodeIds = new();
         private readonly Dictionary<string, int> _objectiveCounts = new();
         private readonly Dictionary<string, QuestNodeData> _nodeMap = new();
+        private bool _begun;
 
         public QuestInstance(QuestGraphData graph)
         {
             Graph = graph;
-            foreach (var node in graph.nodes)
-                _nodeMap[node.id] = node;
-
+            BuildNodeMap();
+            _begun = true;
             EnterNode(graph.startNodeId);
         }
 
-        // Private constructor used by FromSave — builds the node map but does NOT
-        // call EnterNode so that onEnterActions are not re-fired on load.
-        private QuestInstance(QuestGraphData graph, bool _restoreMode)
+        // Private constructor used by Deferred and FromSave — builds the node map but does NOT call
+        // EnterNode, so the owner can register the instance (preventing recursive duplicate starts)
+        // before running its initial actions, or restore it without re-firing onEnterActions.
+        private QuestInstance(QuestGraphData graph, bool deferEnter)
         {
             Graph = graph;
-            foreach (var node in graph.nodes)
+            BuildNodeMap();
+        }
+
+        /// <summary>
+        /// Creates an instance whose initial node actions have not yet run. Call <see cref="Begin"/>
+        /// once the instance is registered, so a recursive StartQuest during the initial actions
+        /// correctly sees this quest as already active.
+        /// </summary>
+        public static QuestInstance Deferred(QuestGraphData graph) => new QuestInstance(graph, true);
+
+        /// <summary>Runs the initial node's onEnterActions exactly once.</summary>
+        public void Begin()
+        {
+            if (_begun)
+                return;
+            _begun = true;
+            EnterNode(Graph.startNodeId);
+        }
+
+        private void BuildNodeMap()
+        {
+            foreach (var node in Graph.nodes)
                 _nodeMap[node.id] = node;
         }
 
@@ -52,7 +74,8 @@ namespace Game.Core
             System.Collections.Generic.List<string> nodeIds,
             System.Collections.Generic.Dictionary<string, int> counts)
         {
-            var inst = new QuestInstance(graph, _restoreMode: true);
+            var inst = new QuestInstance(graph, deferEnter: true);
+            inst._begun = true; // restored nodes are already active; Begin() must be a no-op
             foreach (var id in nodeIds)
                 inst._activeNodeIds.Add(id);
             foreach (var kv in counts)
@@ -248,7 +271,7 @@ namespace Game.Core
 
             foreach (var actionData in node.onEnterActions)
             {
-                var action = QuestRuntimeBindings.BuildAction?.Invoke(actionData);
+                var action = QuestRuntimeBindings.BuildAction?.Invoke(actionData, Graph.questId);
                 action?.Execute();
             }
 

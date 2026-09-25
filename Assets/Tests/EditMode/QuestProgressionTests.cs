@@ -149,5 +149,29 @@ namespace Game.Tests
             Assert.AreEqual(1, quest.ObjectiveCounts["any_kill"]);
             Assert.IsTrue(quest.IsInNode("done"));
         }
+
+        [Test]
+        public void Deferred_Instance_Does_Not_Enter_The_Start_Node_Until_Begin()
+        {
+            QuestInstance quest = QuestInstance.Deferred(BuildGraph(1));
+
+            Assert.AreEqual(0, quest.ActiveNodeIds.Count,
+                "a deferred instance must not run initial node actions before it is registered");
+
+            quest.Begin();
+
+            Assert.IsTrue(quest.IsInNode("start"), "Begin must enter the start node");
+        }
+
+        [Test]
+        public void Begin_Is_Idempotent()
+        {
+            QuestInstance quest = QuestInstance.Deferred(BuildGraph(1));
+
+            quest.Begin();
+            quest.Begin();
+
+            Assert.AreEqual(1, quest.ActiveNodeIds.Count, "Begin must enter the start node exactly once");
+        }
     }
 }

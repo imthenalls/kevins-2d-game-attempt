@@ -19,8 +19,8 @@ namespace Game.Core
         /// </summary>
         public static Func<QuestConditionData, ICondition> BuildCondition = DefaultBuildCondition;
 
-        /// <summary>Builds an action from JSON data. Set by QuestLoader.</summary>
-        public static Func<QuestActionData, IQuestAction> BuildAction;
+        /// <summary>Builds an action from JSON data plus the owning quest id. Set by QuestLoader.</summary>
+        public static Func<QuestActionData, string, IQuestAction> BuildAction;
 
         /// <summary>Receives diagnostic messages. Set by QuestLoader; silent by default.</summary>
         public static Action<string> Log = _ => { };

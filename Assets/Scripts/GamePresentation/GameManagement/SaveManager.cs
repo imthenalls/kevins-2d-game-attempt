@@ -30,10 +30,15 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 7;
+    private const int CurrentSaveVersion = 8;
     private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
+    private string TempPath => SavePath + ".tmp";
+    private string BackupPath => SavePath + ".bak";
+
+    private bool _saveInProgress;
+    private bool _loadInProgress;
 
     // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -62,6 +67,45 @@ public class SaveManager : MonoBehaviour
     public void Save()
     {
         if (!SaveEnabled) return;
+        if (_saveInProgress)
+        {
+            Debug.LogWarning("[SaveManager] Save already in progress; skipping.");
+            return;
+        }
+
+        _saveInProgress = true;
+        try
+        {
+            SaveData data = CollectSaveData();
+            string json = JsonUtility.ToJson(data, prettyPrint: true);
+
+            string dir = Path.GetDirectoryName(SavePath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            // Serialize the complete save to a temp file before touching the real one.
+            File.WriteAllText(TempPath, json);
+
+            // Keep the previous good save as a backup, then replace the main file.
+            if (File.Exists(SavePath))
+            {
+                try { File.Copy(SavePath, BackupPath, overwrite: true); }
+                catch (Exception e) { Debug.LogWarning($"[SaveManager] Backup copy failed: {e.Message}"); }
+            }
+
+            File.Copy(TempPath, SavePath, overwrite: true);
+            File.Delete(TempPath);
+            Debug.Log($"[SaveManager] Saved → {SavePath}");
+        }
+        finally
+        {
+            _saveInProgress = false;
+        }
+    }
+
+    /// <summary>Collects the current game state without writing to disk.</summary>
+    private SaveData CollectSaveData()
+    {
         var data = new SaveData();
         data.saveVersion = CurrentSaveVersion;
         data.currentScene = SceneManager.GetActiveScene().name;
@@ -134,6 +178,8 @@ public class SaveManager : MonoBehaviour
 
         // NPCs — position, stats (enemies), and inventory (vendors/loot)
         // Equipped items are owned outside the inventory grid.
+        int equipmentBonusHp = 0;
+        int equipmentBonusMp = 0;
         if (player != null && player.TryGetComponent(out EquipmentManager equipment))
         {
             foreach (EquipSlotType slotType in Enum.GetValues(typeof(EquipSlotType)))
@@ -146,9 +192,15 @@ public class SaveManager : MonoBehaviour
                         slot = slotType.ToString(),
                         itemId = equippedItem.itemId,
                     });
+                    equipmentBonusHp += equippedItem.bonusMaxHp;
+                    equipmentBonusMp += equippedItem.bonusMaxMp;
                 }
             }
         }
+
+        // Base maximums exclude equipment bonuses; the final maximums above include them.
+        data.playerBaseMaxHp = Mathf.Max(0, data.playerMaxHp - equipmentBonusHp);
+        data.playerBaseMaxMp = Mathf.Max(0, data.playerMaxMp - equipmentBonusMp);
 
         // Keyring — key items never occupy inventory slots.
         if (PlayerKeyring.Instance != null)
@@ -162,6 +214,10 @@ public class SaveManager : MonoBehaviour
                 });
             }
         }
+
+        // Pending (undelivered) quest rewards.
+        if (PendingRewardManager.Instance != null)
+            data.pendingRewards = PendingRewardManager.Instance.GetSaveData();
 
         foreach (var npc in FindObjectsByType<NpcController>())
         {
@@ -235,23 +291,42 @@ public class SaveManager : MonoBehaviour
             }
         }
         data.marketTransactions = TradeService.GetSaveData();
-        File.WriteAllText(SavePath, JsonUtility.ToJson(data, prettyPrint: true));
-        Debug.Log($"[SaveManager] Saved → {SavePath}");
+        return data;
     }
 
     /// <summary>
-    /// Reads the save file, restores world-state and quest data immediately,
-    /// then loads the saved scene and restores the player + inventory once it is ready.
+    /// Reads and validates the save file completely before applying any state, then restores
+    /// world-state and quest data immediately and loads the saved scene. Falls back to the backup
+    /// when the main file is corrupt. Returns false (and changes nothing) on failure.
     /// </summary>
-    public void Load()
+    public bool Load()
     {
-        if (!HasSave())
+        if (_loadInProgress)
         {
-            Debug.LogWarning("[SaveManager] No save file found.");
-            return;
+            Debug.LogWarning("[SaveManager] Load already in progress.");
+            return false;
         }
 
-        var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
+        _loadInProgress = true;
+        try
+        {
+            if (!TryReadValidatedSave(out SaveData data, out string error))
+            {
+                Debug.LogError($"[SaveManager] Load failed: {error}");
+                return false;
+            }
+
+            ApplyLoadedData(data);
+            return true;
+        }
+        finally
+        {
+            _loadInProgress = false;
+        }
+    }
+
+    private void ApplyLoadedData(SaveData data)
+    {
         TradeService.LoadSaveData(data.marketTransactions);
 
         if (WorldTravelState.Instance != null)
@@ -285,6 +360,136 @@ public class SaveManager : MonoBehaviour
         SceneLoader.Instance.LoadScene(data.currentScene);
     }
 
+    // ── Read + validation ─────────────────────────────────────────────────────
+
+    private bool TryReadValidatedSave(out SaveData data, out string error)
+    {
+        data = null;
+        error = null;
+
+        if (!File.Exists(SavePath))
+        {
+            error = "No save file found.";
+            return false;
+        }
+
+        string[] candidates = File.Exists(BackupPath)
+            ? new[] { SavePath, BackupPath }
+            : new[] { SavePath };
+
+        SaveData parsed = null;
+        string parseError = null;
+        string usedPath = null;
+
+        foreach (string path in candidates)
+        {
+            if (!File.Exists(path))
+                continue;
+
+            try
+            {
+                parsed = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+                usedPath = path;
+                break;
+            }
+            catch (Exception e)
+            {
+                parseError = e.Message;
+                parsed = null;
+            }
+        }
+
+        if (parsed == null)
+        {
+            error = parseError != null
+                ? $"Save file is corrupt and could not be read ({parseError})."
+                : "Save file is corrupt and could not be read.";
+            return false;
+        }
+
+        if (usedPath == BackupPath)
+            Debug.LogWarning("[SaveManager] Main save was corrupt; recovered from backup.");
+
+        NormalizeSave(parsed);
+
+        string validation = ValidateSave(parsed);
+        if (validation != null)
+        {
+            // A main file that parses but fails validation may still have a usable backup.
+            if (usedPath == SavePath && File.Exists(BackupPath))
+            {
+                SaveData backup = null;
+                try { backup = JsonUtility.FromJson<SaveData>(File.ReadAllText(BackupPath)); }
+                catch { backup = null; }
+                if (backup != null)
+                {
+                    NormalizeSave(backup);
+                    if (ValidateSave(backup) == null)
+                    {
+                        Debug.LogWarning("[SaveManager] Main save failed validation; recovered from backup.");
+                        data = backup;
+                        return true;
+                    }
+                }
+            }
+
+            error = validation;
+            return false;
+        }
+
+        data = parsed;
+        return true;
+    }
+
+    // Fills in any collection the deserializer left null so downstream restore code cannot NPE.
+    private static void NormalizeSave(SaveData data)
+    {
+        if (data == null) return;
+        data.worldPositions ??= new();
+        data.worldAbilities ??= new();
+        data.worldFacts ??= new();
+        data.activeQuests ??= new();
+        data.inventorySlots ??= new();
+        data.worldAInventorySlots ??= new();
+        data.worldBInventorySlots ??= new();
+        data.playerKeys ??= new();
+        data.playerEquipment ??= new();
+        data.pendingRewards ??= new();
+        data.npcStates ??= new();
+        data.hotbarSlots ??= new();
+        data.marketTransactions ??= new();
+        data.wallet ??= new WalletSaveData();
+        data.wallet.transactions ??= new();
+    }
+
+    private static string ValidateSave(SaveData data)
+    {
+        if (data == null)
+            return "Save data is null.";
+        if (data.saveVersion < 0 || data.saveVersion > CurrentSaveVersion)
+            return $"Unsupported save version {data.saveVersion}.";
+        if (string.IsNullOrWhiteSpace(data.currentScene))
+            return "Save is missing the current scene.";
+        if (!SceneAvailable(data.currentScene))
+            return $"Saved scene '{data.currentScene}' is not available.";
+        if (data.playerMaxHp < 0 || data.playerHp < 0 || data.playerMaxMp < 0 || data.playerMp < 0)
+            return "Save contains negative stat values.";
+        return null;
+    }
+
+    private static bool SceneAvailable(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+            return false;
+
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+            if (SceneManager.GetSceneAt(i).name == sceneName)
+                return true;
+
+        try { return Application.CanStreamedLevelBeLoaded(sceneName); }
+        catch { return false; }
+    }
+
     // ── Scene-dependent restore ───────────────────────────────────────────────
 
     private void RestoreSceneState(SaveData data)
@@ -297,9 +502,10 @@ public class SaveManager : MonoBehaviour
 
             if (player.TryGetComponent<EntityStats>(out var stats))
             {
-                stats.Configure(data.playerMaxHp, data.playerMaxMp);
-                stats.SetMaxHp(data.playerMaxHp);
-                stats.SetHp(data.playerHp);
+                // Restore the base max HP first; the equipment pass re-applies bonuses without
+                // healing, and the final current HP is set after that pass.
+                ComputeBaseMax(data, out int baseHp, out int baseMp);
+                stats.SetMaxHp(baseHp);
             }
 
             if (player.TryGetComponent<Wallet>(out var wallet))
@@ -320,6 +526,10 @@ public class SaveManager : MonoBehaviour
                     keyring.AddKey(key, entry.quantity);
             }
         }
+
+        // Pending (undelivered) quest rewards.
+        if (PendingRewardManager.Instance != null)
+            PendingRewardManager.Instance.LoadSaveData(data.pendingRewards);
 
         // Inventory
         var inv = InventoryUI.Model;
@@ -345,33 +555,48 @@ public class SaveManager : MonoBehaviour
         }
 
         // NPCs — restore position, stats, and inventory
-        // Restore equipment after base stats and inventory so bonuses apply once.
+        // Restore equipment after base stats and inventory so bonuses apply once, WITHOUT the normal
+        // equip heal / mana fill (those values are restored from the save afterward).
         if (player != null && player.TryGetComponent(out EquipmentManager equipment))
         {
             foreach (EquipSlotType slotType in Enum.GetValues(typeof(EquipSlotType)))
                 equipment.Unequip(slotType);
 
-            if (data.playerEquipment != null)
+            equipment.SetRestoring(true);
+            try
             {
-                foreach (EquipmentSaveEntry entry in data.playerEquipment)
+                if (data.playerEquipment != null)
                 {
-                    if (!Enum.TryParse(entry.slot, out EquipSlotType slotType))
-                        continue;
-
-                    ItemData item = ItemDatabase.Instance?.Get(entry.itemId);
-                    WorldLayer activeWorld = WorldTravelState.Instance != null
-                        ? WorldTravelState.Instance.CurrentWorld
-                        : WorldLayer.WorldA;
-                    if (item == null || !item.IsEquip || item.equipSlot != slotType ||
-                        !item.IsAvailableInWorld(activeWorld))
+                    foreach (EquipmentSaveEntry entry in data.playerEquipment)
                     {
-                        Debug.LogWarning($"[SaveManager] Invalid equipped item '{entry.itemId}' for slot '{entry.slot}'.");
-                        continue;
-                    }
+                        if (!Enum.TryParse(entry.slot, out EquipSlotType slotType))
+                            continue;
 
-                    equipment.Equip(slotType, item);
+                        ItemData item = ItemDatabase.Instance?.Get(entry.itemId);
+                        WorldLayer activeWorld = WorldTravelState.Instance != null
+                            ? WorldTravelState.Instance.CurrentWorld
+                            : WorldLayer.WorldA;
+                        if (item == null || !item.IsEquip || item.equipSlot != slotType ||
+                            !item.IsAvailableInWorld(activeWorld))
+                        {
+                            Debug.LogWarning($"[SaveManager] Invalid equipped item '{entry.itemId}' for slot '{entry.slot}'.");
+                            continue;
+                        }
+
+                        equipment.Equip(slotType, item);
+                    }
                 }
             }
+            finally
+            {
+                equipment.SetRestoring(false);
+            }
+        }
+
+        // Final current HP/MP, clamped to the recalculated (base + bonus) maximums.
+        if (player != null && player.TryGetComponent<EntityStats>(out var finalStats))
+        {
+            finalStats.SetHp(data.playerHp);
         }
 
         if (data.npcStates != null && data.npcStates.Count > 0)
@@ -396,47 +621,29 @@ public class SaveManager : MonoBehaviour
                         new NpcScheduleSnapshot(entry.npcId, (NpcSchedulePhase)entry.schedulePhase, entry.scheduleSeconds));
                 }
 
-                // Model-backed NPCs restore through the pure-C# model; the bound NpcStateView
-                // refreshes the transform and EntityStats from the model.
+                // Position + health. Model-backed NPCs restore through the pure-C# model (the bound
+                // NpcStateView then refreshes the transform and EntityStats); everything else uses
+                // the legacy scene-transform path. Inventory and wallet are restored afterwards for
+                // BOTH kinds so a model-backed NPC still gets its items and mana back.
                 if (entry.hasModelState && GameSessionHost.Session != null)
                 {
                     GameSessionHost.Session.NpcStates.Apply(
                         new NpcStateSnapshot(entry.npcId, entry.hp, entry.maxHp, entry.cellX, entry.cellY));
-                    continue;
                 }
-
-                npc.transform.position = new Vector3(entry.x, entry.y, 0f);
-
-                if (entry.hasStats && npc.Stats != null)
+                else
                 {
-                    npc.Stats.Configure(entry.maxHp, entry.maxMp);
-                    npc.Stats.SetHp(entry.hp);
-                    npc.Stats.SetMp(entry.mp);
-                }
+                    npc.transform.position = new Vector3(entry.x, entry.y, 0f);
 
-                if (entry.inventorySlots != null && npc.Inventory != null)
-                {
-                    for (int i = 0; i < npc.Inventory.SlotCount; i++)
-                        npc.Inventory.GetSlot(i).Clear();
-
-                    foreach (var slotEntry in entry.inventorySlots)
+                    if (entry.hasStats && npc.Stats != null)
                     {
-                        var item = ItemDatabase.Instance != null
-                            ? ItemDatabase.Instance.Get(slotEntry.itemId)
-                            : null;
-
-                        if (item == null)
-                        {
-                            Debug.LogWarning($"[SaveManager] NPC '{entry.npcId}': item not found '{slotEntry.itemId}'");
-                            continue;
-                        }
-                        npc.Inventory.GetSlot(slotEntry.slotIndex).Set(item, slotEntry.quantity);
+                        npc.Stats.Configure(entry.maxHp, entry.maxMp);
+                        npc.Stats.SetHp(entry.hp);
+                        npc.Stats.SetMp(entry.mp);
                     }
-                    npc.Inventory.ForceRefresh();
                 }
 
-                if (entry.wallet != null && npc.ManaWallet != null)
-                    npc.ManaWallet.LoadSaveData(entry.wallet);
+                RestoreNpcInventory(npc, entry);
+                RestoreNpcWallet(npc, entry);
             }
         }
 
@@ -458,6 +665,50 @@ public class SaveManager : MonoBehaviour
         }
 
         Debug.Log("[SaveManager] Scene state restored.");
+    }
+
+    // Restores one NPC's saved inventory. Validates every slot index and item id independently so a
+    // single corrupt or missing entry cannot abort the remaining entries.
+    private static void RestoreNpcInventory(NpcController npc, NpcSaveEntry entry)
+    {
+        if (entry == null || entry.inventorySlots == null || npc == null || npc.Inventory == null)
+            return;
+
+        for (int i = 0; i < npc.Inventory.SlotCount; i++)
+            npc.Inventory.GetSlot(i).Clear();
+
+        foreach (var slotEntry in entry.inventorySlots)
+        {
+            if (slotEntry == null)
+                continue;
+
+            if (slotEntry.slotIndex < 0 || slotEntry.slotIndex >= npc.Inventory.SlotCount)
+            {
+                Debug.LogWarning($"[SaveManager] NPC '{entry.npcId}': invalid inventory slot index {slotEntry.slotIndex}.");
+                continue;
+            }
+
+            ItemData item = ItemDatabase.Instance != null
+                ? ItemDatabase.Instance.Get(slotEntry.itemId)
+                : null;
+            if (item == null)
+            {
+                Debug.LogWarning($"[SaveManager] NPC '{entry.npcId}': item not found '{slotEntry.itemId}'");
+                continue;
+            }
+
+            npc.Inventory.GetSlot(slotEntry.slotIndex).Set(item, Mathf.Max(1, slotEntry.quantity));
+        }
+
+        npc.Inventory.ForceRefresh();
+    }
+
+    private static void RestoreNpcWallet(NpcController npc, NpcSaveEntry entry)
+    {
+        if (entry == null || entry.wallet == null || npc == null || npc.ManaWallet == null)
+            return;
+
+        npc.ManaWallet.LoadSaveData(entry.wallet);
     }
 
     private static void WriteInventory(
@@ -635,5 +886,39 @@ public class SaveManager : MonoBehaviour
         }
 
         return migrated;
+    }
+
+    /// <summary>
+    /// Resolves the player's base (bonus-free) maximum HP/MP for the current save version. v8+ saves
+    /// store the base directly; older saves only stored final maximums, so the saved equipment's
+    /// bonuses are subtracted back out (the equipment pass re-applies them without healing).
+    /// </summary>
+    private static void ComputeBaseMax(SaveData data, out int baseHp, out int baseMp)
+    {
+        if (data.saveVersion >= 8)
+        {
+            baseHp = Mathf.Max(0, data.playerBaseMaxHp);
+            baseMp = Mathf.Max(0, data.playerBaseMaxMp);
+            return;
+        }
+
+        int bonusHp = 0;
+        int bonusMp = 0;
+        if (data.playerEquipment != null)
+        {
+            foreach (var entry in data.playerEquipment)
+            {
+                if (entry == null) continue;
+                ItemData item = ItemDatabase.Instance != null ? ItemDatabase.Instance.Get(entry.itemId) : null;
+                if (item != null)
+                {
+                    bonusHp += item.bonusMaxHp;
+                    bonusMp += item.bonusMaxMp;
+                }
+            }
+        }
+
+        baseHp = Mathf.Max(0, data.playerMaxHp - bonusHp);
+        baseMp = Mathf.Max(0, data.playerMaxMp - bonusMp);
     }
 }

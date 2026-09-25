@@ -107,7 +107,7 @@ public static class QuestLoader
     /// Constructs the correct IQuestAction from a QuestActionData's "type" field.
     /// Returns null and logs an error for unknown types.
     /// </summary>
-    public static IQuestAction BuildAction(QuestActionData data)
+    public static IQuestAction BuildAction(QuestActionData data, string questId)
     {
         if (data == null) return null;
 
@@ -116,9 +116,10 @@ public static class QuestLoader
             "SetFact"    => new SetFactAction(data.key, data.value),
             "ClearFlag"  => new ClearFlagAction(data.key),
             "ToggleFlag" => new ToggleFlagAction(data.key),
-            "GiveItem"   => new GiveItemAction(data.itemId, data.count),
+            "GiveItem"   => new GiveItemAction(data.itemId, data.count, questId),
             "RemoveItem" => new RemoveItemAction(data.itemId, data.count),
             "StartQuest" => new StartQuestAction(data.questId),
+            "ClaimRewards" => new ClaimRewardsAction(),
             _            => UnknownType<IQuestAction>(data.type, "action"),
         };
     }

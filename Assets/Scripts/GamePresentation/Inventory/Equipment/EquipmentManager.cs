@@ -29,9 +29,17 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private EquipmentLoadoutConfig config = new EquipmentLoadoutConfig();
 
     private EntityStats _stats;
+    private bool _restoring;
 
     /// <summary>The underlying data model. Subscribe to Model.OnSlotChanged for change events.</summary>
     public EquipmentModel Model { get; private set; }
+
+    /// <summary>
+    /// Toggles save-restore mode. While restoring, equipping/unequipping does not heal HP, restore
+    /// MP, or touch the mana wallet — those values come from the save — so bonuses are not double
+    /// counted. Attack/defense still flow through StatBonuses normally.
+    /// </summary>
+    public void SetRestoring(bool restoring) => _restoring = restoring;
 
     private void Awake()
     {
@@ -119,11 +127,23 @@ public class EquipmentManager : MonoBehaviour
     private void HandleSlotChanged(EquipSlotType slot, IItem newItem, IItem oldItem)
     {
         ItemData oldData = oldItem as ItemData;
+        ItemData newData = newItem as ItemData;
+
+        if (_restoring)
+        {
+            // Restore path: only attack/defense flow normally; HP is re-applied without healing and
+            // MP is left to the already-restored wallet, so maximums are not double counted.
+            if (oldData != null)
+                _stats.RemoveStatBonus(0, 0, oldData.bonusAttack, oldData.bonusDefense);
+            if (newData != null)
+                _stats.ApplyStatBonus(newData.bonusMaxHp, 0, newData.bonusAttack, newData.bonusDefense, healDelta: false);
+            return;
+        }
+
         if (oldData != null)
             _stats.RemoveStatBonus(oldData.bonusMaxHp, oldData.bonusMaxMp,
                                    oldData.bonusAttack, oldData.bonusDefense);
 
-        ItemData newData = newItem as ItemData;
         if (newData != null)
             _stats.ApplyStatBonus(newData.bonusMaxHp, newData.bonusMaxMp,
                                   newData.bonusAttack, newData.bonusDefense);

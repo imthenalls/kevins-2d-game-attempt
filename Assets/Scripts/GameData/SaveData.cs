@@ -36,6 +36,7 @@ namespace Game.Core
         // Version 5 adds two-world travel state and separate world inventories.
     // Version 6 adds per-world avatar ability unlocks.
     // Version 7 adds the player's logical grid position (cell + local offset) via hasPlayerCell.
+    // Version 8 separates base max HP/MP from equipment bonuses (playerBaseMaxHp/Mp).
     // Missing fields deserialize as 0, so pre-unification saves are version 0.
         public int saveVersion;
 
@@ -65,6 +66,11 @@ namespace Game.Core
         public int playerMaxHp;
         public int playerMaxMp;
 
+        // Base maximums before equipment bonuses (v8+). Restoring from these — then re-applying the
+        // saved equipment's bonuses without healing — prevents bonuses from being counted twice.
+        public int playerBaseMaxHp;
+        public int playerBaseMaxMp;
+
         public WalletSaveData wallet = new();
 
         // Completed item-for-mana market exchanges retained by TradeService.
@@ -90,6 +96,9 @@ namespace Game.Core
 
         // Equipped items are owned outside the inventory grid and saved separately.
         public List<EquipmentSaveEntry> playerEquipment = new();
+
+        // Quest rewards that could not be delivered (inventory full) and remain claimable.
+        public List<PendingRewardEntry> pendingRewards = new();
 
         // ── NPC / Enemy state ─────────────────────────────────────────────────────
         // One entry per NPC in the current scene. Keyed by NpcController.NpcId.
