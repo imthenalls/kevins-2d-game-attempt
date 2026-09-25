@@ -505,8 +505,8 @@ public static class Town3DSceneBuilder
         int npcMask = 1 << Mathf.Max(0, LayerMask.NameToLayer("Npc"));
         int interactableLayer = LayerMask.NameToLayer("Interactable");
         int interactableMask = npcMask | (interactableLayer >= 0 ? 1 << interactableLayer : 0);
-        SetIntField(interaction, "npcLayers", npcMask);
-        SetIntField(interaction, "interactableLayers", interactableMask);
+        SetLayerMaskField(interaction, "npcLayers", npcMask);
+        SetLayerMaskField(interaction, "interactableLayers", interactableMask);
         SetNestedFloat(interaction, "config", "InteractionSearchRadius", 2.5f);
 
         player.AddComponent<CombatReceiver>();
@@ -581,7 +581,8 @@ public static class Town3DSceneBuilder
 
             enemy.AddComponent<NpcStateView>();
             var wanderer = enemy.AddComponent<NpcWander3D>();
-            SetIntField(wanderer, "wallLayers", wallMask);
+            SetLayerMaskField(wanderer, "wallLayers", wallMask);
+            SetLayerMaskField(wanderer, "neighborLayers", 1 << npcLayer);
             SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 6f);
             SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
 
@@ -627,7 +628,8 @@ public static class Town3DSceneBuilder
         brute.AddComponent<NpcStateView>();
 
         var wanderer = brute.AddComponent<NpcWander3D>();
-        SetIntField(wanderer, "wallLayers", wallMask);
+        SetLayerMaskField(wanderer, "wallLayers", wallMask);
+        SetLayerMaskField(wanderer, "neighborLayers", 1 << npcLayer);
         SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 5f);
         SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.2f);
 
@@ -685,7 +687,7 @@ public static class Town3DSceneBuilder
         var dash = dasher.AddComponent<NpcDashMelee3D>();
         SetObjectField(dash, "bodyCollider", capsule);
         SetObjectField(dash, "bodyRenderer", renderer);
-        SetIntField(dash, "obstacleLayers", wallMask);
+        SetLayerMaskField(dash, "obstacleLayers", wallMask);
         SetNestedFloat(dash, "config", "WarningDuration", 0.5f);
         SetNestedFloat(dash, "config", "ApproachSpeed", 2.8f);
         SetNestedFloat(dash, "config", "DashRange", 7f);
@@ -732,7 +734,8 @@ public static class Town3DSceneBuilder
             npc.AddComponent<NpcStateView>();
 
             var wanderer = npc.AddComponent<NpcWander3D>();
-            SetIntField(wanderer, "wallLayers", wallMask);
+            SetLayerMaskField(wanderer, "wallLayers", wallMask);
+            SetLayerMaskField(wanderer, "neighborLayers", 1 << npcLayer);
             SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 8f);
             SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
 
@@ -741,7 +744,7 @@ public static class Town3DSceneBuilder
             {
                 var b = Buildings[i];
                 var pathfinder = npc.AddComponent<NpcPathfinder3D>();
-                SetIntField(pathfinder, "obstacleLayers", wallMask);
+                SetLayerMaskField(pathfinder, "obstacleLayers", wallMask);
 
                 string keyId = "house_key_" + b.x + "_" + b.y;
                 var schedule = npc.AddComponent<NpcSchedule3D>();
@@ -877,6 +880,18 @@ public static class Town3DSceneBuilder
         if (p != null) { p.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 
+    // LayerMask serializes as a struct (serializedVersion 2, m_Bits), so intValue does not stick.
+    private static void SetLayerMaskField(Object target, string field, int mask)
+    {
+        var fieldInfo = target.GetType().GetField(
+            field,
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+        if (fieldInfo == null) return;
+
+        fieldInfo.SetValue(target, (LayerMask)mask);
+        UnityEditor.EditorUtility.SetDirty(target);
+    }
+
     private static void SetNestedFloat(Object target, string parentField, string childField, float value)
     {
         var so = new SerializedObject(target);
@@ -931,3 +946,4 @@ public static class Town3DSceneBuilder
         EditorBuildSettings.scenes = scenes.ToArray();
     }
 }
+

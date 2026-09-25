@@ -26,8 +26,10 @@ public class NpcWander3D : MonoBehaviour
     [SerializeField] private NpcWanderConfig wanderConfig = new NpcWanderConfig();
 
     [Header("Unity References")]
-    [Tooltip("Layers that block movement (buildings, walls).")]
+    [Tooltip("Layers that bound the wander area (buildings, perimeter walls).")]
     [SerializeField] private LayerMask wallLayers = ~0;
+    [Tooltip("If set, other members on these layers also block movement so NPCs do not stack.")]
+    [SerializeField] private LayerMask neighborLayers = 0;
 
     private Rigidbody body;
     private CapsuleCollider bodyCollider;
@@ -135,14 +137,15 @@ public class NpcWander3D : MonoBehaviour
             body.linearVelocity = Vector3.zero;
     }
 
-    // Sphere-casts the body ahead so it stops before pushing into a wall or building.
+    // Sphere-casts the body ahead so it stops before pushing into a wall, building, or neighbor NPC.
     private bool HitsWall(Vector3 direction, float distance)
     {
         float radius = bodyCollider != null ? bodyCollider.radius : 0.3f;
         Vector3 origin = body.position + Vector3.up * (bodyCollider != null ? bodyCollider.center.y : 0.7f) + direction * 0.05f;
 
+        int blockers = wallLayers | neighborLayers;
         int count = Physics.SphereCastNonAlloc(
-            origin, radius, direction, HitBuffer, distance, wallLayers, QueryTriggerInteraction.Ignore);
+            origin, radius, direction, HitBuffer, distance, blockers, QueryTriggerInteraction.Ignore);
 
         for (int i = 0; i < count; i++)
         {
