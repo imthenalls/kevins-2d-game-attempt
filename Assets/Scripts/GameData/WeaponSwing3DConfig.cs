@@ -13,7 +13,7 @@ namespace Game.Core
     public class WeaponSwing3DConfig
     {
         /// <summary>Yaw the blade rests at when not swinging (degrees).</summary>
-        public float RestYaw = 35f;
+        public float RestYaw = -55f;
 
         /// <summary>Yaw the blade starts the sweep at, relative to rest (degrees).</summary>
         public float StartYaw = -85f;
@@ -35,5 +35,11 @@ namespace Game.Core
 
         /// <summary>Longest sprite dimension of the held weapon, normalized to this many world units.</summary>
         public float WeaponSpriteLength = 0.7f;
+
+        /// <summary>
+        /// In-plane roll (degrees) of the blade sprite in the billboard plane while resting. Tilts the
+        /// blade so a down-angled held pose reads clearly; 0 keeps the sprite's authored orientation.
+        /// </summary>
+        public float SpriteRoll = -50f;
     }
 }

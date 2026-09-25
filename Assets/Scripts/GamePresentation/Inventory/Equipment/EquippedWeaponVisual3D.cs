@@ -34,6 +34,7 @@ public class EquippedWeaponVisual3D : MonoBehaviour
     private EquipmentModel boundModel;
     private CombatAttacker boundAttacker;
     private PlayerControllerBase player;
+    private BillboardSprite billboard;
     private float swingStartedAt;
     private float currentBladeYaw;
     private bool wasWindowOpen;
@@ -52,6 +53,8 @@ public class EquippedWeaponVisual3D : MonoBehaviour
             combatAttacker = GetComponentInParent<CombatAttacker>();
 
         transform.localPosition = new Vector3(config.OrbitRadius, 0f, 0f);
+        billboard = GetComponent<BillboardSprite>();
+        ApplySpriteRoll();
         ResetPose();
         SetWeapon(null);
     }
@@ -208,6 +211,15 @@ public class EquippedWeaponVisual3D : MonoBehaviour
 
         float scale = Mathf.Max(0.01f, config.WeaponSpriteLength / longest);
         transform.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    // Tilts the blade within the billboard plane so the rest pose reads as a held, down-angled weapon.
+    private void ApplySpriteRoll()
+    {
+        if (billboard == null)
+            billboard = GetComponent<BillboardSprite>();
+
+        billboard?.SetRoll(config.SpriteRoll);
     }
 
     private void ResetPose()
