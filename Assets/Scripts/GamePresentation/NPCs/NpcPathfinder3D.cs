@@ -32,9 +32,18 @@ public class NpcPathfinder3D : MonoBehaviour, IWalkabilityGrid
     [Tooltip("How many cells to search for a walkable start cell.")]
     [SerializeField, Min(0)] private int startSnapRadius = 4;
 
+    /// <summary>Layers treated as obstacles by this pathfinder.</summary>
+    public LayerMask ObstacleMask => obstacleLayers;
+
+    // Per-search walkability cache: Physics.CheckBox per cell dominates path cost, and A* revisits
+    // cells. Cleared at the start of every FindPath so dynamic obstacles are still respected.
+    private readonly Dictionary<long, bool> walkableCache = new Dictionary<long, bool>();
+
     /// <summary>Finds a cell path between two world positions, or null when none exists.</summary>
     public List<Vector3> FindPath(Vector3 start, Vector3 goal)
     {
+        walkableCache.Clear();
+
         int startX = Mathf.FloorToInt(start.x / cellSize);
         int startY = Mathf.FloorToInt(start.z / cellSize);
         int goalX = Mathf.FloorToInt(goal.x / cellSize);
@@ -57,9 +66,15 @@ public class NpcPathfinder3D : MonoBehaviour, IWalkabilityGrid
 
     public bool IsWalkable(int cellX, int cellY)
     {
+        long key = ((long)cellX << 32) ^ (uint)cellY;
+        if (walkableCache.TryGetValue(key, out bool cached))
+            return cached;
+
         Vector3 center = CellCenter(cellX, cellY, 0f) + Vector3.up * 0.5f;
         Vector3 half = new Vector3(cellSize * 0.45f, 0.5f, cellSize * 0.45f);
-        return !Physics.CheckBox(center, half, Quaternion.identity, obstacleLayers, QueryTriggerInteraction.Ignore);
+        bool walkable = !Physics.CheckBox(center, half, Quaternion.identity, obstacleLayers, QueryTriggerInteraction.Ignore);
+        walkableCache[key] = walkable;
+        return walkable;
     }
 
     public bool TryFindWalkable(int cellX, int cellY, int maxRadius, out int walkableCellX, out int walkableCellY)

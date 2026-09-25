@@ -33,6 +33,11 @@ public class NpcProximityMelee3D : MonoBehaviour
     [Tooltip("Give up and resume wandering once the player is this many attack ranges away.")]
     [SerializeField, Min(1f)] private float disengageRangeMultiplier = 4f;
 
+    [Tooltip("How often to recompute the chase path (seconds).")]
+    [SerializeField, Min(0.05f)] private float repathInterval = 0.4f;
+
+    private NpcChaseNavigator navigator;
+
     public bool IsEngaged { get; private set; }
 
     private void Awake()
@@ -43,6 +48,7 @@ public class NpcProximityMelee3D : MonoBehaviour
             body = GetComponent<Rigidbody>();
         if (attacker == null)
             attacker = GetComponent<CombatAttacker>();
+        navigator = GetComponent<NpcChaseNavigator>();
     }
 
     private void LateUpdate()
@@ -84,9 +90,11 @@ public class NpcProximityMelee3D : MonoBehaviour
 
         if (decision == MeleeEngagement.Chase)
         {
-            body.linearVelocity = distance > 0.0001f
-                ? toPlayer / distance * chaseSpeed
-                : Vector3.zero;
+            // Route around obstacles instead of pressing straight into them.
+            Vector3 step = navigator != null
+                ? navigator.TryGetStepDirection(player.transform.position, transform.position, repathInterval)
+                : (distance > 0.0001f ? toPlayer / distance : Vector3.zero);
+            body.linearVelocity = step * chaseSpeed;
             return;
         }
 

@@ -31,6 +31,8 @@ public sealed class NpcDashMelee3D : MonoBehaviour
     [Header("Movement Limits (Unity)")]
     [SerializeField] private LayerMask obstacleLayers = ~0;
     [SerializeField] private bool useArenaBounds;
+    [Tooltip("How often to recompute the approach path (seconds).")]
+    [SerializeField, Min(0.05f)] private float repathInterval = 0.4f;
 
     private Color WarningColor => new Color(config.WarningR, config.WarningG, config.WarningB, config.WarningA);
 
@@ -38,6 +40,7 @@ public sealed class NpcDashMelee3D : MonoBehaviour
     private Rigidbody body;
     private CombatAttacker attacker;
     private NpcDashMeleeModel model;
+    private NpcChaseNavigator navigator;
     private Color restingColor;
 
     private static readonly RaycastHit[] Hits = new RaycastHit[32];
@@ -55,6 +58,8 @@ public sealed class NpcDashMelee3D : MonoBehaviour
         if (bodyCollider == null) bodyCollider = GetComponent<CapsuleCollider>();
         if (bodyRenderer == null) bodyRenderer = GetComponentInChildren<SpriteRenderer>();
         if (bodyRenderer != null) restingColor = bodyRenderer.color;
+
+        navigator = GetComponent<NpcChaseNavigator>();
 
         model = new NpcDashMeleeModel(config);
 
@@ -119,6 +124,13 @@ public sealed class NpcDashMelee3D : MonoBehaviour
         switch (decision.Intent)
         {
             case NpcDashIntent.Approach:
+                // Route around obstacles while closing; the dash itself stays committed/straight.
+                if (navigator != null)
+                {
+                    Vector3 step = navigator.TryGetStepDirection(
+                        player.transform.position, transform.position, repathInterval);
+                    direction = step;
+                }
                 MoveSafely(direction, decision.Distance);
                 break;
 

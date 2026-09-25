@@ -586,6 +586,12 @@ public static class Town3DSceneBuilder
             SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 6f);
             SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
 
+            var banditPath = enemy.AddComponent<NpcPathfinder3D>();
+            SetLayerMaskField(banditPath, "obstacleLayers", wallMask);
+            SetIntField(banditPath, "searchPadding", 8);
+            SetIntField(banditPath, "maxNodes", 600);
+            enemy.AddComponent<NpcChaseNavigator>();
+
             AddWeaponRig(enemy, usePlayerInput: false, damage: 8, range: 1.6f, duration: 0.35f, cooldown: 0.9f);
             enemy.AddComponent<NpcProximityMelee3D>();
 
@@ -633,6 +639,12 @@ public static class Town3DSceneBuilder
         SetNestedFloat(wanderer, "wanderConfig", "WanderRadius", 5f);
         SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.2f);
 
+        var brutePath = brute.AddComponent<NpcPathfinder3D>();
+        SetLayerMaskField(brutePath, "obstacleLayers", wallMask);
+        SetIntField(brutePath, "searchPadding", 8);
+        SetIntField(brutePath, "maxNodes", 600);
+        brute.AddComponent<NpcChaseNavigator>();
+
         AddWeaponRig(brute, usePlayerInput: false, damage: 16, range: 1.8f, duration: 0.45f, cooldown: 1.2f);
 
         var melee = brute.AddComponent<NpcProximityMelee3D>();
@@ -671,6 +683,12 @@ public static class Town3DSceneBuilder
         SetNestedFloat(npc, "config", "AggroRange", 14f);
         SetNestedFloat(npc, "config", "InteractionRange", 2.5f);
         dasher.AddComponent<NpcStateView>();
+
+        var dasherPath = dasher.AddComponent<NpcPathfinder3D>();
+        SetLayerMaskField(dasherPath, "obstacleLayers", wallMask);
+        SetIntField(dasherPath, "searchPadding", 8);
+        SetIntField(dasherPath, "maxNodes", 600);
+        dasher.AddComponent<NpcChaseNavigator>();
 
         AddWeaponRig(dasher, usePlayerInput: false, damage: 10, range: 1.6f, duration: 0.3f, cooldown: 0.9f);
 
