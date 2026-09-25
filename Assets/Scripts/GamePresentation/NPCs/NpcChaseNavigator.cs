@@ -20,9 +20,6 @@ public sealed class NpcChaseNavigator : MonoBehaviour
     private const float WaypointReached = 0.35f;
     private const float RepathTargetMoved = 1.5f;
 
-    [Tooltip("Stop and move directly at the target once within this distance (line-of-sight melee).")]
-    [SerializeField, Min(0.1f)] private float directRange = 2.5f;
-
     [Tooltip("Skip pathfinding beyond this distance and step directly; chase should be local.")]
     [SerializeField, Min(1f)] private float maxPathDistance = 25f;
 
@@ -49,8 +46,9 @@ public sealed class NpcChaseNavigator : MonoBehaviour
         if (distance <= 0.001f)
             return Vector3.zero;
 
-        // Close enough and unobstructed: drive straight in so melee stays responsive.
-        if (distance <= directRange || distance > maxPathDistance || HasClearLine(self, target))
+        // Drive straight only when the way is actually clear, or as a last resort beyond the
+        // pathable range. A wall within directRange must still be routed around, not jammed into.
+        if (HasClearLine(self, target) || distance > maxPathDistance)
         {
             path.Clear();
             pathIndex = 0;

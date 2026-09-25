@@ -110,6 +110,15 @@ namespace Game.Core
                     return new NpcDashDecision(Phase, NpcDashIntent.None, 0f, 0f, 0f, false);
 
                 case NpcDashPhase.Warning:
+                    // If the shot clears during the telegraph, abort back to approach instead of
+                    // committing a dash into the wall the target just moved behind.
+                    if (!hasLineOfSight)
+                    {
+                        Enter(NpcDashPhase.Approach);
+                        return new NpcDashDecision(Phase, NpcDashIntent.Approach,
+                            config.ApproachSpeed * delta, directionX, directionZ, false);
+                    }
+
                     if (PhaseTime + 0.0001f >= config.WarningDuration)
                     {
                         // Aim is committed here; dodging afterward does not steer the dash.
@@ -159,11 +168,10 @@ namespace Game.Core
                 return;
             }
 
-            // A wall stopped the committed dash. If it was barely blocked at all, swing where we
-            // stopped; if the dash made little/no progress, resume approach so the navigator can
-            // route around the obstacle instead of re-dashing into it forever.
+            // A wall cut the committed dash short. Swinging at the wall is pointless; go back to
+            // approach so navigation can route around it instead of re-dashing into it forever.
             if (moved + 0.001f < desired)
-                Enter(moved <= 0.05f ? NpcDashPhase.Approach : NpcDashPhase.Swing);
+                Enter(NpcDashPhase.Approach);
         }
 
         private void Enter(NpcDashPhase phase)

@@ -96,24 +96,38 @@ namespace Game.Tests
         }
 
         [Test]
-        public void Fully_Blocked_Dash_Resumes_Approach_Instead_Of_Swinging()
+        public void Blocked_Dash_Resumes_Approach_Instead_Of_Swinging()
         {
             NpcDashMeleeModel m = AtDash();
             NpcDashDecision d = Tick(m, 5f);
             m.ReportDashMoved(0f, d.Distance); // wall blocked the whole step
 
             Assert.AreEqual(NpcDashPhase.Approach, m.Phase,
-                "a dash that made no progress must re-approach so navigation can route around");
+                "a blocked dash must re-approach so navigation can route around the wall");
         }
 
         [Test]
-        public void Partially_Blocked_Dash_Still_Swings()
+        public void Partially_Blocked_Dash_Resumes_Approach()
         {
             NpcDashMeleeModel m = AtDash();
             NpcDashDecision d = Tick(m, 5f);
-            m.ReportDashMoved(d.Distance * 0.5f, d.Distance); // mostly moved, then hit a wall
+            m.ReportDashMoved(d.Distance * 0.5f, d.Distance); // wall cut the step short
 
-            Assert.AreEqual(NpcDashPhase.Swing, m.Phase);
+            Assert.AreEqual(NpcDashPhase.Approach, m.Phase,
+                "swinging at a wall that stopped the dash is pointless; reposition instead");
+        }
+
+        [Test]
+        public void Warning_Aborts_When_Line_Of_Sight_Is_Lost()
+        {
+            var m = new NpcDashMeleeModel(Config());
+            Tick(m, 5f); // Approach -> Warning
+
+            NpcDashDecision d = m.Tick(0.1f, 5f, 12f, 1f, 0f, 0.3f, true, hasLineOfSight: false);
+
+            Assert.AreEqual(NpcDashPhase.Approach, m.Phase,
+                "losing sight during the telegraph must cancel the pending dash");
+            Assert.AreEqual(NpcDashIntent.Approach, d.Intent);
         }
 
         [Test]
