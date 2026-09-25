@@ -276,7 +276,10 @@ namespace Game.Core
             }
 
             if (node.transitions.Count == 0)
+            {
                 QuestRuntimeBindings.Log($"[Quest:{Graph.questId}] Reached terminal node '{nodeId}'.");
+                QuestRuntimeBindings.MarkQuestCompleted?.Invoke(Graph.questId);
+            }
         }
 
         private bool AllConditionsMet(QuestTransitionData transition)

@@ -173,5 +173,25 @@ namespace Game.Tests
 
             Assert.AreEqual(1, quest.ActiveNodeIds.Count, "Begin must enter the start node exactly once");
         }
+
+        [Test]
+        public void Reaching_A_Terminal_Node_Notifies_Quest_Completion()
+        {
+            var completed = new List<string>();
+            System.Action<string> original = QuestRuntimeBindings.MarkQuestCompleted;
+            QuestRuntimeBindings.MarkQuestCompleted = id => completed.Add(id);
+            try
+            {
+                QuestInstance quest = new QuestInstance(BuildGraph(1));
+                quest.OnEvent("EnemyKilled", "goblin", 1); // objective -> "done" (terminal)
+
+                Assert.AreEqual(1, completed.Count, "a terminal node must fire the completion hook once");
+                Assert.AreEqual("test_quest", completed[0]);
+            }
+            finally
+            {
+                QuestRuntimeBindings.MarkQuestCompleted = original;
+            }
+        }
     }
 }

@@ -15,17 +15,12 @@ Unchecked items are planned work. Completed work is retained below as a concise 
 - [ ] **Economy balancing workbook** — track item inputs, time, mana cost, expected/minimum yield, prices, profit, throughput, unlock timing, capacity, access, and buyer class.
 - [ ] **Bounded economy RNG** — define yield/demand ranges, guaranteed minimums, curated pools, and bad-luck protection; never gate essential progression behind unbounded randomness.
 - [ ] **Narrative reward budget** — measure active hourly earnings and test ordinary mana gifts near the provisional 10–20% range while preventing repeatable faucets.
-- [ ] **Quest progression status** — persist explicit completed/failed quest state or consistently write terminal `Quest.<Id>.Completed` facts.
 - [ ] **Quest economy extensions** — after Wallet/MP unification, add canonical mana conditions/actions and integer reputation adjustments.
-- [ ] **Quest item resolution** — update `HasItem`, `GiveItem`, and `RemoveItem` to resolve stable IDs through `ItemDatabase` instead of direct `Resources.Load`.
-- [ ] **Quest content validation** — validate quest/node/objective/action/condition/item IDs and transition targets before entering play mode.
 - [ ] **Currency HUD** — display `Wallet.Balance` and update it through `Wallet.OnBalanceChanged`.
 - [ ] **Trade quest context events** — add explicitly named participant/market-specific events if future quests need more context than `TradeCompleted(itemId, quantity)`.
 - [ ] **NPC market simulation** — schedule producer, consumer, stock-target, offer-matching, and trading decisions on bounded market ticks.
 - [ ] **Dynamic market pricing** — adjust prices from supply, demand, stock targets, and local modifiers with safeguards against runaway inflation/deflation.
-- [ ] **Currency rewards** — add quest and loot integrations that call `Wallet.Add` with stable reason/reference IDs.
 - [ ] **Transaction viewer** — provide a development/debug UI for the wallet's saved transaction history.
-- [ ] **Inventory item-detail panel** — implement the Inspect action currently marked TODO in `InventoryContextMenu`; show the selected item's full description and relevant gameplay/equipment statistics.
 
 ## Backlog
 
@@ -57,6 +52,15 @@ Unchecked items are planned work. Completed work is retained below as a concise 
 - [x] **Atomic trade foundation** — shared player/NPC participants, inventory preflight/rollback, correlated Wallet transfer, saved NPC wallets, and a bounded saved market ledger.
 - [x] **Trade quest events** — successful committed trades raise one `TradeCompleted(itemId, quantity)` event; failed trades raise none.
 - [x] **Manual quest transitions** — automatic traversal ignores manual edges, validated choice APIs select them, and dialogue choices can supply quest/source/target IDs.
+
+### Quest and save hardening
+
+- [x] **Quest progression status** — reaching a terminal node writes a `Quest.<Id>.Completed` world fact (via `QuestRuntimeBindings.MarkQuestCompleted`).
+- [x] **Quest item resolution** — `HasItem`, `GiveItem`, and `RemoveItem` resolve ids through `ItemDatabase` (with a `Resources.Load` fallback).
+- [x] **Quest content validation** — `GameDataValidator` flags unknown action and condition types.
+- [x] **Currency rewards** — `GrantMana` quest action grants mana via `Wallet.Add` with a stable reason/reference id.
+- [x] **Inventory item-detail panel** — the Inspect action pins the enhanced tooltip (icon, type/scope, description, bonuses, sell value) at the clicked slot.
+- [x] **Save correctness** — equipment base/bonus separation, NPC inventory/wallet restore, safe quest chaining, pending rewards, and save validation + backup recovery.
 
 ### Presentation and behavior
 

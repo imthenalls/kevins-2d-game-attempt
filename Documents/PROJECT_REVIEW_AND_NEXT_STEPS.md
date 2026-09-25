@@ -114,9 +114,10 @@ Covered:
 
 Still outstanding:
 
-- Unknown quest action or condition types
 - Missing spawn-point IDs
 - Missing dialogue ids referenced by `NpcDialogue`
+
+(Unknown quest action/condition types are now flagged by the validator.)
 
 ### 5. Stabilize Saving
 

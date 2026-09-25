@@ -158,6 +158,40 @@ public class ClaimRewardsAction : IQuestAction
 }
 
 // ---------------------------------------------------------------------------
+// GrantMana
+// JSON: { "type": "GrantMana", "amount": 100 }
+// Grants mana (currency) to the player's wallet as a quest reward.
+// ---------------------------------------------------------------------------
+public class GrantManaAction : IQuestAction
+{
+    private readonly int _amount;
+    private readonly string _questId;
+
+    public GrantManaAction(int amount, string questId = "")
+    {
+        _amount = amount;
+        _questId = questId;
+    }
+
+    public void Execute()
+    {
+        if (_amount <= 0)
+            return;
+
+        var player = UnityEngine.Object.FindAnyObjectByType<PlayerControllerBase>();
+        Wallet wallet = player != null ? player.ManaWallet : null;
+        if (wallet == null)
+        {
+            Debug.LogWarning("[GrantManaAction] Player wallet not found.");
+            return;
+        }
+
+        if (!wallet.Add(_amount, "Quest reward", _questId))
+            Debug.LogWarning($"[GrantManaAction] Could not grant {_amount} mana (wallet full).");
+    }
+}
+
+// ---------------------------------------------------------------------------
 // ClearFlag
 // JSON: { "type": "ClearFlag", "key": "Dungeon.TorchLit" }
 // Removes a world state flag so HasFlag returns false.

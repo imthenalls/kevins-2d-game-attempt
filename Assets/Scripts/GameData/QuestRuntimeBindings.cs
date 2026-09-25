@@ -22,6 +22,10 @@ namespace Game.Core
         /// <summary>Builds an action from JSON data plus the owning quest id. Set by QuestLoader.</summary>
         public static Func<QuestActionData, string, IQuestAction> BuildAction;
 
+        /// <summary>Fired when a quest reaches a terminal node (no outgoing transitions). Set by
+        /// QuestLoader so the Shell can persist a completion fact.</summary>
+        public static Action<string> MarkQuestCompleted;
+
         /// <summary>Receives diagnostic messages. Set by QuestLoader; silent by default.</summary>
         public static Action<string> Log = _ => { };
 

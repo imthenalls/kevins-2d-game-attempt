@@ -25,6 +25,17 @@ public static class GameDataValidator
     private const string ReportPath = "Temp/game-data-validation.txt";
     private static readonly string[] SceneFolders = { "Assets/Scenes" };
 
+    private static readonly HashSet<string> KnownConditionTypes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "ObjectiveComplete", "Fact", "QuestInNode", "HasItem",
+    };
+
+    private static readonly HashSet<string> KnownActionTypes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "SetFact", "ClearFlag", "ToggleFlag", "GiveItem", "RemoveItem",
+        "StartQuest", "ClaimRewards", "GrantMana",
+    };
+
     [MenuItem("Tools/Validation/Validate Game Data")]
     public static void ValidateMenu() => Validate();
 
@@ -146,6 +157,14 @@ public static class GameDataValidator
 
                 foreach (QuestConditionData condition in CollectConditions(node))
                 {
+                    if (condition == null)
+                        continue;
+                    if (!string.IsNullOrWhiteSpace(condition.type) && !KnownConditionTypes.Contains(condition.type))
+                    {
+                        issues.Add(new ValidationIssue(
+                            ValidationSeverity.Error, "quest.condition.type",
+                            owner + " uses unknown condition type '" + condition.type + "'."));
+                    }
                     if (!string.IsNullOrWhiteSpace(condition.itemId))
                         itemRefs.Add(new IdIntegrity.IdReference(owner, condition.itemId));
                     if (!string.IsNullOrWhiteSpace(condition.questId))
@@ -162,6 +181,12 @@ public static class GameDataValidator
                 {
                     if (action == null)
                         continue;
+                    if (!string.IsNullOrWhiteSpace(action.type) && !KnownActionTypes.Contains(action.type))
+                    {
+                        issues.Add(new ValidationIssue(
+                            ValidationSeverity.Error, "quest.action.type",
+                            owner + " uses unknown action type '" + action.type + "'."));
+                    }
                     if (!string.IsNullOrWhiteSpace(action.itemId))
                         itemRefs.Add(new IdIntegrity.IdReference(owner, action.itemId));
                     if (!string.IsNullOrWhiteSpace(action.questId))

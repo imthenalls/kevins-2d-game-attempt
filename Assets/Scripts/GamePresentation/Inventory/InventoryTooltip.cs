@@ -43,6 +43,7 @@ public class InventoryTooltip : MonoBehaviour
     private RectTransform canvasRect;
     private Image iconImage;
     private TextMeshProUGUI bonusesText;
+    private bool pinned;
 
     private void Awake()
     {
@@ -60,7 +61,7 @@ public class InventoryTooltip : MonoBehaviour
 
     private void Update()
     {
-        if (panel == null || !panel.gameObject.activeSelf || canvasRect == null) return;
+        if (panel == null || !panel.gameObject.activeSelf || canvasRect == null || pinned) return;
 
         UpdatePanelPosition();
     }
@@ -69,28 +70,54 @@ public class InventoryTooltip : MonoBehaviour
     {
         if (instance == null || item == null) return;
 
-        if (instance.nameText != null)        instance.nameText.text = item.itemName;
-        if (instance.typeText != null)        instance.typeText.text = BuildTypeLabel(item);
-        if (instance.descriptionText != null) instance.descriptionText.text = item.description;
-        if (instance.sellValueText != null)
-            instance.sellValueText.text = item.sellValue > 0 ? $"Sell: {item.sellValue}g" : string.Empty;
+        instance.pinned = false;
+        instance.Populate(item);
+        instance.ShowPanel();
+    }
 
-        instance.ApplyIcon(item.icon);
-        instance.ApplyBonuses(item);
+    /// <summary>Shows the details pinned at a fixed screen position (the Inspect action), so they
+    /// stay visible without holding the cursor over the slot.</summary>
+    public static void Pin(ItemData item, Vector2 screenPosition)
+    {
+        if (instance == null || item == null) return;
 
-        if (instance.panel != null)
-        {
-            instance.transform.SetAsLastSibling();
-            instance.panel.SetAsLastSibling();
-            instance.panel.gameObject.SetActive(true);
-            instance.UpdatePanelPosition();
-        }
+        instance.pinned = true;
+        instance.Populate(item);
+        instance.ShowPanel();
+        instance.PositionAt(screenPosition);
     }
 
     public static void Hide()
     {
-        if (instance != null && instance.panel != null)
+        if (instance == null)
+            return;
+
+        instance.pinned = false;
+        if (instance.panel != null)
             instance.panel.gameObject.SetActive(false);
+    }
+
+    private void Populate(ItemData item)
+    {
+        if (nameText != null)        nameText.text = item.itemName;
+        if (typeText != null)        typeText.text = BuildTypeLabel(item);
+        if (descriptionText != null) descriptionText.text = item.description;
+        if (sellValueText != null)
+            sellValueText.text = item.sellValue > 0 ? $"Sell: {item.sellValue}g" : string.Empty;
+
+        ApplyIcon(item.icon);
+        ApplyBonuses(item);
+    }
+
+    private void ShowPanel()
+    {
+        if (panel == null)
+            return;
+
+        transform.SetAsLastSibling();
+        panel.SetAsLastSibling();
+        panel.gameObject.SetActive(true);
+        UpdatePanelPosition();
     }
 
     private void ApplyIcon(Sprite icon)
@@ -245,11 +272,16 @@ public class InventoryTooltip : MonoBehaviour
 
     private void UpdatePanelPosition()
     {
+        PositionAt(GetMousePosition());
+    }
+
+    private void PositionAt(Vector2 screenPosition)
+    {
         if (panel == null || canvasRect == null || parentCanvas == null) return;
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             canvasRect,
-            GetMousePosition(),
+            screenPosition,
             parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : Camera.main,
             out Vector2 localPoint);
 

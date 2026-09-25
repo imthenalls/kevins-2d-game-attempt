@@ -16,6 +16,11 @@ public static class QuestLoader
         QuestRuntimeBindings.BuildCondition = BuildCondition;
         QuestRuntimeBindings.BuildAction = BuildAction;
         QuestRuntimeBindings.Log = message => Debug.Log(message);
+        QuestRuntimeBindings.MarkQuestCompleted = questId =>
+        {
+            if (WorldStateManager.Instance != null && !string.IsNullOrWhiteSpace(questId))
+                WorldStateManager.Instance.SetFlag($"Quest.{questId}.Completed");
+        };
     }
     private static readonly JsonSerializerSettings Settings = new()
     {
@@ -120,6 +125,7 @@ public static class QuestLoader
             "RemoveItem" => new RemoveItemAction(data.itemId, data.count),
             "StartQuest" => new StartQuestAction(data.questId),
             "ClaimRewards" => new ClaimRewardsAction(),
+            "GrantMana"  => new GrantManaAction(data.amount, questId),
             _            => UnknownType<IQuestAction>(data.type, "action"),
         };
     }

@@ -180,7 +180,14 @@ public class InventoryContextMenu : MonoBehaviour
 
     private void OnInspect()
     {
-        // TODO: open an item detail panel when one exists
+        if (model == null) return;
+        var slot = model.GetSlot(targetSlotIndex);
+        if (slot.IsEmpty) return;
+
+        ItemData item = slot.item.AsItemData();
+        if (item != null)
+            InventoryTooltip.Pin(item, lastScreenPosition);
+
         Hide();
     }
 

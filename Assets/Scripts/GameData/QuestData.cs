@@ -98,6 +98,7 @@ namespace Game.Core
         public string value;
         public string itemId;
         public int count = 1;
+        public int amount;
         public string questId;
     }
 }
