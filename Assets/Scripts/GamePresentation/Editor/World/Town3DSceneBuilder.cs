@@ -510,6 +510,9 @@ public static class Town3DSceneBuilder
         SetNestedFloat(interaction, "config", "InteractionSearchRadius", 2.5f);
 
         player.AddComponent<CombatReceiver>();
+        var playerFlash = player.AddComponent<DamageFlash>();
+        SetObjectField(playerFlash, "bodyRenderer", renderer);
+        SetColorField(playerFlash, "flashColor", new Color(1f, 0.25f, 0.25f, 1f));
         AddWeaponRig(player, usePlayerInput: true, damage: 12, range: 1.7f, duration: 0.3f, cooldown: 0.45f);
     }
 
@@ -604,6 +607,9 @@ public static class Town3DSceneBuilder
             renderer.color = new Color(0.85f, 0.20f, 0.20f);
             renderer.sortingOrder = 55;
             visual.AddComponent<BillboardSprite>();
+
+            var flash = enemy.AddComponent<DamageFlash>();
+            SetObjectField(flash, "bodyRenderer", renderer);
         }
 
         BuildDashEnemy(root.transform, npcLayer, wallMask);
@@ -659,6 +665,9 @@ public static class Town3DSceneBuilder
         renderer.color = new Color(0.55f, 0.10f, 0.10f);
         renderer.sortingOrder = 56;
         visual.AddComponent<BillboardSprite>();
+
+        var flash = brute.AddComponent<DamageFlash>();
+        SetObjectField(flash, "bodyRenderer", renderer);
     }
 
     // A dash-melee variant: it flashes a warning, then dashes straight at the player.
@@ -896,6 +905,13 @@ public static class Town3DSceneBuilder
         var so = new SerializedObject(target);
         SerializedProperty p = so.FindProperty(field);
         if (p != null) { p.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetColorField(Object target, string field, Color value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.colorValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 
     // LayerMask serializes as a struct (serializedVersion 2, m_Bits), so intValue does not stick.
