@@ -442,7 +442,7 @@ public class SaveManager : MonoBehaviour
     }
 
     // Fills in any collection the deserializer left null so downstream restore code cannot NPE.
-    private static void NormalizeSave(SaveData data)
+    public static void NormalizeSave(SaveData data)
     {
         if (data == null) return;
         data.worldPositions ??= new();
@@ -462,7 +462,7 @@ public class SaveManager : MonoBehaviour
         data.wallet.transactions ??= new();
     }
 
-    private static string ValidateSave(SaveData data)
+    public static string ValidateSave(SaveData data)
     {
         if (data == null)
             return "Save data is null.";
@@ -922,3 +922,4 @@ public class SaveManager : MonoBehaviour
         baseMp = Mathf.Max(0, data.playerMaxMp - bonusMp);
     }
 }
+
