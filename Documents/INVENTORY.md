@@ -151,9 +151,14 @@ Hover triggers `InventoryTooltip.Show` / `.Hide` automatically.
 
 Static show/hide calls. Place one instance under the Canvas.
 
-At runtime the tooltip enforces a 320x190 white panel with black text, readable padding,
+At runtime the tooltip enforces a 340x250 white panel with black text, readable padding,
 screen-edge clamping, and disabled raycast blocking. Disabling raycasts prevents the tooltip
 from stealing hover from the slot and rapidly flashing on and off.
+
+The tooltip shows the item **icon** (top-right), **name**, **type · equip slot · flags · world
+scope**, **description**, **equipment bonuses** (Max HP/MP, Attack, Defense — only when non-zero),
+and **sell value**. The icon and bonus lines are built programmatically, so the prefab only wires
+the base text fields; equipment-heavy items show their full effect without a prefab change.
 
 ```csharp
 InventoryTooltip.Show(itemData);

@@ -7,9 +7,12 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Floating tooltip that displays item details (name, type flags, description, sell value)
-/// when the player hovers over an occupied inventory slot. The panel follows the cursor
-/// each frame via Update().
+/// Floating tooltip that displays full item details — icon, name, type + equip slot + flags + world
+/// scope, description, equipment bonuses, and sell value — when the player hovers over an occupied
+/// inventory slot. The panel follows the cursor each frame via Update().
+///
+/// The icon and bonus lines are built programmatically (the prefab only wires the base text fields),
+/// so equipment-heavy items show their full effect without a prefab change.
 ///
 /// Unity setup:
 ///   1. Place one instance on a GameObject inside the same Canvas as InventoryUI.
@@ -24,7 +27,8 @@ public class InventoryTooltip : MonoBehaviour
 {
     private static readonly Color TooltipBackgroundColor = Color.white;
     private static readonly Color TooltipTextColor = Color.black;
-    private static readonly Vector2 TooltipSize = new Vector2(320f, 190f);
+    private static readonly Color BonusTextColor = new Color(0.1f, 0.35f, 0.1f);
+    private static readonly Vector2 TooltipSize = new Vector2(340f, 250f);
 
     private static InventoryTooltip instance;
 
@@ -37,6 +41,8 @@ public class InventoryTooltip : MonoBehaviour
 
     private Canvas parentCanvas;
     private RectTransform canvasRect;
+    private Image iconImage;
+    private TextMeshProUGUI bonusesText;
 
     private void Awake()
     {
@@ -64,10 +70,13 @@ public class InventoryTooltip : MonoBehaviour
         if (instance == null || item == null) return;
 
         if (instance.nameText != null)        instance.nameText.text = item.itemName;
-        if (instance.typeText != null)        instance.typeText.text = $"{item.type}{BuildFlagLabel(item.flags)}";
+        if (instance.typeText != null)        instance.typeText.text = BuildTypeLabel(item);
         if (instance.descriptionText != null) instance.descriptionText.text = item.description;
         if (instance.sellValueText != null)
             instance.sellValueText.text = item.sellValue > 0 ? $"Sell: {item.sellValue}g" : string.Empty;
+
+        instance.ApplyIcon(item.icon);
+        instance.ApplyBonuses(item);
 
         if (instance.panel != null)
         {
@@ -84,12 +93,65 @@ public class InventoryTooltip : MonoBehaviour
             instance.panel.gameObject.SetActive(false);
     }
 
+    private void ApplyIcon(Sprite icon)
+    {
+        if (iconImage == null) return;
+
+        iconImage.sprite = icon;
+        iconImage.gameObject.SetActive(icon != null);
+    }
+
+    private void ApplyBonuses(ItemData item)
+    {
+        if (bonusesText == null) return;
+
+        string bonus = BuildBonusLabel(item);
+        bonusesText.text = bonus;
+        bonusesText.gameObject.SetActive(bonus.Length > 0);
+    }
+
+    // "Equipment · Weapon [Unique] · World A" — combines category, equip slot, flags, and world scope.
+    private static string BuildTypeLabel(ItemData item)
+    {
+        string label = item.type.ToString();
+        if (item.IsEquip)
+            label += " · " + item.equipSlot.ToString();
+
+        label += BuildFlagLabel(item.flags);
+        label += BuildScopeLabel(item.scope);
+        return label;
+    }
+
     private static string BuildFlagLabel(ItemFlags flags)
     {
-        if ((flags & ItemFlags.QuestItem) != 0) return " [Quest]";
-        if ((flags & ItemFlags.KeyItem)   != 0) return " [Key]";
-        if ((flags & ItemFlags.Unique)    != 0) return " [Unique]";
-        return string.Empty;
+        var parts = new System.Collections.Generic.List<string>();
+        if ((flags & ItemFlags.QuestItem) != 0) parts.Add("Quest");
+        if ((flags & ItemFlags.KeyItem)   != 0) parts.Add("Key");
+        if ((flags & ItemFlags.Unique)    != 0) parts.Add("Unique");
+        return parts.Count > 0 ? " [" + string.Join(", ", parts) + "]" : string.Empty;
+    }
+
+    private static string BuildScopeLabel(ItemScope scope)
+    {
+        switch (scope)
+        {
+            case ItemScope.WorldA: return " · World A only";
+            case ItemScope.WorldB: return " · World B only";
+            default: return string.Empty;
+        }
+    }
+
+    private static string BuildBonusLabel(ItemData item)
+    {
+        if (!item.IsEquip)
+            return string.Empty;
+
+        var parts = new System.Collections.Generic.List<string>();
+        if (item.bonusMaxHp  > 0) parts.Add("+" + item.bonusMaxHp  + " Max HP");
+        if (item.bonusMaxMp  > 0) parts.Add("+" + item.bonusMaxMp  + " Max MP");
+        if (item.bonusAttack > 0) parts.Add("+" + item.bonusAttack + " Attack");
+        if (item.bonusDefense > 0) parts.Add("+" + item.bonusDefense + " Defense");
+        return parts.Count > 0 ? string.Join("\n", parts) : string.Empty;
     }
 
     private void ConfigurePanelVisuals()
@@ -113,12 +175,47 @@ public class InventoryTooltip : MonoBehaviour
         canvasGroup.blocksRaycasts = false;
 
         ConfigureText(nameText, 24f, FontStyles.Bold, -12f, 32f);
-        ConfigureText(typeText, 18f, FontStyles.Normal, -48f, 24f);
-        ConfigureText(descriptionText, 17f, FontStyles.Normal, -78f, 70f);
-        ConfigureText(sellValueText, 17f, FontStyles.Bold, -158f, 24f);
+        ConfigureText(typeText, 17f, FontStyles.Normal, -48f, 24f);
+        ConfigureText(descriptionText, 16f, FontStyles.Normal, -78f, 78f);
+        ConfigureText(sellValueText, 17f, FontStyles.Bold, -232f, 24f);
+
+        BuildIcon();
+        BuildBonusesText();
+        ConfigureText(bonusesText, 17f, FontStyles.Bold, -162f, 64f);
+        if (bonusesText != null)
+            bonusesText.color = BonusTextColor;
 
         foreach (Graphic graphic in panel.GetComponentsInChildren<Graphic>(true))
             graphic.raycastTarget = false;
+    }
+
+    private void BuildIcon()
+    {
+        var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        iconObject.transform.SetParent(panel, false);
+        iconImage = iconObject.GetComponent<Image>();
+        iconImage.color = Color.white;
+
+        RectTransform rect = iconImage.rectTransform;
+        rect.anchorMin = new Vector2(1f, 1f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(-12f, -12f);
+        rect.sizeDelta = new Vector2(44f, 44f);
+        iconImage.gameObject.SetActive(false);
+    }
+
+    private void BuildBonusesText()
+    {
+        var bonusObject = new GameObject("Bonuses", typeof(RectTransform), typeof(TextMeshProUGUI));
+        bonusObject.transform.SetParent(panel, false);
+        bonusesText = bonusObject.GetComponent<TextMeshProUGUI>();
+        bonusesText.fontSize = 17f;
+        bonusesText.fontStyle = FontStyles.Bold;
+        bonusesText.color = BonusTextColor;
+        bonusesText.alignment = TextAlignmentOptions.TopLeft;
+        bonusesText.raycastTarget = false;
+        bonusesText.gameObject.SetActive(false);
     }
 
     private static void ConfigureText(
