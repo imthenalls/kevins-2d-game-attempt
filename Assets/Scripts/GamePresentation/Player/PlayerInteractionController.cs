@@ -199,8 +199,20 @@ public class PlayerInteractionController : MonoBehaviour
                 return;
             }
 
-            if (!TryApplyManualQuestTransition(selectedChoice))
-                return;
+            // A choice that references a quest branch should work even when the player skipped the
+            // quest giver (for example asking the caretaker for the key directly), so start the
+            // referenced quest first when it is not already running.
+            if (!string.IsNullOrWhiteSpace(selectedChoice.questId) &&
+                QuestManager.Instance != null &&
+                !QuestManager.Instance.IsQuestActive(selectedChoice.questId))
+            {
+                QuestManager.Instance.StartQuest(selectedChoice.questId);
+            }
+
+            // A failed manual transition (the quest already moved past this branch, or conditions
+            // are unmet) must not leave the dialogue stuck on an option that does nothing. It is
+            // logged in TryApplyManualQuestTransition; continue to the choice's next node / end.
+            TryApplyManualQuestTransition(selectedChoice);
 
             // A choice can begin a quest directly (e.g. accepting a quest from an NPC).
             if (!string.IsNullOrWhiteSpace(selectedChoice.startQuestId) && QuestManager.Instance != null)
