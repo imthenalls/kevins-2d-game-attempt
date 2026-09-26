@@ -50,6 +50,8 @@ public class NpcSchedule3D : MonoBehaviour
     [SerializeField, Min(0f)] private float neighborSteerStrength = 1.2f;
     [Tooltip("Log schedule/route decisions. Development only.")]
     [SerializeField] private bool logDiagnostics = false;
+    [Tooltip("Distance to the home approach at which the NPC goes inside, without needing the exact point.")]
+    [SerializeField, Min(0.1f)] private float homeDoorEnterRadius = 1.5f;
 
     private const float WaypointReached = 0.35f;
 
@@ -62,6 +64,8 @@ public class NpcSchedule3D : MonoBehaviour
     private TravelRecoveryModel recovery;
     private List<Vector3> path;
     private int pathIndex;
+
+    private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
     /// <summary>The key id this NPC carries for its home.</summary>
     public string HomeKeyId => homeKeyId;
@@ -164,6 +168,19 @@ public class NpcSchedule3D : MonoBehaviour
 
         Vector3 position = transform.position;
 
+        // Close enough to the door: go inside instead of insisting on the exact approach cell, so the
+        // NPC cannot jam against the wall beside its door.
+        if (homeEntrance != null)
+        {
+            Vector3 toDoor = homeEntrance.position - position;
+            toDoor.y = 0f;
+            if (toDoor.sqrMagnitude <= homeDoorEnterRadius * homeDoorEnterRadius)
+            {
+                EnterHome();
+                return;
+            }
+        }
+
         // Skip over any waypoints already reached this frame.
         bool atWaypoint = false;
         while (pathIndex < path.Count)
@@ -185,12 +202,20 @@ public class NpcSchedule3D : MonoBehaviour
 
         Vector3 delta = path[pathIndex] - position;
         delta.y = 0f;
-        Vector3 direction = delta.normalized;
+        float distanceToWaypoint = delta.magnitude;
+        Vector3 direction = delta / distanceToWaypoint;
 
         // Slide around other commuters instead of pushing through them.
         Vector3 separation = NpcLocalAvoidance.Compute(
-            position, body, bodyCollider, neighborLayers, neighborSeparation, GetInstanceID());
+            position, body, bodyCollider, neighborLayers, neighborSeparation, StableSeed());
         direction = NpcLocalAvoidance.Steer(direction, separation, neighborSteerStrength);
+
+        // Do not drive into the static world; standing still lets the recovery model repath.
+        if (HitsWall(direction, distanceToWaypoint))
+        {
+            body.linearVelocity = Vector3.zero;
+            return;
+        }
 
         body.linearVelocity = direction * movementConfig.MoveSpeed;
 
@@ -279,6 +304,34 @@ public class NpcSchedule3D : MonoBehaviour
         if (wanderer != null)
             wanderer.enabled = true;
     }
+
+    // Sphere-casts the body ahead against the pathfinder's obstacle layers so the NPC stops at a
+    // wall (instead of pressing into it) and lets the recovery model repath.
+    private bool HitsWall(Vector3 direction, float distance)
+    {
+        if (pathfinder == null || distance <= 0f)
+            return false;
+
+        float radius = bodyCollider != null ? bodyCollider.radius : 0.3f;
+        float centerY = bodyCollider != null ? bodyCollider.center.y : 0.7f;
+        Vector3 origin = body.position + Vector3.up * centerY + direction * 0.05f;
+
+        int count = Physics.SphereCastNonAlloc(
+            origin, radius, direction, HitBuffer, distance,
+            pathfinder.ObstacleMask, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider hit = HitBuffer[i].collider;
+            if (hit != null && hit != bodyCollider && !hit.isTrigger)
+                return true;
+        }
+
+        return false;
+    }
+
+    // A stable per-NPC seed for local-avoidance escape directions (names are unique).
+    private int StableSeed() => gameObject.name.GetHashCode();
 
     // Ends the current trip, keeps the door locked, and resumes wandering after the retry delay.
     private void CancelTrip(float retrySeconds)

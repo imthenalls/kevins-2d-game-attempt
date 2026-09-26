@@ -180,7 +180,7 @@ public class NpcWander3D : MonoBehaviour
         Vector3 direction = delta / distance;
 
         Vector3 separation = NpcLocalAvoidance.Compute(
-            position, body, bodyCollider, neighborLayers, neighborSeparation, GetInstanceID());
+            position, body, bodyCollider, neighborLayers, neighborSeparation, gameObject.name.GetHashCode());
         direction = NpcLocalAvoidance.Steer(direction, separation, neighborSteerStrength);
 
         if (HitsWall(direction, distance))
