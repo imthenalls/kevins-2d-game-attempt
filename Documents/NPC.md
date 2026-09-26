@@ -207,6 +207,32 @@ A choice may also select a manual quest transition:
 
 The quest edge must use `"automatic": false`, be reachable from the active source node, and have passing conditions. `questSourceNodeId` may be omitted when the target is unambiguous.
 
+### Conditional nodes and choices
+
+A node or choice can require an active quest, optionally at a specific node:
+
+```json
+{
+  "id": "offer",
+  "text": "The main building key, perhaps?",
+  "nextNodeId": "",
+  "endConversation": false,
+  "requireQuestId": "open_main_building",
+  "requireQuestNodeId": "find_key",
+  "choices": [ { "text": "Yes, do you have it?", "nextNodeId": "give_key", "endConversation": false } ]
+}
+```
+
+- `requireQuestId` — the node/choice is only used while that quest is active.
+- `requireQuestNodeId` — additionally requires the quest to be sitting on that node.
+- A graph can set `fallbackStartNodeId` (next to `startNodeId`) for the greeting shown when the
+  primary start node is gated off. `DialogueGate` evaluates the rule; `NpcDialogue` picks the start
+  node and `PlayerInteractionController` hides unavailable choices. With no gating fields, everything
+  behaves exactly as before.
+
+This is how the caretaker only offers the key once the `open_main_building` quest reaches `find_key`;
+otherwise she shows the `hint` fallback and the choice list is empty.
+
 ### Sources (priority order)
 
 1. `DialogueGraphAsset` assigned in Inspector.

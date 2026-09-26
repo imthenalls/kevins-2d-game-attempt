@@ -40,6 +40,7 @@ public class PlayerInteractionController : MonoBehaviour
     private readonly List<Collider2D> overlap2D = new List<Collider2D>();
     private readonly List<Component> candidates = new List<Component>();
     private static readonly Collider[] Overlap3D = new Collider[32];
+    private readonly List<DialogueChoiceDefinition> availableChoices = new List<DialogueChoiceDefinition>();
     private NpcDialogue activeDialogue;
     private DialogueNodeDefinition activeNode;
     private int selectedChoiceIndex;
@@ -188,8 +189,8 @@ public class PlayerInteractionController : MonoBehaviour
             return;
         }
 
-        List<DialogueChoiceDefinition> choices = activeNode.choices;
-        if (choices != null && choices.Count > 0)
+        List<DialogueChoiceDefinition> choices = availableChoices;
+        if (choices.Count > 0)
         {
             selectedChoiceIndex = Mathf.Clamp(selectedChoiceIndex, 0, choices.Count - 1);
             DialogueChoiceDefinition selectedChoice = choices[selectedChoiceIndex];
@@ -283,16 +284,33 @@ public class PlayerInteractionController : MonoBehaviour
         }
 
         string speaker = activeDialogue.GetSpeakerNameForNode(activeNode);
-        List<string> choiceTexts = null;
 
-        if (activeNode.choices != null && activeNode.choices.Count > 0)
+        // Only offer choices whose quest gating currently holds (e.g. the caretaker's key response
+        // is hidden until the key quest has actually begun).
+        availableChoices.Clear();
+        if (activeNode.choices != null)
         {
-            choiceTexts = new List<string>(activeNode.choices.Count);
             for (int i = 0; i < activeNode.choices.Count; i++)
             {
                 DialogueChoiceDefinition choice = activeNode.choices[i];
-                choiceTexts.Add(choice != null ? choice.text : string.Empty);
+                if (choice == null || !DialogueGate.IsAvailable(choice.requireQuestId, choice.requireQuestNodeId))
+                    continue;
+
+                availableChoices.Add(choice);
             }
+        }
+
+        List<string> choiceTexts = null;
+        if (availableChoices.Count > 0)
+        {
+            selectedChoiceIndex = Mathf.Clamp(selectedChoiceIndex, 0, availableChoices.Count - 1);
+            choiceTexts = new List<string>(availableChoices.Count);
+            for (int i = 0; i < availableChoices.Count; i++)
+                choiceTexts.Add(availableChoices[i].text);
+        }
+        else
+        {
+            selectedChoiceIndex = 0;
         }
 
         dialogueUI.ShowDialogue(speaker, activeNode.text, choiceTexts, selectedChoiceIndex);
@@ -305,14 +323,14 @@ public class PlayerInteractionController : MonoBehaviour
             return;
         }
 
-        int count = activeNode.choices.Count;
+        int count = availableChoices.Count;
         selectedChoiceIndex = (selectedChoiceIndex + direction + count) % count;
         ShowCurrentNode();
     }
 
     private bool HasMultipleChoices()
     {
-        return activeNode != null && activeNode.choices != null && activeNode.choices.Count > 1;
+        return availableChoices.Count > 1;
     }
 
     private static bool TryApplyManualQuestTransition(DialogueChoiceDefinition choice)

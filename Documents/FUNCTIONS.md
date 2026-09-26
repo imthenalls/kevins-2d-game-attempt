@@ -64,7 +64,8 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 
 | Script | Responsibility | Key runtime API |
 |---|---|---|
-| `Assets/Scripts/GamePresentation/NPCs/DialogueData.cs` | Serializable dialogue graph, node, and choice DTOs, including optional manual quest transition fields. | Public serialized fields |
+| `Assets/Scripts/GamePresentation/NPCs/DialogueData.cs` | Serializable dialogue graph, node, and choice DTOs, including optional manual quest transition and quest-gating fields. | Public serialized fields |
+| `Assets/Scripts/GamePresentation/NPCs/DialogueGate.cs` | Evaluates node/choice quest gating (`requireQuestId`, `requireQuestNodeId`). | `IsAvailable(requireQuestId, requireQuestNodeId)` |
 | `Assets/Scripts/GamePresentation/NPCs/DialogueDatabase.cs` | Loads and indexes JSON/asset dialogue graphs. | `RegisterAsset()`, `TryGetDialogue()` |
 | `Assets/Scripts/GamePresentation/NPCs/DialogueGraphAsset.cs` | ScriptableObject wrapper for a dialogue graph. | `Graph`, `DialogueId` |
 | `Assets/Scripts/GamePresentation/NPCs/DialogueUIController.cs` | Displays the speaker, line, and choice list. | `GetOrCreate()`, `ShowDialogue()`, `HideDialogue()`, `IsShowingDialogue` |

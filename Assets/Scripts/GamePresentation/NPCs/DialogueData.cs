@@ -10,6 +10,7 @@ using System.Collections.Generic;
 ///   DialogueDatabaseJson      — root container (list of graphs, used in dialogues.json).
 ///     DialogueGraphDefinition — one complete conversation identified by dialogueId.
 ///       startNodeId           — id of the first node to show (defaults to first in list).
+///       fallbackStartNodeId   — start node used when startNodeId's condition is not met (optional).
 ///       DialogueNodeDefinition— one line of dialogue.
 ///         text                — what the speaker says.
 ///         speakerName         — overrides NPC display name for this line (optional).
@@ -19,6 +20,9 @@ using System.Collections.Generic;
 ///           DialogueChoiceDefinition — one selectable response with its own nextNodeId.
 ///             Optional questId / questSourceNodeId / questTargetNodeId select a manual
 ///             quest transition when the response is confirmed.
+///       Optional gating: a node or choice carrying requireQuestId (quest must be active) and/or
+///       requireQuestNodeId (quest must be at that node) is only used while that holds true. This
+///       lets a greeting change once a quest has begun, and hides responses that do not apply yet.
 ///
 /// Unity setup: none — these are pure data containers, not components.
 /// </summary>
@@ -34,6 +38,8 @@ public class DialogueGraphDefinition
 {
     public string dialogueId;
     public string startNodeId = "start";
+    /// <summary>Start node used when startNodeId's condition is not met (optional).</summary>
+    public string fallbackStartNodeId;
     public List<DialogueNodeDefinition> nodes = new List<DialogueNodeDefinition>();
 }
 
@@ -46,6 +52,10 @@ public class DialogueNodeDefinition
     public string nextNodeId;
     public bool endConversation;
     public List<DialogueChoiceDefinition> choices = new List<DialogueChoiceDefinition>();
+    /// <summary>Quest that must be active for this node to be used (optional).</summary>
+    public string requireQuestId;
+    /// <summary>Quest node that must be active for this node to be used (optional).</summary>
+    public string requireQuestNodeId;
 }
 
 [Serializable]
@@ -60,4 +70,8 @@ public class DialogueChoiceDefinition
     public string startQuestId;
     public string teleportPortalId;
     public string teleportScene;
+    /// <summary>Quest that must be active for this choice to be shown (optional).</summary>
+    public string requireQuestId;
+    /// <summary>Quest node that must be active for this choice to be shown (optional).</summary>
+    public string requireQuestNodeId;
 }

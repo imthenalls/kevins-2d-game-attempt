@@ -261,14 +261,17 @@
     },
     {
       "dialogueId": "key_holder",
-      "startNodeId": "start",
+      "startNodeId": "offer",
+      "fallbackStartNodeId": "hint",
       "nodes": [
         {
-          "id": "start",
+          "id": "offer",
           "speakerName": "Caretaker",
           "text": "You look like you're searching for something. The main building key, perhaps?",
           "nextNodeId": "",
           "endConversation": false,
+          "requireQuestId": "open_main_building",
+          "requireQuestNodeId": "find_key",
           "choices": [
             {
               "text": "Yes, do you have it?",
@@ -284,6 +287,14 @@
               "endConversation": false
             }
           ]
+        },
+        {
+          "id": "hint",
+          "speakerName": "Caretaker",
+          "text": "The main building has been sealed for years and its key went missing. Ask the Keeper - they may know where it got to.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
         },
         {
           "id": "give_key",

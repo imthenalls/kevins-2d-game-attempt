@@ -78,7 +78,8 @@ public class NpcDialogue : MonoBehaviour
                 return false;
         }
 
-        return true;
+        // Nothing to say if every start node is gated off and no fallback applies.
+        return TryGetStartNode(out _);
     }
 
     public bool TryGetStartNode(out DialogueNodeDefinition node)
@@ -92,8 +93,20 @@ public class NpcDialogue : MonoBehaviour
         }
 
         string startNodeId = string.IsNullOrWhiteSpace(activeGraph.startNodeId) ? activeGraph.nodes[0].id : activeGraph.startNodeId;
-        return TryGetNode(startNodeId, out node);
+
+        if (TryGetNode(startNodeId, out node) && IsNodeAvailable(node))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(activeGraph.fallbackStartNodeId) &&
+            TryGetNode(activeGraph.fallbackStartNodeId, out node) && IsNodeAvailable(node))
+            return true;
+
+        node = null;
+        return false;
     }
+
+    private static bool IsNodeAvailable(DialogueNodeDefinition node) =>
+        node != null && DialogueGate.IsAvailable(node.requireQuestId, node.requireQuestNodeId);
 
     public bool TryGetNode(string nodeId, out DialogueNodeDefinition node)
     {

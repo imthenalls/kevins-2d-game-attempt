@@ -31,7 +31,9 @@
         "questTargetNodeId": { "type": "string" },
         "startQuestId": { "type": "string" },
         "teleportPortalId": { "type": "string" },
-        "teleportScene": { "type": "string" }
+        "teleportScene": { "type": "string" },
+        "requireQuestId": { "type": "string" },
+        "requireQuestNodeId": { "type": "string" }
       }
     },
     "node": {
@@ -47,7 +49,9 @@
         "choices": {
           "type": "array",
           "items": { "$ref": "#/$defs/choice" }
-        }
+        },
+        "requireQuestId": { "type": "string" },
+        "requireQuestNodeId": { "type": "string" }
       }
     },
     "dialogueGraph": {
@@ -57,6 +61,7 @@
       "properties": {
         "dialogueId": { "type": "string", "minLength": 1 },
         "startNodeId": { "type": "string", "minLength": 1 },
+        "fallbackStartNodeId": { "type": "string" },
         "nodes": {
           "type": "array",
           "minItems": 1,
