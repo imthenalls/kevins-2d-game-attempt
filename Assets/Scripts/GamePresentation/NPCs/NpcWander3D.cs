@@ -57,6 +57,7 @@ public class NpcWander3D : MonoBehaviour
     private WanderModel model;
     private List<Vector3> path;
     private int pathIndex;
+    private Vector3 desiredVelocity;
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
@@ -73,6 +74,12 @@ public class NpcWander3D : MonoBehaviour
 
         if (body != null)
         {
+            // Villagers are immovable: the player is blocked by them but cannot shove them into each
+            // other. Enemies stay dynamic so their chase/dash movement keeps working.
+            bool immovable = controller == null || controller.NpcType != NpcType.Enemy;
+            if (body.isKinematic != immovable)
+                body.isKinematic = immovable;
+
             body.useGravity = false;
             body.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
         }
@@ -202,7 +209,26 @@ public class NpcWander3D : MonoBehaviour
             return;
         }
 
-        body.linearVelocity = direction * behaviorConfig.MoveSpeed;
+        Drive(direction * behaviorConfig.MoveSpeed);
+    }
+
+    // Applies movement: kinematic bodies are swept in FixedUpdate (so they push the player but are
+    // never pushed); dynamic bodies use velocity as before.
+    private void Drive(Vector3 velocity)
+    {
+        if (body == null)
+            return;
+
+        if (body.isKinematic)
+            desiredVelocity = velocity;
+        else
+            body.linearVelocity = velocity;
+    }
+
+    private void FixedUpdate()
+    {
+        if (body != null && body.isKinematic)
+            body.MovePosition(body.position + desiredVelocity * Time.fixedDeltaTime);
     }
 
     private void FailTarget()
@@ -270,7 +296,12 @@ public class NpcWander3D : MonoBehaviour
 
     private void Stop()
     {
-        if (body != null)
+        if (body == null)
+            return;
+
+        if (body.isKinematic)
+            desiredVelocity = Vector3.zero;
+        else
             body.linearVelocity = Vector3.zero;
     }
 

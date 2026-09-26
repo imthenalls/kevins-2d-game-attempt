@@ -109,6 +109,9 @@ Travelling NPCs never push against an obstacle forever and never teleport home a
   are skipped.
 - `NpcLocalAvoidance` steers both stacks around neighbors. `NpcSchedule3D` exposes `Neighbor Layers`
   (set to the `Npc` layer by the builder); `NpcWander3D` already did.
+- Villagers are **immovable**: `NpcWander3D`/`NpcSchedule3D` force every non-`Enemy` NPC's `Rigidbody`
+  to kinematic and sweep it with `MovePosition`, so the player is blocked by a villager but can never
+  shove one into another. Enemies stay dynamic so chase/dash movement keeps working.
 
 Tuning lives in `NpcTravelRecoveryConfig` (`Stall Timeout`, `Max Repaths`, `Retry Seconds`) plus each
 component's `Neighbor Separation` / `Neighbor Steer Strength`. Set `Log Diagnostics` on either

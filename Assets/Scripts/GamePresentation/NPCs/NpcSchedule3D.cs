@@ -64,6 +64,7 @@ public class NpcSchedule3D : MonoBehaviour
     private TravelRecoveryModel recovery;
     private List<Vector3> path;
     private int pathIndex;
+    private Vector3 desiredVelocity;
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
@@ -86,6 +87,15 @@ public class NpcSchedule3D : MonoBehaviour
         if (controller == null) controller = GetComponent<NpcController>();
         if (recovery == null)
             recovery = new TravelRecoveryModel(recoveryConfig.StallTimeout, recoveryConfig.MaxRepaths);
+
+        if (body != null)
+        {
+            // Commuters are villagers, so they are immovable: the player cannot shove them.
+            bool enemy = controller != null && controller.NpcType == NpcType.Enemy;
+            if (!enemy && !body.isKinematic)
+                body.isKinematic = true;
+            body.useGravity = false;
+        }
 
         if (model != null)
             return;
@@ -115,7 +125,7 @@ public class NpcSchedule3D : MonoBehaviour
         // Hold still while talking (dialogue, cutscene) or otherwise not idle; timers pause too.
         if (controller != null && controller.BehaviorState != NpcBehaviorState.Idle)
         {
-            body.linearVelocity = Vector3.zero;
+            HaltBody();
             return;
         }
 
@@ -147,7 +157,7 @@ public class NpcSchedule3D : MonoBehaviour
         if (wanderer != null)
             wanderer.enabled = false;
 
-        body.linearVelocity = Vector3.zero;
+        HaltBody();
 
         // A missing route is not permission to teleport home; the trip is cancelled and retried.
         if (!EnsureRoute())
@@ -224,11 +234,11 @@ public class NpcSchedule3D : MonoBehaviour
         // Do not drive into the static world; standing still lets the recovery model repath.
         if (HitsWall(direction, distanceToWaypoint))
         {
-            body.linearVelocity = Vector3.zero;
+            HaltBody();
             return;
         }
 
-        body.linearVelocity = direction * movementConfig.MoveSpeed;
+        Drive(direction * movementConfig.MoveSpeed);
 
         TravelRecoveryDecision decision =
             recovery.Evaluate(position.x, position.z, Time.deltaTime, atWaypoint);
@@ -272,7 +282,7 @@ public class NpcSchedule3D : MonoBehaviour
 
     private void EnterHome()
     {
-        body.linearVelocity = Vector3.zero;
+        HaltBody();
         path = null;
 
         PortalManager manager = PortalManager.Instance;
@@ -344,11 +354,41 @@ public class NpcSchedule3D : MonoBehaviour
     // A stable per-NPC seed for local-avoidance escape directions (names are unique).
     private int StableSeed() => gameObject.name.GetHashCode();
 
+    // Applies movement: kinematic villagers are swept in FixedUpdate (so they push the player but are
+    // never pushed); dynamic bodies use velocity as before.
+    private void Drive(Vector3 velocity)
+    {
+        if (body == null)
+            return;
+
+        if (body.isKinematic)
+            desiredVelocity = velocity;
+        else
+            body.linearVelocity = velocity;
+    }
+
+    private void HaltBody()
+    {
+        if (body == null)
+            return;
+
+        if (body.isKinematic)
+            desiredVelocity = Vector3.zero;
+        else
+            body.linearVelocity = Vector3.zero;
+    }
+
+    private void FixedUpdate()
+    {
+        if (body != null && body.isKinematic)
+            body.MovePosition(body.position + desiredVelocity * Time.fixedDeltaTime);
+    }
+
     // Ends the current trip, keeps the door locked, and resumes wandering after the retry delay.
     private void CancelTrip(float retrySeconds)
     {
         path = null;
-        body.linearVelocity = Vector3.zero;
+        HaltBody();
         SetHomeDoorLocked(true);
         model.SetPhase(NpcSchedulePhase.Away, retrySeconds);
         if (wanderer != null)
