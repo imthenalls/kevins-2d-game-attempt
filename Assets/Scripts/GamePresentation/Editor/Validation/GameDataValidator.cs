@@ -359,6 +359,15 @@ public static class GameDataValidator
                         portalRefs.Add(new IdIntegrity.IdReference("portal '" + portal.PortalId + "'", portal.DestinationPortalId));
                 }
 
+                foreach (PortalTrigger3D portal in UnityEngine.Object.FindObjectsByType<PortalTrigger3D>(FindObjectsInactive.Include))
+                {
+                    if (string.IsNullOrWhiteSpace(portal.PortalId))
+                        continue;
+                    portalIds.Add(portal.PortalId);
+                    if (!string.IsNullOrWhiteSpace(portal.DestinationPortalId))
+                        portalRefs.Add(new IdIntegrity.IdReference("portal '" + portal.PortalId + "'", portal.DestinationPortalId));
+                }
+
                 issues.AddRange(IdIntegrity.FindDuplicateOrBlankIds(npcIds, "scene '" + sceneName + "' npc"));
 
                 int worldCharacters = UnityEngine.Object.FindObjectsByType<WorldCharacter>(FindObjectsInactive.Include).Length;

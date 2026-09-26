@@ -29,6 +29,7 @@
         "questId": { "type": "string" },
         "questSourceNodeId": { "type": "string" },
         "questTargetNodeId": { "type": "string" },
+        "startQuestId": { "type": "string" },
         "teleportPortalId": { "type": "string" },
         "teleportScene": { "type": "string" }
       }

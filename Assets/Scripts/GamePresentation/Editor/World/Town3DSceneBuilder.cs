@@ -46,6 +46,10 @@ public static class Town3DSceneBuilder
     private static Scene scene;
     private static Sprite squareSprite;
 
+    // The quest-relevant "main building": a locked front door that requires main_building_key.
+    private const int MainBuildingX = 20;
+    private const int MainBuildingY = 14;
+
     private static readonly Dictionary<(int x, int y), Transform> DoorApproaches = new();
 
     /// <summary>An axis-aligned rectangle of room cells: origin (X, Z), size (W, D).</summary>
@@ -115,6 +119,7 @@ public static class Town3DSceneBuilder
 
         BuildPlayer(spawn.transform.position);
         BuildTownExitPortal();
+        BuildHiddenKey();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
@@ -204,7 +209,8 @@ public static class Town3DSceneBuilder
             // 'S' buildings face the street on their +z edge; 'N' buildings on their -z edge.
             float doorX = doorCellX + 0.5f;
             float doorZ = b.side == 'S' ? b.y + b.d + 0.25f : b.y - 0.25f;
-            string doorId = "door_" + b.x + "_" + b.y;
+            bool isMainBuilding = b.x == MainBuildingX && b.y == MainBuildingY;
+            string doorId = isMainBuilding ? "main_building_door" : "door_" + b.x + "_" + b.y;
 
             var door = new GameObject("Door");
             door.transform.SetParent(root.transform, false);
@@ -218,8 +224,8 @@ public static class Town3DSceneBuilder
             var portal = door.AddComponent<PortalTrigger3D>();
             SetStringField(portal, "portalId", doorId);
             SetStringField(portal, "destinationPortalId", "int_" + b.x + "_" + b.y);
-            // The owner's key opens this door; travelers with a key holder must carry it.
-            SetStringField(portal, "requiredKeyId", "house_key_" + b.x + "_" + b.y);
+            // The owner's key opens this door; the main building has its own dedicated key.
+            SetStringField(portal, "requiredKeyId", isMainBuilding ? "main_building_key" : "house_key_" + b.x + "_" + b.y);
 
             // The approach is where a traveler is placed when returning from the room (outside).
             float approachZ = b.side == 'S' ? doorZ + 1.0f : doorZ - 1.0f;
@@ -303,7 +309,8 @@ public static class Town3DSceneBuilder
 
         var portal = door.AddComponent<PortalTrigger3D>();
         SetStringField(portal, "portalId", "int_" + b.x + "_" + b.y);
-        SetStringField(portal, "destinationPortalId", "door_" + b.x + "_" + b.y);
+        SetStringField(portal, "destinationPortalId",
+            (b.x == MainBuildingX && b.y == MainBuildingY) ? "main_building_door" : "door_" + b.x + "_" + b.y);
 
         var exit = new GameObject("ExitPoint");
         exit.transform.SetParent(door.transform, false);
@@ -550,6 +557,33 @@ public static class Town3DSceneBuilder
         SetObjectField(portal, "exitPoint", exitPoint);
     }
 
+    // A walk-over pickup holding the main building key, tucked behind a non-main building so it is
+    // the "find it hidden behind a building" alternative to asking the caretaker NPC.
+    private static void BuildHiddenKey()
+    {
+        var pickup = new GameObject("Hidden Main Building Key");
+        pickup.transform.position = CellToWorld(6, 2);
+
+        var collider = pickup.AddComponent<BoxCollider>();
+        collider.isTrigger = true;
+        collider.size = new Vector3(1f, 1f, 1f);
+        collider.center = new Vector3(0f, 0.5f, 0f);
+
+        var visual = new GameObject("KeyVisual");
+        visual.transform.SetParent(pickup.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 0.3f, 0f);
+        visual.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(1f, 0.85f, 0.25f);
+        renderer.sortingOrder = 45;
+        visual.AddComponent<BillboardSprite>();
+
+        var itemPickup = pickup.AddComponent<ItemPickup>();
+        SetStringField(itemPickup, "itemId", "main_building_key");
+        SetLayerMaskField(itemPickup, "playerLayers", 1);
+    }
+
     // Adds the equipment, attacker and billboarded 3D weapon rig shared by the player and enemies.
     private static void AddWeaponRig(GameObject entity, bool usePlayerInput, int damage, float range, float duration, float cooldown)
     {
@@ -791,7 +825,12 @@ public static class Town3DSceneBuilder
             SetNestedFloat(controller, "config", "InteractionRange", 2.5f);
 
             var dialogue = npc.AddComponent<NpcDialogue>();
-            SetStringField(dialogue, "dialogueId", (i % 2 == 0) ? "town_villager_a" : "town_villager_b");
+            string dialogueId = i == 0 ? "quest_giver"
+                : i == 1 ? "key_holder"
+                : (i % 2 == 0) ? "town_villager_a" : "town_villager_b";
+            SetStringField(dialogue, "dialogueId", dialogueId);
+            if (i == 0)
+                SetBoolField(dialogue, "requireHome", true);
             npc.AddComponent<NpcStateView>();
 
             var wanderer = npc.AddComponent<NpcWander3D>();
@@ -801,7 +840,8 @@ public static class Town3DSceneBuilder
             SetNestedFloat(wanderer, "behaviorConfig", "MoveSpeed", 1.6f);
 
             // Give the first NPCs a home: they commute to a specific building's door and back.
-            if (i < Buildings.Count)
+            // The main building is not a home, so its door's key stays the static quest key.
+            if (i < Buildings.Count && !(Buildings[i].x == MainBuildingX && Buildings[i].y == MainBuildingY))
             {
                 var b = Buildings[i];
                 var pathfinder = npc.AddComponent<NpcPathfinder3D>();
@@ -815,6 +855,13 @@ public static class Town3DSceneBuilder
                 SetNestedFloat(schedule, "movementConfig", "MoveSpeed", 1.8f);
                 if (DoorApproaches.TryGetValue((b.x, b.y), out Transform approach))
                     SetObjectField(schedule, "homeEntrance", approach);
+
+                // The quest giver goes home quickly and stays there, so the quest is reliably available.
+                if (i == 0)
+                {
+                    SetNestedFloat(schedule, "scheduleConfig", "AwaySeconds", 3f);
+                    SetNestedFloat(schedule, "scheduleConfig", "HomeSeconds", 240f);
+                }
 
                 // The key is a real item; NpcInventoryDatabase seeds it into this villager's inventory.
             }
@@ -932,6 +979,13 @@ public static class Town3DSceneBuilder
         var so = new SerializedObject(target);
         SerializedProperty p = so.FindProperty(field);
         if (p != null) { p.intValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetBoolField(Object target, string field, bool value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.boolValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 
     private static void SetFloatField(Object target, string field, float value)

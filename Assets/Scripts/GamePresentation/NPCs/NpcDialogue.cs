@@ -29,6 +29,10 @@ public class NpcDialogue : MonoBehaviour
     [SerializeField] private string dialogueId;
     [SerializeField] private DialogueGraphAsset dialogueAsset;
 
+    [Header("Availability")]
+    [Tooltip("When true, dialogue is only available while this NPC is Home (inside its house) per NpcSchedule3D.")]
+    [SerializeField] private bool requireHome;
+
     [Header("Inventory Gift")]
     [Tooltip("Item id transferred from this NPC's owned inventory when dialogue finishes. Leave empty for no gift.")]
     [SerializeField] private string giftItemId;
@@ -63,7 +67,18 @@ public class NpcDialogue : MonoBehaviour
     public bool CanStartDialogue(Vector3 interactorPosition)
     {
         EnsureDialogueResolved();
-        return enabled && activeGraph != null && nodeLookup.Count > 0 && npcController != null && npcController.CanInteract(interactorPosition);
+        if (!(enabled && activeGraph != null && nodeLookup.Count > 0 && npcController != null && npcController.CanInteract(interactorPosition)))
+            return false;
+
+        // A home-bound NPC only offers this dialogue while inside its house.
+        if (requireHome)
+        {
+            NpcSchedule3D schedule = GetComponent<NpcSchedule3D>();
+            if (schedule == null || schedule.Model == null || schedule.Model.Phase != NpcSchedulePhase.Home)
+                return false;
+        }
+
+        return true;
     }
 
     public bool TryGetStartNode(out DialogueNodeDefinition node)

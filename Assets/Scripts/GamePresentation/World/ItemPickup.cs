@@ -31,6 +31,8 @@ public class ItemPickup : MonoBehaviour
 
     [Header("Unity References")]
     [SerializeField] private ItemData item;
+    [Tooltip("Item id resolved through ItemDatabase when Item is left blank (runtime items, e.g. keys).")]
+    [SerializeField] private string itemId;
     [Tooltip("Physics layer(s) allowed to collect this item. Set to your Player layer.")]
     [SerializeField] private LayerMask playerLayers = Physics2D.DefaultRaycastLayers;
 
@@ -49,12 +51,15 @@ public class ItemPickup : MonoBehaviour
 
     private void TryCollect(GameObject collector)
     {
-        if (item == null || collector == null) return;
+        if (collector == null) return;
+
+        ItemData resolvedItem = ResolveItem();
+        if (resolvedItem == null) return;
 
         // Layer check first — avoids GetComponent calls for non-player objects
         if (((1 << collector.layer) & playerLayers) == 0) return;
 
-        int taken = InventoryHelper.GiveItem(item, config.Quantity, collector);
+        int taken = InventoryHelper.GiveItem(resolvedItem, config.Quantity, collector);
 
         if (taken <= 0) return; // inventory full — item stays on the ground
 
@@ -62,6 +67,15 @@ public class ItemPickup : MonoBehaviour
 
         if (config.Quantity <= 0)
             Destroy(gameObject);
+    }
+
+    private ItemData ResolveItem()
+    {
+        if (item != null)
+            return item;
+        return !string.IsNullOrWhiteSpace(itemId) && ItemDatabase.Instance != null
+            ? ItemDatabase.Instance.Get(itemId)
+            : null;
     }
 
     // ── Editor ────────────────────────────────────────────────────────────────

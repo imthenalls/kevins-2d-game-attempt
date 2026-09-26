@@ -180,6 +180,17 @@
       "iconPath": ""
     },
     {
+      "id": "main_building_key",
+      "name": "Main Building Key",
+      "description": "A heavy iron key. It unlocks the town's main building.",
+      "type": "Misc",
+      "isEquip": false,
+      "maxStackSize": 1,
+      "sellValue": 0,
+      "flags": ["Unique", "KeyItem"],
+      "iconPath": ""
+    },
+    {
       "id": "bounty_gold",
       "name": "Bounty Gold",
       "description": "The bounty paid out after the bandit king is dealt with.",

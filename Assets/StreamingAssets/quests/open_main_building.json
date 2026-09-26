@@ -1,0 +1,75 @@
+{
+  "questId": "open_main_building",
+  "startNodeId": "find_key",
+  "nodes": [
+    {
+      "id": "find_key",
+      "objectives": [
+        {
+          "id": "obj_key",
+          "eventType": "ItemCollected",
+          "targetId": "main_building_key",
+          "requiredCount": 1
+        }
+      ],
+      "onEnterActions": [],
+      "transitions": [
+        {
+          "targetNodeId": "open_door",
+          "automatic": true,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_key" }
+          ]
+        },
+        {
+          "targetNodeId": "got_key_via_npc",
+          "automatic": false,
+          "conditions": []
+        }
+      ]
+    },
+    {
+      "id": "got_key_via_npc",
+      "objectives": [],
+      "onEnterActions": [
+        { "type": "GiveItem", "itemId": "main_building_key", "count": 1 }
+      ],
+      "transitions": [
+        {
+          "targetNodeId": "open_door",
+          "automatic": true,
+          "conditions": []
+        }
+      ]
+    },
+    {
+      "id": "open_door",
+      "objectives": [
+        {
+          "id": "obj_door",
+          "eventType": "PortalUsed",
+          "targetId": "main_building_door",
+          "requiredCount": 1
+        }
+      ],
+      "onEnterActions": [],
+      "transitions": [
+        {
+          "targetNodeId": "complete",
+          "automatic": true,
+          "conditions": [
+            { "type": "ObjectiveComplete", "objectiveId": "obj_door" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "complete",
+      "objectives": [],
+      "onEnterActions": [
+        { "type": "SetFact", "key": "Quest.OpenMainBuilding.Completed", "value": "True" }
+      ],
+      "transitions": []
+    }
+  ]
+}

@@ -216,6 +216,92 @@
           "choices": []
         }
       ]
+    },
+    {
+      "dialogueId": "quest_giver",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Keeper",
+          "text": "The town's main building is locked and its key has gone missing. Could you open it for me?",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "I'll find the key.",
+              "nextNodeId": "accept",
+              "endConversation": false,
+              "startQuestId": "open_main_building"
+            },
+            {
+              "text": "I'm busy right now.",
+              "nextNodeId": "decline",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "accept",
+          "speakerName": "Keeper",
+          "text": "Find the key and open the door. Ask around town, or look behind the buildings.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "decline",
+          "speakerName": "Keeper",
+          "text": "Come back if you change your mind.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
+    },
+    {
+      "dialogueId": "key_holder",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Caretaker",
+          "text": "You look like you're searching for something. The main building key, perhaps?",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "Yes, do you have it?",
+              "nextNodeId": "give_key",
+              "endConversation": false,
+              "questId": "open_main_building",
+              "questSourceNodeId": "find_key",
+              "questTargetNodeId": "got_key_via_npc"
+            },
+            {
+              "text": "No, never mind.",
+              "nextNodeId": "decline",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "give_key",
+          "speakerName": "Caretaker",
+          "text": "Take it. It should fit the main building's front door.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "decline",
+          "speakerName": "Caretaker",
+          "text": "Suit yourself.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
     }
   ]
 }

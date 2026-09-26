@@ -202,6 +202,10 @@ public class PlayerInteractionController : MonoBehaviour
             if (!TryApplyManualQuestTransition(selectedChoice))
                 return;
 
+            // A choice can begin a quest directly (e.g. accepting a quest from an NPC).
+            if (!string.IsNullOrWhiteSpace(selectedChoice.startQuestId) && QuestManager.Instance != null)
+                QuestManager.Instance.StartQuest(selectedChoice.startQuestId);
+
             if (!string.IsNullOrWhiteSpace(selectedChoice.teleportPortalId))
             {
                 string portalId = selectedChoice.teleportPortalId;

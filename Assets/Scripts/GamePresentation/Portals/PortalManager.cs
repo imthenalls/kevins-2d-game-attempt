@@ -72,12 +72,17 @@ public class PortalManager : MonoBehaviour
                 return false; // IsKeySatisfied already logged the reason
         }
 
-        return TryTeleportToPortal(
+        bool traveled = TryTeleportToPortal(
             sourcePortal.DestinationPortalId,
             traveler,
             sourcePortal.DestinationScene,
             sourcePortal.ChangesWorld,
             sourcePortal.DestinationWorld);
+
+        if (traveled)
+            QuestEventBus.Raise("PortalUsed", sourcePortal.PortalId);
+
+        return traveled;
     }
 
     /// <summary>Uses a source portal by ID. Useful for quest or scripted activation.</summary>
