@@ -242,15 +242,18 @@ public static class Town3DSceneBuilder
             SetObjectField(portal, "exitPoint", approach.transform);
             DoorApproaches[(b.x, b.y)] = approach.transform;
 
+            // Lay the door flat on the wall face (no billboard), so it reads as part of the building
+            // instead of a card turning to face the camera. 0.02 proud avoids z-fighting with the wall.
+            float doorVisualZ = b.side == 'S' ? -0.23f : 0.23f;
             var doorVisual = new GameObject("DoorVisual");
             doorVisual.transform.SetParent(door.transform, false);
-            doorVisual.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+            doorVisual.transform.localPosition = new Vector3(0f, 0.65f, doorVisualZ);
+            doorVisual.transform.localRotation = Quaternion.identity;
             doorVisual.transform.localScale = new Vector3(0.7f, 1.3f, 1f);
             var doorRenderer = doorVisual.AddComponent<SpriteRenderer>();
             doorRenderer.sprite = squareSprite;
             doorRenderer.color = new Color(1.00f, 0.41f, 0.71f);
             doorRenderer.sortingOrder = 60;
-            doorVisual.AddComponent<BillboardSprite>();
         }
     }
 
@@ -325,15 +328,16 @@ public static class Town3DSceneBuilder
         exit.transform.position = new Vector3(centerX, 0f, northWallZ - 2.6f);
         SetObjectField(portal, "exitPoint", exit.transform);
 
+        // Flat on the wall plane (no billboard) so the room door matches the town doors.
         var visual = new GameObject("RoomDoorVisual");
         visual.transform.SetParent(door.transform, false);
         visual.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+        visual.transform.localRotation = Quaternion.identity;
         visual.transform.localScale = new Vector3(0.7f, 1.3f, 1f);
         var renderer = visual.AddComponent<SpriteRenderer>();
         renderer.sprite = squareSprite;
         renderer.color = new Color(1.00f, 0.41f, 0.71f);
         renderer.sortingOrder = 60;
-        visual.AddComponent<BillboardSprite>();
     }
 
     // Builds enclosing walls around an arbitrary cell set, merging collinear edges into single boxes.

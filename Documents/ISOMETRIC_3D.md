@@ -61,9 +61,9 @@ Menu: **Tools > Worlds > Rebuild Town Scene (3D)** (rebuilds `Assets/Scenes/Town
 - **Interiors:** one room per building, south of town at varying sizes and shapes (some L-shaped
   from two rectangles). Walls enclose each room, merging collinear edges into single boxes.
   Each room has a pink room door that routes back to town (the main one is `Main Building Room`).
-- **Doors:** the pink town door is a billboarded sprite; a separate non-rotating trigger child
-  carries the `BoxCollider` + `PortalTrigger3D` and an `Approach` exit; each door is parented under
-  its building.
+- **Doors:** the pink door visual lies flat on the building's wall face (not a billboard), so it
+  reads as part of the building; a separate non-rotating trigger child carries the `BoxCollider` +
+  `PortalTrigger3D` and an `Approach` exit; each door is parented under its building.
 
 ## NPC schedule
 
