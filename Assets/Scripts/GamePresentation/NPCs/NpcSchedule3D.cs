@@ -73,14 +73,22 @@ public class NpcSchedule3D : MonoBehaviour
     /// <summary>The authoritative schedule model for this NPC, when bound.</summary>
     public NpcScheduleState Model => model;
 
-    private void Awake()
+    private void Awake() => EnsureInitialized();
+
+    // (Re)binds the runtime state. Called from Update too, so a domain reload (script recompile
+    // during Play Mode) that resets this non-serialized state cannot leave the NPC frozen forever.
+    private void EnsureInitialized()
     {
-        body = GetComponent<Rigidbody>();
-        bodyCollider = GetComponent<CapsuleCollider>();
-        pathfinder = GetComponent<NpcPathfinder3D>();
-        wanderer = GetComponent<NpcWander3D>();
-        controller = GetComponent<NpcController>();
-        recovery = new TravelRecoveryModel(recoveryConfig.StallTimeout, recoveryConfig.MaxRepaths);
+        if (body == null) body = GetComponent<Rigidbody>();
+        if (bodyCollider == null) bodyCollider = GetComponent<CapsuleCollider>();
+        if (pathfinder == null) pathfinder = GetComponent<NpcPathfinder3D>();
+        if (wanderer == null) wanderer = GetComponent<NpcWander3D>();
+        if (controller == null) controller = GetComponent<NpcController>();
+        if (recovery == null)
+            recovery = new TravelRecoveryModel(recoveryConfig.StallTimeout, recoveryConfig.MaxRepaths);
+
+        if (model != null)
+            return;
 
         string npcId = controller != null ? controller.NpcId : gameObject.name;
         GameSessionHost.EnsureExists();
@@ -94,13 +102,16 @@ public class NpcSchedule3D : MonoBehaviour
                 Random.Range(scheduleConfig.AwaySeconds * 0.3f, scheduleConfig.AwaySeconds));
         }
 
-        // A restored ToHome/Home NPC must not also wander; the schedule drives it until it is Away.
-        if (model != null && model.Phase != NpcSchedulePhase.Away && wanderer != null)
-            wanderer.enabled = false;
+        // Keep the wanderer in step with the (possibly restored) phase: only Away wanders; a
+        // ToHome/Home NPC is driven by the schedule instead.
+        if (wanderer != null)
+            wanderer.enabled = model == null || model.Phase == NpcSchedulePhase.Away;
     }
 
     private void Update()
     {
+        EnsureInitialized();
+
         // Hold still while talking (dialogue, cutscene) or otherwise not idle; timers pause too.
         if (controller != null && controller.BehaviorState != NpcBehaviorState.Idle)
         {

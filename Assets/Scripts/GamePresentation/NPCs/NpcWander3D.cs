@@ -60,26 +60,37 @@ public class NpcWander3D : MonoBehaviour
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
-    private void Awake()
-    {
-        body = GetComponent<Rigidbody>();
-        bodyCollider = GetComponent<CapsuleCollider>();
-        controller = GetComponent<NpcController>();
-        pathfinder = GetComponent<NpcPathfinder3D>();
-        body.useGravity = false;
-        body.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+    private void Awake() => EnsureInitialized();
 
-        model = new WanderModel(
-            wanderConfig.WanderRadius, wanderConfig.ArrivalThreshold,
-            recoveryConfig.StallTimeout, wanderConfig.IdleSeconds,
-            Random.Range(1, int.MaxValue), recoveryConfig.MaxRepaths, FailedTargetRadius);
-        model.BeginIdle();
+    // (Re)creates the runtime state. Called from Update too, so a domain reload (script recompile
+    // during Play Mode) that resets this non-serialized state cannot leave the NPC frozen forever.
+    private void EnsureInitialized()
+    {
+        if (body == null) body = GetComponent<Rigidbody>();
+        if (bodyCollider == null) bodyCollider = GetComponent<CapsuleCollider>();
+        if (controller == null) controller = GetComponent<NpcController>();
+        if (pathfinder == null) pathfinder = GetComponent<NpcPathfinder3D>();
+
+        if (body != null)
+        {
+            body.useGravity = false;
+            body.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+        }
+
+        if (model == null)
+        {
+            model = new WanderModel(
+                wanderConfig.WanderRadius, wanderConfig.ArrivalThreshold,
+                recoveryConfig.StallTimeout, wanderConfig.IdleSeconds,
+                Random.Range(1, int.MaxValue), recoveryConfig.MaxRepaths, FailedTargetRadius);
+            model.BeginIdle();
+        }
     }
 
     private void Update()
     {
-        // Awake normally builds the model; guard so a component added before its dependencies
-        // (or on an object whose Awake was skipped) cannot spam exceptions every frame.
+        // Rebuilds state if a domain reload cleared it before doing anything else.
+        EnsureInitialized();
         if (model == null)
         {
             Stop();
