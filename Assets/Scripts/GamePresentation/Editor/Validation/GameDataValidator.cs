@@ -54,10 +54,10 @@ public static class GameDataValidator
         var questIds = quests.Keys.Where(k => !string.IsNullOrWhiteSpace(k)).ToList();
         ValidateQuests(quests, itemIds, issues);
 
-        // 3. Dialogue — ids, node links, and references to quests.
+        // 3. Dialogue — ids, node links, quest-gating references, and references to quests.
         var dialogueRefs = new List<IdIntegrity.IdReference>();
         var sceneRefs = new List<IdIntegrity.IdReference>();
-        ReadDialogues(Path.Combine(dataRoot, "dialogues.json"), questIds, dialogueRefs, sceneRefs, issues);
+        ReadDialogues(Path.Combine(dataRoot, "dialogues.json"), quests, dialogueRefs, sceneRefs, issues);
 
         // 4. NPC inventories and enemy loot reference item ids.
         var itemRefs = new List<IdIntegrity.IdReference>();
@@ -212,7 +212,7 @@ public static class GameDataValidator
 
     private static void ReadDialogues(
         string path,
-        IReadOnlyCollection<string> knownQuests,
+        Dictionary<string, QuestGraphData> quests,
         List<IdIntegrity.IdReference> questRefs,
         List<IdIntegrity.IdReference> sceneRefs,
         List<ValidationIssue> issues)
@@ -220,6 +220,8 @@ public static class GameDataValidator
         DialogueFile file = ReadJson<DialogueFile>(path, issues);
         if (file?.dialogues == null)
             return;
+
+        Dictionary<string, HashSet<string>> questNodeSets = BuildQuestNodeSets(quests);
 
         issues.AddRange(IdIntegrity.FindDuplicateOrBlankIds(
             file.dialogues.Select(d => d?.dialogueId).ToList(), "dialogue"));
@@ -241,6 +243,13 @@ public static class GameDataValidator
                     label + " startNodeId '" + graph.startNodeId + "' does not exist."));
             }
 
+            if (!string.IsNullOrWhiteSpace(graph.fallbackStartNodeId) && !nodeSet.Contains(graph.fallbackStartNodeId))
+            {
+                issues.Add(new ValidationIssue(
+                    ValidationSeverity.Error, "dialogue.start",
+                    label + " fallbackStartNodeId '" + graph.fallbackStartNodeId + "' does not exist."));
+            }
+
             foreach (DialogueNode node in graph.nodes ?? Enumerable.Empty<DialogueNode>())
             {
                 if (node == null)
@@ -248,19 +257,81 @@ public static class GameDataValidator
 
                 string owner = label + " node '" + node.id + "'";
                 CheckLink(owner, node.nextNodeId, node.endConversation, nodeSet, issues);
+                CheckQuestGate(owner, node.requireQuestId, node.requireQuestNodeId, questNodeSets, questRefs, issues);
 
                 foreach (DialogueChoice choice in node.choices ?? Enumerable.Empty<DialogueChoice>())
                 {
                     if (choice == null)
                         continue;
-                    CheckLink(owner + " choice", choice.nextNodeId, choice.endConversation, nodeSet, issues);
+
+                    string choiceOwner = owner + " choice";
+                    CheckLink(choiceOwner, choice.nextNodeId, choice.endConversation, nodeSet, issues);
+                    CheckQuestGate(choiceOwner, choice.requireQuestId, choice.requireQuestNodeId, questNodeSets, questRefs, issues);
 
                     if (!string.IsNullOrWhiteSpace(choice.questId))
-                        questRefs.Add(new IdIntegrity.IdReference(owner, choice.questId));
+                        questRefs.Add(new IdIntegrity.IdReference(choiceOwner, choice.questId));
                     if (!string.IsNullOrWhiteSpace(choice.teleportScene))
-                        sceneRefs.Add(new IdIntegrity.IdReference(owner, choice.teleportScene));
+                        sceneRefs.Add(new IdIntegrity.IdReference(choiceOwner, choice.teleportScene));
                 }
             }
+        }
+    }
+
+    // Case-insensitive quest id -> its node ids, for checking quest-gated dialogue.
+    private static Dictionary<string, HashSet<string>> BuildQuestNodeSets(Dictionary<string, QuestGraphData> quests)
+    {
+        var result = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        if (quests == null)
+            return result;
+
+        foreach (KeyValuePair<string, QuestGraphData> pair in quests)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+                continue;
+
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (QuestNodeData node in pair.Value?.nodes ?? Enumerable.Empty<QuestNodeData>())
+            {
+                if (node != null && !string.IsNullOrWhiteSpace(node.id))
+                    ids.Add(node.id);
+            }
+
+            result[pair.Key] = ids;
+        }
+
+        return result;
+    }
+
+    // Validates a node/choice's optional quest gating: the quest id must resolve, and a named quest
+    // node must exist within that quest.
+    private static void CheckQuestGate(
+        string owner,
+        string requireQuestId,
+        string requireQuestNodeId,
+        Dictionary<string, HashSet<string>> questNodeSets,
+        List<IdIntegrity.IdReference> questRefs,
+        List<ValidationIssue> issues)
+    {
+        if (!string.IsNullOrWhiteSpace(requireQuestId))
+            questRefs.Add(new IdIntegrity.IdReference(owner, requireQuestId));
+
+        if (string.IsNullOrWhiteSpace(requireQuestNodeId))
+            return;
+
+        if (string.IsNullOrWhiteSpace(requireQuestId))
+        {
+            issues.Add(new ValidationIssue(
+                ValidationSeverity.Error, "dialogue.gate",
+                owner + " sets requireQuestNodeId without a requireQuestId to resolve it."));
+            return;
+        }
+
+        // An unknown quest id is already reported by FindDanglingReferences against dialogueRefs.
+        if (questNodeSets.TryGetValue(requireQuestId, out HashSet<string> nodes) && !nodes.Contains(requireQuestNodeId))
+        {
+            issues.Add(new ValidationIssue(
+                ValidationSeverity.Error, "dialogue.gate",
+                owner + " requires quest '" + requireQuestId + "' node '" + requireQuestNodeId + "', which does not exist."));
         }
     }
 
@@ -579,7 +650,7 @@ public static class GameDataValidator
     [Serializable] private sealed class EnemyLootItem { public string itemId; public int minQuantity; public int maxQuantity; }
 
     [Serializable] private sealed class DialogueFile { public int version; public DialogueGraph[] dialogues; }
-    [Serializable] private sealed class DialogueGraph { public string dialogueId; public string startNodeId; public DialogueNode[] nodes; }
-    [Serializable] private sealed class DialogueNode { public string id; public string nextNodeId; public bool endConversation; public DialogueChoice[] choices; }
-    [Serializable] private sealed class DialogueChoice { public string nextNodeId; public bool endConversation; public string questId; public string teleportScene; }
+    [Serializable] private sealed class DialogueGraph { public string dialogueId; public string startNodeId; public string fallbackStartNodeId; public DialogueNode[] nodes; }
+    [Serializable] private sealed class DialogueNode { public string id; public string nextNodeId; public bool endConversation; public DialogueChoice[] choices; public string requireQuestId; public string requireQuestNodeId; }
+    [Serializable] private sealed class DialogueChoice { public string nextNodeId; public bool endConversation; public string questId; public string teleportScene; public string requireQuestId; public string requireQuestNodeId; }
 }
