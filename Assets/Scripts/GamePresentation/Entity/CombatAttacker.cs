@@ -42,17 +42,21 @@ public class CombatAttacker : MonoBehaviour
     private CombatReceiver _selfReceiver;
     private PlayerControllerBase _playerController;
 
+    // Lazily created so a visual listener reading these before Awake (or after a disable/re-enable)
+    // never dereferences a null model.
+    private AttackModel Model => model ??= new AttackModel(config);
+
     /// <summary>Configured visual duration for listeners animating this attack.</summary>
-    public float AttackDuration => model.AttackDuration;
+    public float AttackDuration => Model.AttackDuration;
 
     /// <summary>Legacy delay retained for compatibility with existing visual listeners.</summary>
     public float AttackWindup => config.AttackWindup;
 
     /// <summary>World-space distance used by melee AI to decide when to attack.</summary>
-    public float AttackRange => model.AttackRange;
+    public float AttackRange => Model.AttackRange;
 
     /// <summary>True while the current swing may deal weapon-contact damage.</summary>
-    public bool IsWeaponHitWindowOpen => model.IsWeaponHitWindowOpen;
+    public bool IsWeaponHitWindowOpen => Model.IsWeaponHitWindowOpen;
 
     private void Awake()
     {
@@ -64,26 +68,25 @@ public class CombatAttacker : MonoBehaviour
 
     private void Update()
     {
-        // Awake normally builds the model; guard so a component added without its Awake running
-        // cannot spam exceptions every frame during teardown or stress setup.
-        if (model == null)
-            return;
+        // Awake normally builds the model; Model lazily creates it so a component added without its
+        // Awake running cannot spam exceptions every frame during teardown or stress setup.
+        AttackModel attackModel = Model;
 
         bool hasWeapon = HasRequiredPlayerWeapon();
 
-        if (model.Tick(Time.deltaTime, hasWeapon))
+        if (attackModel.Tick(Time.deltaTime, hasWeapon))
             OnAttackStarted?.Invoke();
 
         // Ignore player attack input while movement is locked (dialogue, inventory, cutscene).
         if (config.UsePlayerInput && WasAttackPressedThisFrame() &&
             (_playerController == null || _playerController.MovementEnabled))
         {
-            if (model.HandleInput(hasWeapon))
+            if (attackModel.HandleInput(hasWeapon))
                 OnAttackStarted?.Invoke();
         }
     }
 
-    private void OnDisable() => model.Reset();
+    private void OnDisable() => model?.Reset();
 
     /// <summary>
     /// Attempts an attack. Player-controlled attackers require an equipped Weapon item.
@@ -91,10 +94,10 @@ public class CombatAttacker : MonoBehaviour
     /// </summary>
     public void TryAttack()
     {
-        if (!isActiveAndEnabled || model == null)
+        if (!isActiveAndEnabled)
             return;
 
-        if (model.TryBegin(HasRequiredPlayerWeapon()))
+        if (Model.TryBegin(HasRequiredPlayerWeapon()))
             OnAttackStarted?.Invoke();
     }
 
