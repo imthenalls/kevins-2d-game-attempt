@@ -55,19 +55,24 @@ Menu: **Tools > Worlds > Rebuild Town Scene (3D)** (rebuilds `Assets/Scenes/Town
 
 - Ground/roads/park are meshes on XZ; buildings are extruded boxes with `BoxCollider` on the
   `Walls` layer.
+- **Buildings:** each is a scale-1 container (`Building_<x>_<y>`, or **`Main Building`** for the
+  quest building at grid (20,14)) holding a `Body` cube child (on `Walls`) and a nested `Door`. The
+  main building is double-size (8x6); the rest are 4x3.
 - **Interiors:** one room per building, south of town at varying sizes and shapes (some L-shaped
   from two rectangles). Walls enclose each room, merging collinear edges into single boxes.
-  Each room has a pink room door that routes back to town.
+  Each room has a pink room door that routes back to town (the main one is `Main Building Room`).
 - **Doors:** the pink town door is a billboarded sprite; a separate non-rotating trigger child
-  carries the `BoxCollider` + `PortalTrigger3D` and an `Approach` exit.
+  carries the `BoxCollider` + `PortalTrigger3D` and an `Approach` exit; each door is parented under
+  its building.
 
 ## NPC schedule
 
 | Script | Role |
 |---|---|
-| `NpcWander3D` | 3D wanderer: random XZ targets, sphere-cast wall avoidance. |
-| `NpcPathfinder3D` | Grid A* on XZ; blocked cells found with `Physics.CheckBox` on the Walls layer. |
+| `NpcWander3D` | 3D wanderer: random XZ targets, sphere-cast wall avoidance, routes around buildings with `NpcPathfinder3D`, steers around neighbors, and recovers from stalls (repath then abandon). |
+| `NpcPathfinder3D` | Grid A* on XZ; blocked cells found with `Physics.CheckBox` on the Walls layer. Optional `Require Walkable Goal` refuses a destination cell that is not standable. |
 | `NpcSchedule3D` | Daily loop: wander → walk to its house door (pathfind) → teleport inside → wait → come back out. Disables `NpcWander3D` while commuting. Carries a home key id. |
+| `NpcLocalAvoidance` | Shared helper: distance-weighted separation from nearby NPCs, used by both wanderers and commuters. Fully overlapping NPCs escape along a per-NPC angle so they split rather than copy each other. |
 
 All 14 town villagers are assigned a home (`door_<x>_<y>` / `int_<x>_<y>`), one per building, and each
 holds its `house_key_<x>_<y>` **item** in its inventory (the ids are defined in `items.json` as KeyItems
@@ -86,6 +91,28 @@ and logical cell live in the `Game.Core.NpcState` model (via `GameSession.NpcSta
 schedule (phase + seconds remaining) is likewise authoritative in `Game.Core.NpcScheduleState`
 (`GameSession.NpcSchedules`, saved per NPC); `NpcSchedule3D` is a thin facade that reads/writes it, so
 "who is home" survives a save.
+
+### Movement recovery and local avoidance
+
+Travelling NPCs never push against an obstacle forever and never teleport home as a fallback:
+
+- `Game.Core.TravelRecoveryModel` (engine-free, unit-tested) watches progress toward the current
+  waypoint. After `StallTimeout` with no progress it returns `Repath`; once `MaxRepaths` recalculations
+  are spent it returns `Abandon`. `WanderModel` composes this same model, so wandering and commuting
+  share one policy.
+- `NpcSchedule3D`: a missing/again-failing route **cancels** the trip (`CancelTrip`) and resumes
+  wandering instead of entering the house. After a restored save in the `ToHome` phase it rebuilds the
+  route before moving. It enters `Home` **only after** `PortalManager.TryUsePortal` succeeds, and stays
+  `Home` (retrying) if the exit portal fails, rather than walking out through the wall.
+- `NpcWander3D`: picks straight-line targets when the path is clear, otherwise routes around buildings
+  with `NpcPathfinder3D`; a dead end is remembered (`FailedTargetRadius`) so near-identical candidates
+  are skipped.
+- `NpcLocalAvoidance` steers both stacks around neighbors. `NpcSchedule3D` exposes `Neighbor Layers`
+  (set to the `Npc` layer by the builder); `NpcWander3D` already did.
+
+Tuning lives in `NpcTravelRecoveryConfig` (`Stall Timeout`, `Max Repaths`, `Retry Seconds`) plus each
+component's `Neighbor Separation` / `Neighbor Steer Strength`. Set `Log Diagnostics` on either
+component for development-only stall/repath logging.
 
 ## Verification
 

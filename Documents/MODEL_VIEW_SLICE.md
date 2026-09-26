@@ -42,7 +42,7 @@ nothing in it can reference UnityEngine. It contains plain C# only:
 |---|---|
 | `GameSessionHost` | Composition root. Creates the `GameSession` (DontDestroyOnLoad); no large global static state. |
 | `NpcStateView` | Adapter on the NPC. Registers the model by `npcId`, binds `EntityStats`, mirrors physics movement into the model as a command, and repositions the body from the model. Dimension-aware: a 2D NPC (`Rigidbody2D`) maps through the scene `Grid` on XY; a 3D NPC (`Rigidbody`) maps cells on XZ using `Cell Size` (no Grid). |
-| `NpcSchedule3D` | Facade over `NpcScheduleState`: wanders, walks to the home door, teleports in/out, and locks/unlocks the door, issuing model commands. Phase/timer are read from and written to the model. |
+| `NpcSchedule3D` | Facade over `NpcScheduleState`: wanders, walks to the home door, teleports in/out, and locks/unlocks the door, issuing model commands. Phase/timer are read from and written to the model. Stall/repath/abandon decisions delegate to `Game.Core.TravelRecoveryModel`, and neighbors are steered around with `NpcLocalAvoidance`. |
 | `EntityStats` | Optional facade: when bound to an `IHealthModel`, `Hp`/`MaxHp` read from the model and `TakeDamage`/`Heal`/`SetHp`/`IncreaseMaxHp`/`DecreaseMaxHp` delegate to it. Unbound entities behave exactly as before. |
 | `SaveManager` / `SaveData` | Convert `NpcState` ↔ `NpcSaveEntry` (`hasModelState`, `cellX`, `cellY`, `hp`, `maxHp`). |
 

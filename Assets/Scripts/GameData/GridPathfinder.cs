@@ -9,8 +9,13 @@ namespace Game.Core
     ///
     /// Unity setup: none — static class.
     ///
-    /// Runtime API: FindPath(grid, startX, startY, goalX, goalY, padding, maxNodes, snapRadius)
-    /// returns the cells to walk through (excluding the start cell), or null when unreachable.
+    /// Runtime API: FindPath(grid, startX, startY, goalX, goalY, padding, maxNodes, snapRadius,
+    /// requireWalkableGoal) returns the cells to walk through (excluding the start cell), or null
+    /// when unreachable.
+    ///
+    /// When <c>requireWalkableGoal</c> is false (default) the goal cell may be blocked — the legacy
+    /// behavior older 2D door interactions rely on (pathing up to a closed gate). Set it true to
+    /// demand a genuinely standable destination.
     /// </summary>
     public static class GridPathfinder
     {
@@ -23,7 +28,8 @@ namespace Game.Core
             IWalkabilityGrid grid,
             int startX, int startY,
             int goalX, int goalY,
-            int searchPadding, int maxNodes, int startSnapRadius)
+            int searchPadding, int maxNodes, int startSnapRadius,
+            bool requireWalkableGoal = false)
         {
             if (grid == null)
                 return null;
@@ -36,6 +42,9 @@ namespace Game.Core
 
             if (start == goal)
                 return new List<(int x, int y)> { goal };
+
+            if (requireWalkableGoal && !grid.IsWalkable(goal.x, goal.y))
+                return null;
 
             int minX = System.Math.Min(start.x, goal.x) - searchPadding;
             int maxX = System.Math.Max(start.x, goal.x) + searchPadding;

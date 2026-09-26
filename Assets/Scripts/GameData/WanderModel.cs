@@ -11,15 +11,19 @@ namespace Game.Core
         /// <summary>Reached the target.</summary>
         Arrived = 1,
 
-        /// <summary>No progress for the stall timeout.</summary>
+        /// <summary>No progress and the recovery budget is spent.</summary>
         Stalled = 2,
+
+        /// <summary>No progress; the caller should recompute the route to the target.</summary>
+        Repath = 3,
     }
 
     /// <summary>
     /// Engine-free wander decisions for an NPC: idle timing, random candidate destination generation,
-    /// arrival and stall detection. It holds no Unity types — the Unity adapter supplies geometry
-    /// (whether a candidate is blocked, how to move) and applies movement/pathfinding. Plain C#,
-    /// lives in Game.Data and is unit-testable without a scene.
+    /// arrival, and stall recovery. It holds no Unity types — the Unity adapter supplies geometry
+    /// (whether a candidate is blocked, how to move) and applies movement/pathfinding. Stall/repath
+    /// policy is delegated to the shared <see cref="TravelRecoveryModel"/>. Plain C#, lives in
+    /// Game.Data and is unit-testable without a scene.
     ///
     /// Unity setup: none. Constructed by NpcWander3D / NpcWanderBehavior.
     /// </summary>
@@ -27,27 +31,35 @@ namespace Game.Core
     {
         public const int MaxCandidateAttempts = 8;
 
-        // Matches the previous stall epsilon (0.02 world units) squared.
-        private const float ProgressEpsilonSqr = 0.0004f;
-
         private readonly Random rng;
         private readonly float wanderRadius;
         private readonly float arrivalThreshold;
-        private readonly float stallTimeout;
         private readonly float idleSeconds;
+        private readonly float failedTargetRadius;
+        private readonly TravelRecoveryModel recovery;
 
         private float idleRemaining;
         private bool hasTarget;
         private float targetX, targetZ;
         private int candidateAttempts;
-        private float lastX, lastZ, stalledTime;
+
+        private bool hasFailedTarget;
+        private float failedX, failedZ;
 
         public WanderModel(float wanderRadius, float arrivalThreshold, float stallTimeout, float idleSeconds, int seed)
+            : this(wanderRadius, arrivalThreshold, stallTimeout, idleSeconds, seed, 0, 0f)
+        {
+        }
+
+        public WanderModel(
+            float wanderRadius, float arrivalThreshold, float stallTimeout, float idleSeconds, int seed,
+            int maxRepaths, float failedTargetRadius)
         {
             this.wanderRadius = wanderRadius < 0f ? 0f : wanderRadius;
             this.arrivalThreshold = arrivalThreshold < 0f ? 0f : arrivalThreshold;
-            this.stallTimeout = stallTimeout;
             this.idleSeconds = idleSeconds < 0f ? 0f : idleSeconds;
+            this.failedTargetRadius = failedTargetRadius < 0f ? 0f : failedTargetRadius;
+            recovery = new TravelRecoveryModel(stallTimeout, maxRepaths);
             rng = new Random(seed);
         }
 
@@ -71,24 +83,34 @@ namespace Game.Core
         }
 
         /// <summary>
-        /// Produces the next random candidate destination on the disc. Returns false once the
-        /// attempt budget (8) is spent, so the caller can give up and idle.
+        /// Produces the next random candidate destination on the disc, skipping spots close to the
+        /// last dead end. Returns false once the attempt budget (8) is spent, so the caller can give
+        /// up and idle.
         /// </summary>
         public bool TryNextCandidate(float originX, float originZ, out float candidateX, out float candidateZ)
         {
-            if (candidateAttempts >= MaxCandidateAttempts)
+            while (candidateAttempts < MaxCandidateAttempts)
             {
-                candidateX = originX;
-                candidateZ = originZ;
-                return false;
+                candidateAttempts++;
+                double angle = rng.NextDouble() * Math.PI * 2.0;
+                double radius = Math.Sqrt(rng.NextDouble()) * wanderRadius;
+                candidateX = originX + (float)(Math.Cos(angle) * radius);
+                candidateZ = originZ + (float)(Math.Sin(angle) * radius);
+
+                if (hasFailedTarget && failedTargetRadius > 0f)
+                {
+                    float dx = candidateX - failedX;
+                    float dz = candidateZ - failedZ;
+                    if (dx * dx + dz * dz <= failedTargetRadius * failedTargetRadius)
+                        continue;
+                }
+
+                return true;
             }
 
-            candidateAttempts++;
-            double angle = rng.NextDouble() * Math.PI * 2.0;
-            double radius = Math.Sqrt(rng.NextDouble()) * wanderRadius;
-            candidateX = originX + (float)(Math.Cos(angle) * radius);
-            candidateZ = originZ + (float)(Math.Sin(angle) * radius);
-            return true;
+            candidateX = originX;
+            candidateZ = originZ;
+            return false;
         }
 
         /// <summary>Accepts a destination passed the caller's obstruction test.</summary>
@@ -97,14 +119,29 @@ namespace Game.Core
             hasTarget = true;
             targetX = x;
             targetZ = z;
-            lastX = currentX;
-            lastZ = currentZ;
-            stalledTime = 0f;
+            recovery.Reset(currentX, currentZ);
         }
 
+        /// <summary>Clears the current target without recording it as a dead end.</summary>
         public void AbortTarget() => hasTarget = false;
 
-        /// <summary>Arrival/stall test. Call while a target is active.</summary>
+        /// <summary>
+        /// Records the current target as a dead end and clears it, so near-identical candidates are
+        /// skipped until a different area is chosen.
+        /// </summary>
+        public void FailTarget()
+        {
+            if (hasTarget && failedTargetRadius > 0f)
+            {
+                failedX = targetX;
+                failedZ = targetZ;
+                hasFailedTarget = true;
+            }
+
+            hasTarget = false;
+        }
+
+        /// <summary>Arrival/recovery test. Call while a target is active.</summary>
         public WanderDecision Evaluate(float currentX, float currentZ, float deltaSeconds)
         {
             float dx = targetX - currentX;
@@ -112,22 +149,18 @@ namespace Game.Core
             if (dx * dx + dz * dz <= arrivalThreshold * arrivalThreshold)
                 return WanderDecision.Arrived;
 
-            float movedX = currentX - lastX;
-            float movedZ = currentZ - lastZ;
-            if (movedX * movedX + movedZ * movedZ >= ProgressEpsilonSqr)
-            {
-                lastX = currentX;
-                lastZ = currentZ;
-                stalledTime = 0f;
-            }
-            else
-            {
-                stalledTime += deltaSeconds;
-                if (stalledTime >= stallTimeout)
-                    return WanderDecision.Stalled;
-            }
+            TravelRecoveryDecision recoveryDecision =
+                recovery.Evaluate(currentX, currentZ, deltaSeconds, atWaypoint: false);
 
-            return WanderDecision.Moving;
+            switch (recoveryDecision)
+            {
+                case TravelRecoveryDecision.Repath:
+                    return WanderDecision.Repath;
+                case TravelRecoveryDecision.Abandon:
+                    return WanderDecision.Stalled;
+                default:
+                    return WanderDecision.Moving;
+            }
         }
 
         /// <summary>Normalized direction from the current position to the target.</summary>

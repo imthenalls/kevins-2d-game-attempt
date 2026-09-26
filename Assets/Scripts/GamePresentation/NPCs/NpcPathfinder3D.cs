@@ -32,6 +32,9 @@ public class NpcPathfinder3D : MonoBehaviour, IWalkabilityGrid
     [Tooltip("How many cells to search for a walkable start cell.")]
     [SerializeField, Min(0)] private int startSnapRadius = 4;
 
+    [Tooltip("Require the destination cell itself to be walkable (a standable spot).")]
+    [SerializeField] private bool requireWalkableGoal = false;
+
     /// <summary>Layers treated as obstacles by this pathfinder.</summary>
     public LayerMask ObstacleMask => obstacleLayers;
 
@@ -50,7 +53,9 @@ public class NpcPathfinder3D : MonoBehaviour, IWalkabilityGrid
         int goalY = Mathf.FloorToInt(goal.z / cellSize);
 
         List<(int x, int y)> cells =
-            GridPathfinder.FindPath(this, startX, startY, goalX, goalY, searchPadding, maxNodes, startSnapRadius);
+            GridPathfinder.FindPath(
+                this, startX, startY, goalX, goalY, searchPadding, maxNodes, startSnapRadius,
+                requireWalkableGoal);
 
         if (cells == null)
             return null;

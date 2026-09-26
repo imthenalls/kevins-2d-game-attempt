@@ -30,7 +30,7 @@ Every configured NPC needs a unique, stable `NpcController.NpcId`:
 }
 ```
 
-Item ids reference definitions in `Assets/StreamingAssets/items.json`. `NpcInventoryDatabase` starts automatically, creates the configured NPC inventory through `NpcController.EnsureInventory()`, and seeds each NPC only once per runtime session. Saved inventory replaces the starting JSON state when loading a save.
+Item ids reference definitions in `Assets/StreamingAssets/items.json`. `NpcInventoryDatabase` starts automatically, creates the configured NPC inventory through `NpcController.EnsureInventory()`, and seeds any matching NPC whose inventory is still empty (so a freshly (re)loaded or domain-reload-restored scene is seeded again, while a populated/save-restored inventory is left alone). Saved inventory replaces the starting JSON state when loading a save.
 
 ## Unity Setup
 

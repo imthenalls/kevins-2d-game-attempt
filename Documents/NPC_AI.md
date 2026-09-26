@@ -139,6 +139,9 @@ it fail and give up, leave the keyring empty.
 
 - **Phase 3 (done):** `NpcPerception` + `NpcBehaviorBase` shared helpers (targeting, move-to, interact).
 - **Phase 4 (done):** persist NPC lock knowledge via WorldState; grid pathfinding (`NpcPathfinder`).
-- **Future:** schedules, combat AI, and shared goals.
+- **Phase 5 (done, 3D Town):** daily home schedules (`NpcSchedule3D`) with shared stall/repath/abandon
+  recovery (`Game.Core.TravelRecoveryModel`), building-aware wandering and local NPC avoidance
+  (`NpcLocalAvoidance`) — see [ISOMETRIC_3D.md](ISOMETRIC_3D.md).
+- **Future:** combat AI and shared goals.
 
 See [SLIDING_DOORS.md](SLIDING_DOORS.md) and [KEY_HOLDER.md](KEY_HOLDER.md).

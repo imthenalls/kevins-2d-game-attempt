@@ -37,7 +37,8 @@ public static class Town3DSceneBuilder
 
     private static readonly List<(int x, int y, int w, int d, char side)> Buildings = new()
     {
-        (4, 14, 4, 3, 'S'), (12, 14, 4, 3, 'S'), (20, 14, 4, 3, 'S'), (4, 4, 4, 3, 'S'),
+        // The main building (index 2) is double-size so it reads as the town landmark.
+        (4, 14, 4, 3, 'S'), (12, 14, 4, 3, 'S'), (20, 14, 8, 6, 'S'), (4, 4, 4, 3, 'S'),
         (35, 14, 4, 3, 'S'), (43, 14, 4, 3, 'S'), (51, 14, 4, 3, 'S'), (35, 4, 4, 3, 'S'),
         (4, 24, 4, 3, 'N'), (12, 24, 4, 3, 'N'), (4, 34, 4, 3, 'N'),
         (35, 24, 4, 3, 'N'), (53, 24, 4, 3, 'N'), (35, 36, 4, 3, 'N'),
@@ -196,25 +197,31 @@ public static class Town3DSceneBuilder
         {
             float centerX = b.x + b.w * 0.5f;
             float centerZ = b.y + b.d * 0.5f;
+            bool isMainBuilding = b.x == MainBuildingX && b.y == MainBuildingY;
 
-            GameObject building = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            building.name = "Building_" + b.x + "_" + b.y;
-            building.layer = wallsLayer;
+            // A scale-1 container holds the solid body and the door, so the door can live under its
+            // building without inheriting the body's non-uniform scale.
+            var building = new GameObject(isMainBuilding ? "Main Building" : "Building_" + b.x + "_" + b.y);
             building.transform.SetParent(root.transform, false);
-            building.transform.position = new Vector3(centerX, BuildingHeight * 0.5f, centerZ);
-            building.transform.localScale = new Vector3(b.w, BuildingHeight, b.d);
-            building.GetComponent<MeshRenderer>().sharedMaterial = body;
+            building.transform.position = new Vector3(centerX, 0f, centerZ);
+
+            GameObject solid = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            solid.name = "Body";
+            solid.layer = wallsLayer;
+            solid.transform.SetParent(building.transform, false);
+            solid.transform.localPosition = new Vector3(0f, BuildingHeight * 0.5f, 0f);
+            solid.transform.localScale = new Vector3(b.w, BuildingHeight, b.d);
+            solid.GetComponent<MeshRenderer>().sharedMaterial = body;
 
             int doorCellX = b.x + b.w / 2;
             // 'S' buildings face the street on their +z edge; 'N' buildings on their -z edge.
             float doorX = doorCellX + 0.5f;
             float doorZ = b.side == 'S' ? b.y + b.d + 0.25f : b.y - 0.25f;
-            bool isMainBuilding = b.x == MainBuildingX && b.y == MainBuildingY;
             string doorId = isMainBuilding ? "main_building_door" : "door_" + b.x + "_" + b.y;
 
             var door = new GameObject("Door");
-            door.transform.SetParent(root.transform, false);
-            door.transform.position = new Vector3(doorX, 0f, doorZ);
+            door.transform.SetParent(building.transform, false);
+            door.transform.localPosition = new Vector3(doorX - centerX, 0f, doorZ - centerZ);
 
             var doorCollider = door.AddComponent<BoxCollider>();
             doorCollider.isTrigger = true;
@@ -231,7 +238,7 @@ public static class Town3DSceneBuilder
             float approachZ = b.side == 'S' ? doorZ + 1.0f : doorZ - 1.0f;
             var approach = new GameObject("Approach");
             approach.transform.SetParent(door.transform, false);
-            approach.transform.position = new Vector3(doorX, 0f, approachZ);
+            approach.transform.localPosition = new Vector3(0f, 0f, approachZ - doorZ);
             SetObjectField(portal, "exitPoint", approach.transform);
             DoorApproaches[(b.x, b.y)] = approach.transform;
 
@@ -269,12 +276,13 @@ public static class Town3DSceneBuilder
             var b = Buildings[i];
             Rect[] rects = Rooms[i];
             var cells = CellsFrom(rects);
-            string roomName = "Room_" + b.x + "_" + b.y;
+            string roomId = "Room_" + b.x + "_" + b.y;
+            string roomName = (b.x == MainBuildingX && b.y == MainBuildingY) ? "Main Building Room" : roomId;
 
             var room = new GameObject(roomName);
             room.transform.SetParent(root.transform, false);
 
-            CreateCellMesh(roomName + "Floor", cells, 0.03f, floor, room.transform);
+            CreateCellMesh(roomId + "Floor", cells, 0.03f, floor, room.transform);
             BuildRoomWalls(room.transform, cells, wallsLayer, wall);
             BuildRoomDoor(room.transform, b, rects[0]);
         }
@@ -846,6 +854,8 @@ public static class Town3DSceneBuilder
                 var b = Buildings[i];
                 var pathfinder = npc.AddComponent<NpcPathfinder3D>();
                 SetLayerMaskField(pathfinder, "obstacleLayers", wallMask);
+                // Home approaches must be standable; do not route to a blocked (inside-wall) cell.
+                SetBoolField(pathfinder, "requireWalkableGoal", true);
 
                 string keyId = "house_key_" + b.x + "_" + b.y;
                 var schedule = npc.AddComponent<NpcSchedule3D>();
@@ -853,6 +863,7 @@ public static class Town3DSceneBuilder
                 SetStringField(schedule, "homeInteriorPortalId", "int_" + b.x + "_" + b.y);
                 SetStringField(schedule, "homeKeyId", keyId);
                 SetNestedFloat(schedule, "movementConfig", "MoveSpeed", 1.8f);
+                SetLayerMaskField(schedule, "neighborLayers", 1 << npcLayer);
                 if (DoorApproaches.TryGetValue((b.x, b.y), out Transform approach))
                     SetObjectField(schedule, "homeEntrance", approach);
 

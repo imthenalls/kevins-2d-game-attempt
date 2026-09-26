@@ -63,6 +63,10 @@ public class NpcInventoryDatabase : MonoBehaviour
 
     private void HandleSceneLoaded(Scene _, LoadSceneMode __) => ApplyToLoadedScene();
 
+    // Fallback seed for scenes restored without a sceneLoaded event (for example an Enter Play Mode
+    // or domain-reload backup scene), so NPC keys still exist after a script reload.
+    private void Start() => ApplyToLoadedScene();
+
     /// <summary>Seeds all configured, not-yet-initialized NPCs in the active scene.</summary>
     public void ApplyToLoadedScene()
     {
@@ -87,9 +91,6 @@ public class NpcInventoryDatabase : MonoBehaviour
 
         foreach (var pair in matches)
         {
-            if (initializedNpcIds.Contains(pair.Key))
-                continue;
-
             if (pair.Value.Count != 1)
             {
                 Debug.LogError(
@@ -98,9 +99,32 @@ public class NpcInventoryDatabase : MonoBehaviour
                 continue;
             }
 
-            SeedInventory(pair.Value[0], entries[pair.Key]);
+            NpcController npc = pair.Value[0];
+
+            // Skip NPCs that already hold items (a save restore or an earlier seed). Freshly
+            // (re)loaded scene instances start empty, so this also re-seeds them after a scene
+            // reload or a domain reload that restored the scene without raising sceneLoaded.
+            if (HasAnyItems(npc.Inventory))
+                continue;
+
+            SeedInventory(npc, entries[pair.Key]);
             initializedNpcIds.Add(pair.Key);
         }
+    }
+
+    // True when the inventory holds at least one item; used to avoid double-seeding a populated NPC.
+    private static bool HasAnyItems(InventoryModel inventory)
+    {
+        if (inventory == null)
+            return false;
+
+        for (int i = 0; i < inventory.SlotCount; i++)
+        {
+            if (!inventory.GetSlot(i).IsEmpty)
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>Clears runtime initialization tracking for a new-game flow.</summary>
