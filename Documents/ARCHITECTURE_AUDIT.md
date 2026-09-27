@@ -7,11 +7,16 @@
 ## Verdict
 
 `Game.Data` cannot reference Unity or `Game.Presentation` — that is enforced by the compiler, not
-by convention. Authoritative state — NPC state, inventory, tuning, config, mana, world facts,
-quests, equipment, hotbar, keys, player health, and the save shape — now lives in the Core. The
-only remaining Shell-owned authoritative value is the player's continuous physics position, which
-is a documented transitional compromise. See [AGENT.md](../AGENT.md) → **Architecture: Engine-Free
-Core** for the pattern and rules.
+by convention. Most authoritative state — NPC state, inventory contents, tuning, config, mana, world
+facts, quests, equipment, hotbar, keys, player health, and the save shape — lives in the Core, and
+the player's continuous physics position is a documented transitional compromise.
+
+**However, the migration is not complete.** A re-audit of the NPC folder found remaining
+Shell-owned rules and persistent state: the `NpcSchedule3D` schedule state machine,
+`NpcInventoryDatabase` starting-inventory seeding policy, `NpcPerception` target ranking, and
+residual `NpcProximityMelee3D` engagement decisions. These are tracked in **Deviations** below and
+must not be described as migrated. (`NpcMemory` was migrated as the first step — see **Migrated
+since the first audit**.)
 
 This is also the project's named architecture: **Engine-Free Core**.
 
@@ -83,22 +88,39 @@ This is also the project's named architecture: **Engine-Free Core**.
   a grid cell + local offset (preferring the player's `PositionModel` when remembering the player),
   saves it in `WorldPositionSaveEntry` (v7), and converts legacy float-only entries through the
   scene Grid on load. Play Mode test: `World_Remembered_Position_RoundTrips_As_Cell`.
+- **NPC memory** — persistent locked-gate knowledge and its remember/skip/forget rules moved to
+  `Game.Core.NpcMemoryModel`, owned by `GameSession` (`NpcMemoryRepo`/`NpcMemories`) and saved via
+  `NpcSaveEntry.lockedGates` (v9); `NpcMemory` is now a facade over stable gate ids. This also fixes
+  the `Clear()` bug where persisted facts survived a local clear. Engine-free tests:
+  `Assets/Tests/EditMode/NpcMemoryModelTests.cs`.
 
-## Deviations — authoritative state still in Presentation
+## Deviations — authoritative state / rules still in Presentation
 
-| # | State | Location | Impact | Note |
+| # | State / rule | Location | Impact | Note |
 |---|---|---|---|---|
-| — | _None._ | — | Every authoritative value is Core-owned; position is grid-anchored. | — |
+| 1 | Schedule state machine (Away→ToHome→Home, portal success/failure, retry timing, randomized initial time) | `NPCs/NpcSchedule3D.cs` | Core stores phase/timer but not the transitions; the "rules and decisions" live in the facade. | Move into `NpcScheduleState` with events in / commands out. |
+| 2 | Starting-inventory seeding policy + initialization state | `NPCs/NpcInventoryDatabase.cs` | Treats any non-empty inventory as initialized, so a legitimately emptied NPC is reseeded on reload; `initializedNpcIds` is tracked but not consulted. | Core DTOs + Core initialization service using the inventory's initialized flag; state in `GameSession`. |
+| 3 | Scan tuning + nearest target/gate ranking | `NPCs/NpcPerception.cs` | Gameplay tuning and selection rules in the MonoBehaviour; player discovery hardwired to `PlayerController2D`. | `NpcPerceptionConfig` + a target-selection policy; use `PlayerControllerBase`/dimension adapters. |
+| 4 | Residual engagement decisions | `NPCs/NpcProximityMelee3D.cs` | Uses `MeleeEngagementPolicy`, but tuning fields and target-validity/behavior-blocked transitions remain in the MonoBehaviour. | Extend the Core policy to take alive/behavior inputs and return an intent. |
+| — | Player continuous physics position | `PlayerController2D/3D` | Grid-anchored via `PositionModel`; the raw physics transform is still Shell-owned. | Documented transitional compromise. |
 
 ## Practical consequence
 
-The migration is complete: all authoritative state (NPC state, inventory, tuning, mana, world facts,
-quests, equipment, hotbar, keys, player health, player position, per-world remembered positions, and
-the save shape) lives in the Engine-Free Core, with fast engine-free tests for the pure logic.
+The migration is **in progress**, not complete. Most authoritative state lives in the Engine-Free
+Core with fast engine-free tests, but the four deviations above still place gameplay rules or
+persistent state in `Game.Presentation`.
 
 ## Recommended migration order
 
-No planned migrations remain.
+Work top-down; each step must keep `Tools/verify-all.ps1` green and add engine-free tests.
+
+1. **`NpcSchedule3D` state machine** → `NpcScheduleState`/service: events in, commands out; all
+   schedule tuning (entry radius, waypoint threshold) in Core config.
+2. **`NpcInventoryDatabase` initialization** → Core DTOs + a Core initialization service keyed off
+   the inventory's initialized flag.
+3. **`NpcPerception`** → `NpcPerceptionConfig` + a target-selection policy.
+4. **`NpcProximityMelee3D`** → extend `MeleeEngagementPolicy` to return an intent (Idle / Blocked /
+   Chase / Attack / Disengage) from tuning + alive/behavior inputs.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.

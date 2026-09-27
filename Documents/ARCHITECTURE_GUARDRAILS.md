@@ -68,7 +68,11 @@ Migrate top-down. Update this table as items land.
 | ✅ | `NPCs/NpcDashMelee3D.cs`, `NpcDashMeleeController.cs` | Approach/Warning/Dash/Swing/Recovery → `Game.Core.NpcDashMeleeModel` (both facades done) |
 | ✅ | `NPCs/NpcWander3D.cs`, `NpcWanderBehavior.cs` | Wander target/idle/stall/arrival + dead-end memory → `Game.Core.WanderModel` (both facades done; stall/repath recovery shared via `TravelRecoveryModel`) |
 | ✅ | `NPCs/NpcWander3D.cs`, `NpcSchedule3D.cs`, `NpcWanderBehavior.cs`, `NpcChaseNavigator.cs`, `NpcUseDoorBehavior.cs` | Route/waypoint following → `Game.Core.RouteFollower`; local-avoidance math → `Game.Core.LocalAvoidance` (the facades only sample physics and apply motion) |
-| ✅ | `NPCs/NpcSchedule3D.cs` | Home-trip stall/repath/abandon policy → `Game.Core.TravelRecoveryModel` (facade applies movement, pathfinding and portal travel) |
+| 🟨 | `NPCs/NpcSchedule3D.cs` | Home-trip stall/repath/abandon policy → `Game.Core.TravelRecoveryModel` ✅; route following → `Game.Core.RouteFollower` ✅. Still in the MonoBehaviour: the **schedule state machine** (Away→ToHome→Home, portal success/failure handling, retry timing, randomized initial time) — move it into `NpcScheduleState` (events in, commands out). |
+| ✅ | `NPCs/NpcMemory.cs` | Persistent gate knowledge + remember/skip/forget rules → `Game.Core.NpcMemoryModel`, owned by `GameSession` (saved via `NpcSaveEntry.lockedGates`); the facade resolves `SlidingDoor` + key holder into ids/booleans. |
+| ⬜ | `NPCs/NpcPerception.cs` | Scan radius config + nearest-target/gate ranking → `Game.Core.NpcPerceptionConfig` + a target-selection policy; Unity overlap sampling stays in the adapter. |
+| ⬜ | `NPCs/NpcProximityMelee3D.cs`, `NpcProximityMeleeController.cs` | Chase/disengage tuning + target-validity and behavior-blocked transitions → extend `Game.Core.MeleeEngagementPolicy` to take alive/behavior inputs and return an intent. |
+| ⬜ | `NPCs/NpcInventoryDatabase.cs` | Starting-inventory seeding policy + "has this NPC been initialized?" → Core DTOs + a Core initialization service using the inventory's initialized flag (not "has an item"). |
 | ✅ | `NPCs/NpcBehaviorManager.cs` | Weighted behavior selection → `Game.Core.NpcBehaviorScheduler` |
 | ✅ | `NPCs/NpcIdleBehavior.cs` | Idle-timer rule → `Game.Core.IdleTimer` |
 
@@ -111,13 +115,16 @@ receiver are now thin facades over them. Engine-free tests:
 
 Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, `DoorLockPolicy`, `PortalAccessPolicy`, and `WeaponSwingPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 
-**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. No authoritative gameplay state remains on a MonoBehaviour.
+**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. **This is not yet true of every file.** The following still own gameplay rules or persistent state and are tracked as debt in the tables above: the `NpcSchedule3D` state machine, `NpcInventoryDatabase` seeding policy, `NpcPerception` target ranking, and the residual `NpcProximityMelee3D` engagement decisions.
 
 ## Known-good (do not "fix")
 
-`Wallet`, `WorldStateManager`, `QuestManager`, `SceneLoader`, `GameBootstrap`, `NpcSchedule3D`
-(phase/timer), `PlayerController*` (position only), and all `*Config` tuning. Pure rendering,
-input reading, sprite/billboard, physics application, and editor tooling are correctly in the Shell.
+`Wallet`, `WorldStateManager`, `QuestManager`, `SceneLoader`, `GameBootstrap`, `PlayerController*`
+(position only), and all `*Config` tuning. Pure rendering, input reading, sprite/billboard, physics
+application, and editor tooling are correctly in the Shell.
+
+`NpcSchedule3D` is **not** known-good: its phase/timer state lives in Core, but the schedule state
+machine still runs in the MonoBehaviour (see its Tier 1 row). Treat it as in-progress.
 
 ## Definition of done for a migration item
 

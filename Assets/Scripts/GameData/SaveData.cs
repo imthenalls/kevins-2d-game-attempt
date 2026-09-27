@@ -37,6 +37,7 @@ namespace Game.Core
     // Version 6 adds per-world avatar ability unlocks.
     // Version 7 adds the player's logical grid position (cell + local offset) via hasPlayerCell.
     // Version 8 separates base max HP/MP from equipment bonuses (playerBaseMaxHp/Mp).
+    // Version 9 adds per-NPC remembered locked gates (NpcMemory).
     // Missing fields deserialize as 0, so pre-unification saves are version 0.
         public int saveVersion;
 
@@ -200,6 +201,10 @@ public class WorldPositionSaveEntry
         public bool  hasSchedule;
         public int   schedulePhase;
         public float scheduleSeconds;
+
+        // Remembered locked gates (NpcMemory): stable gateId + required key id. The skip/forget
+        // rules live in Game.Core.NpcMemoryModel; this is only the persisted form.
+        public List<NpcGateMemory> lockedGates = new();
 
         // Inventory (populated only when the NPC has an InventoryModel)
         public List<InventorySlotEntry> inventorySlots = new();

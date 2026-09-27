@@ -260,6 +260,13 @@ public class SaveManager : MonoBehaviour
                 entry.scheduleSeconds = schedule.SecondsRemaining;
             }
 
+            // NPC knowledge (NpcMemory) is saved from the pure-C# model too.
+            if (GameSessionHost.Session != null &&
+                GameSessionHost.Session.NpcMemories.TryCapture(npc.NpcId, out NpcMemorySnapshot memory))
+            {
+                entry.lockedGates = memory.Gates;
+            }
+
             if (npc.Inventory != null)
             {
                 for (int i = 0; i < npc.Inventory.SlotCount; i++)
@@ -608,6 +615,14 @@ public class SaveManager : MonoBehaviour
 
             foreach (var entry in data.npcStates)
             {
+                // NPC knowledge (NpcMemory) is model-only, so restore it even when the scene object
+                // is absent (a missing NPC must not drop remembered locked gates).
+                if (entry.lockedGates != null && entry.lockedGates.Count > 0 && GameSessionHost.Session != null)
+                {
+                    GameSessionHost.Session.NpcMemories.Apply(
+                        new NpcMemorySnapshot(entry.npcId, entry.lockedGates));
+                }
+
                 if (!npcLookup.TryGetValue(entry.npcId, out var npc))
                 {
                     Debug.LogWarning($"[SaveManager] NPC not found in scene: '{entry.npcId}'");
