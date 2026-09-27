@@ -1,12 +1,13 @@
 namespace Game.Core
 {
     /// <summary>
-    /// Application service for NPC schedule state. Gameplay transitions go through these commands so
-    /// the MonoBehaviour never owns the phase/timer.
+    /// Application service for NPC schedule state. Gameplay transitions run on the model itself
+    /// (<see cref="NpcScheduleState.Tick"/>/<see cref="NpcScheduleState.Handle"/>); this service owns
+    /// registration and the save/load round trip so the MonoBehaviour never owns the phase or timer.
     ///
     /// Unity setup: none. Constructed by GameSession with its NpcScheduleRepository.
     ///
-    /// Runtime API: Register, TryGet, SetPhase, TryCapture, Apply.
+    /// Runtime API: Register, TryGet, TryCapture, Apply.
     /// </summary>
     public sealed class NpcScheduleService
     {
@@ -21,12 +22,6 @@ namespace Game.Core
             repository.GetOrCreate(npcId, phase, secondsRemaining);
 
         public bool TryGet(string npcId, out NpcScheduleState state) => repository.TryGet(npcId, out state);
-
-        public void SetPhase(string npcId, NpcSchedulePhase phase, float secondsRemaining)
-        {
-            if (repository.TryGet(npcId, out NpcScheduleState state))
-                state.SetPhase(phase, secondsRemaining);
-        }
 
         /// <summary>Captures the model for saving. Returns false when the id is unknown.</summary>
         public bool TryCapture(string npcId, out NpcScheduleSnapshot snapshot)

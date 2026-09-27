@@ -7,13 +7,14 @@ using UnityEngine;
 /// inside (via the portal system), stay a while, and come back out. The NPC "owns" a home door and
 /// carries a key id; the door stays open while the owner is home.
 ///
-/// The phase and remaining time are authoritative in the pure-C# <see cref="NpcScheduleState"/>
-/// (Game.Data) owned by GameSession — this component is a thin facade that reads the model, performs
-/// the movement/teleport, and issues model commands. Stall handling delegates to the shared
-/// <see cref="TravelRecoveryModel"/>: a blocked NPC pauses, recomputes its route a bounded number of
-/// times, then cancels the trip and resumes wandering. Neighbors are steered around with
-/// <see cref="NpcLocalAvoidance"/>. Tuning is in <see cref="NpcScheduleConfig"/> and
-/// <see cref="NpcTravelRecoveryConfig"/>. Requires <see cref="NpcPathfinder3D"/> to route to the door.
+/// This component is a thin facade over the engine-free <see cref="NpcScheduleState"/> state machine
+/// (Game.Data, owned by GameSession). It performs the Unity operations the model requests (build a
+/// route, use a portal, open/close the door, enable the wanderer) and reports the outcomes back as
+/// <see cref="NpcScheduleEvent"/>s. Route following uses <see cref="RouteFollower"/>; stall handling
+/// delegates to <see cref="TravelRecoveryModel"/>; neighbors are steered around with
+/// <see cref="NpcLocalAvoidance"/>. Tuning lives in <see cref="NpcScheduleConfig"/>,
+/// <see cref="NpcLocalAvoidanceConfig"/> and <see cref="NpcTravelRecoveryConfig"/>. Requires
+/// <see cref="NpcPathfinder3D"/> to route to the door.
 ///
 /// Unity setup:
 ///   1. Add to an NPC root that already has Rigidbody, CapsuleCollider, NpcWander3D,
@@ -41,19 +42,14 @@ public class NpcSchedule3D : MonoBehaviour
     [Header("Config (Game.Data)")]
     [SerializeField] private NpcBehaviorConfig movementConfig = new NpcBehaviorConfig();
     [SerializeField] private NpcScheduleConfig scheduleConfig = new NpcScheduleConfig();
+    [SerializeField] private NpcLocalAvoidanceConfig avoidanceConfig = new NpcLocalAvoidanceConfig();
     [SerializeField] private NpcTravelRecoveryConfig recoveryConfig = new NpcTravelRecoveryConfig();
 
-    [Header("Local Avoidance (Unity)")]
+    [Header("Unity References")]
     [Tooltip("Layers whose members this NPC steers around while commuting.")]
     [SerializeField] private LayerMask neighborLayers = 0;
-    [SerializeField, Min(0f)] private float neighborSeparation = 0.9f;
-    [SerializeField, Min(0f)] private float neighborSteerStrength = 1.2f;
     [Tooltip("Log schedule/route decisions. Development only.")]
     [SerializeField] private bool logDiagnostics = false;
-    [Tooltip("Distance to the home approach at which the NPC goes inside, without needing the exact point.")]
-    [SerializeField, Min(0.1f)] private float homeDoorEnterRadius = 1.5f;
-
-    private const float WaypointReached = 0.35f;
 
     private Rigidbody body;
     private CapsuleCollider bodyCollider;
@@ -64,6 +60,7 @@ public class NpcSchedule3D : MonoBehaviour
     private TravelRecoveryModel recovery;
     private readonly RouteFollower route = new RouteFollower();
     private Vector3 desiredVelocity;
+    private bool? homeDoorOpen;
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
 
@@ -104,17 +101,13 @@ public class NpcSchedule3D : MonoBehaviour
         GameSession session = GameSessionHost.Session;
         if (session != null && !string.IsNullOrWhiteSpace(npcId))
         {
-            // Register returns the existing model after a reload, so a saved phase is preserved.
+            // Register returns the existing model after a reload or a load, so the saved phase and the
+            // decided initial Away leg are preserved. The randomized start is decided in Core.
             model = session.NpcSchedules.Register(
                 npcId,
                 NpcSchedulePhase.Away,
-                Random.Range(scheduleConfig.AwaySeconds * 0.3f, scheduleConfig.AwaySeconds));
+                scheduleConfig.InitialAwaySeconds(gameObject.name.GetHashCode()));
         }
-
-        // Keep the wanderer in step with the (possibly restored) phase: only Away wanders; a
-        // ToHome/Home NPC is driven by the schedule instead.
-        if (wanderer != null)
-            wanderer.enabled = model == null || model.Phase == NpcSchedulePhase.Away;
     }
 
     private void Update()
@@ -131,43 +124,49 @@ public class NpcSchedule3D : MonoBehaviour
         if (model == null)
             return;
 
-        model.Tick(Time.deltaTime);
+        // The Core state machine decides; this component only executes the returned operations.
+        Execute(model.Tick(Time.deltaTime, scheduleConfig));
+        SyncWanderer();
+        SyncDoor();
 
-        switch (model.Phase)
-        {
-            case NpcSchedulePhase.Away:
-                if (model.SecondsRemaining <= 0f)
-                    BeginToHome();
-                break;
-
-            case NpcSchedulePhase.ToHome:
-                TickToHome();
-                break;
-
-            case NpcSchedulePhase.Home:
-                if (model.SecondsRemaining <= 0f)
-                    BeginLeaving();
-                break;
-        }
+        if (model.Phase == NpcSchedulePhase.ToHome)
+            TickToHome();
     }
 
-    private void BeginToHome()
+    // Runs the Unity operation(s) the schedule requested. May be called recursively (a portal action
+    // reports its outcome, which returns another command).
+    private void Execute(NpcScheduleCommand command)
     {
-        if (wanderer != null)
-            wanderer.enabled = false;
+        if (command == NpcScheduleCommand.None)
+            return;
 
-        HaltBody();
+        if ((command & NpcScheduleCommand.RequestRoute) != 0)
+            RequestRoute();
 
-        // A missing route is not permission to teleport home; the trip is cancelled and retried.
-        if (!EnsureRoute())
+        if ((command & NpcScheduleCommand.EnterHomePortal) != 0)
+            EnterHome();
+
+        if ((command & NpcScheduleCommand.LeaveHomePortal) != 0)
+            LeaveHome();
+
+        if ((command & NpcScheduleCommand.OpenHomeDoor) != 0)
+            SetHomeDoorOpen(true);
+
+        if ((command & NpcScheduleCommand.CloseHomeDoor) != 0)
+            SetHomeDoorOpen(false);
+    }
+
+    // Builds the route home; on failure it reports back so the model abandons the trip and retries.
+    private void RequestRoute()
+    {
+        if (EnsureRoute())
         {
-            LogDiagnostic("no route home; cancelling trip");
-            CancelTrip(recoveryConfig.RetrySeconds);
+            recovery.Reset(body.position.x, body.position.z);
             return;
         }
 
-        recovery.Reset(body.position.x, body.position.z);
-        model.SetPhase(NpcSchedulePhase.ToHome, 0f);
+        LogDiagnostic("no route home; cancelling trip");
+        Execute(model.Handle(NpcScheduleEvent.RouteFailed, scheduleConfig));
     }
 
     private void TickToHome()
@@ -179,7 +178,7 @@ public class NpcSchedule3D : MonoBehaviour
             if (!EnsureRoute())
             {
                 LogDiagnostic("route lost; cancelling trip");
-                CancelTrip(recoveryConfig.RetrySeconds);
+                Execute(model.Handle(NpcScheduleEvent.RouteFailed, scheduleConfig));
                 return;
             }
 
@@ -194,20 +193,21 @@ public class NpcSchedule3D : MonoBehaviour
         {
             Vector3 toDoor = homeEntrance.position - position;
             toDoor.y = 0f;
-            if (toDoor.sqrMagnitude <= homeDoorEnterRadius * homeDoorEnterRadius)
+            float enterRadius = scheduleConfig.HomeDoorEnterRadius;
+            if (toDoor.sqrMagnitude <= enterRadius * enterRadius)
             {
-                EnterHome();
+                Execute(model.Handle(NpcScheduleEvent.ReachedEntrance, scheduleConfig));
                 return;
             }
         }
 
         // Consume waypoints already reached this frame, then head for the current one. When the
         // route is exhausted the NPC has arrived at the door approach.
-        bool atWaypoint = route.Advance(position.x, position.z, WaypointReached) > 0;
+        bool atWaypoint = route.Advance(position.x, position.z, scheduleConfig.WaypointThreshold) > 0;
 
         if (!route.TryCurrent(out float waypointX, out float waypointZ))
         {
-            EnterHome();
+            Execute(model.Handle(NpcScheduleEvent.ReachedEntrance, scheduleConfig));
             return;
         }
 
@@ -218,8 +218,8 @@ public class NpcSchedule3D : MonoBehaviour
 
         // Slide around other commuters instead of pushing through them.
         Vector3 separation = NpcLocalAvoidance.Compute(
-            position, body, bodyCollider, neighborLayers, neighborSeparation, StableSeed());
-        direction = NpcLocalAvoidance.Steer(direction, separation, neighborSteerStrength);
+            position, body, bodyCollider, neighborLayers, avoidanceConfig.NeighborSeparation, StableSeed());
+        direction = NpcLocalAvoidance.Steer(direction, separation, avoidanceConfig.NeighborSteerStrength);
 
         // Do not drive into the static world, but keep ticking recovery so a permanently blocked NPC
         // still repaths (then abandons the trip) instead of pressing into the wall forever.
@@ -237,13 +237,13 @@ public class NpcSchedule3D : MonoBehaviour
             if (!EnsureRoute())
             {
                 LogDiagnostic("repath failed; cancelling trip");
-                CancelTrip(recoveryConfig.RetrySeconds);
+                Execute(model.Handle(NpcScheduleEvent.RouteFailed, scheduleConfig));
             }
         }
         else if (decision == TravelRecoveryDecision.Abandon)
         {
             LogDiagnostic("stalled; abandoning trip");
-            CancelTrip(recoveryConfig.RetrySeconds);
+            Execute(model.Handle(NpcScheduleEvent.RouteFailed, scheduleConfig));
         }
     }
 
@@ -271,50 +271,64 @@ public class NpcSchedule3D : MonoBehaviour
         return true;
     }
 
+    // Uses the town door (so its key requirement is enforced), then reports the outcome to the model.
     private void EnterHome()
     {
         HaltBody();
         route.Clear();
 
         PortalManager manager = PortalManager.Instance;
-        // Route through the town door so its key requirement is enforced for the NPC.
         bool entered = string.IsNullOrWhiteSpace(homeDoorPortalId) ||
                        (manager != null && manager.TryUsePortal(homeDoorPortalId, transform));
 
-        if (!entered)
-        {
-            // The owner could not get in (for example a missing key or a blocked portal). Do not
-            // leave the owner's door standing open or pretend to be home; retry after a full away leg.
-            LogDiagnostic("could not enter home door; retrying later");
-            CancelTrip(scheduleConfig.AwaySeconds);
-            return;
-        }
+        Execute(model.Handle(
+            entered ? NpcScheduleEvent.PortalSucceeded : NpcScheduleEvent.PortalFailed, scheduleConfig));
 
-        // The owner is home, so the door stands open for visitors.
-        SetHomeDoorLocked(false);
-        model.SetPhase(NpcSchedulePhase.Home, scheduleConfig.HomeSeconds);
+        if (!entered)
+            LogDiagnostic("could not enter home door; retrying later");
     }
 
-    private void BeginLeaving()
+    // Uses the interior portal to come back out, then reports the outcome to the model.
+    private void LeaveHome()
     {
         PortalManager manager = PortalManager.Instance;
         bool left = string.IsNullOrWhiteSpace(homeInteriorPortalId) ||
                     (manager != null && manager.TryUsePortal(homeInteriorPortalId, transform));
 
-        if (!left)
-        {
-            // Still inside; stay Home and try again rather than walking out through the walls.
-            LogDiagnostic("could not leave home; will retry");
-            model.SetPhase(NpcSchedulePhase.Home, recoveryConfig.RetrySeconds);
-            return;
-        }
+        Execute(model.Handle(
+            left ? NpcScheduleEvent.PortalSucceeded : NpcScheduleEvent.PortalFailed, scheduleConfig));
 
-        // The owner has left, so the door locks behind them.
-        SetHomeDoorLocked(true);
-        route.Clear();
-        model.SetPhase(NpcSchedulePhase.Away, scheduleConfig.AwaySeconds);
-        if (wanderer != null)
-            wanderer.enabled = true;
+        if (left)
+        {
+            route.Clear();
+            LogDiagnostic("left home");
+        }
+        else
+        {
+            LogDiagnostic("could not leave home; will retry");
+        }
+    }
+
+    private void SyncWanderer()
+    {
+        if (wanderer == null)
+            return;
+
+        // Only Away wanders; a ToHome/Home NPC is driven by the schedule instead.
+        bool shouldWander = model == null || model.Phase == NpcSchedulePhase.Away;
+        if (wanderer.enabled != shouldWander)
+            wanderer.enabled = shouldWander;
+    }
+
+    // The door is open exactly while the owner is home. Reconciled each frame so a restored phase and
+    // a late-created PortalManager both take effect without a transition.
+    private void SyncDoor()
+    {
+        bool open = model != null && model.IsHome;
+        if (homeDoorOpen == open)
+            return;
+
+        SetHomeDoorOpen(open);
     }
 
     // Sphere-casts the body ahead against the pathfinder's obstacle layers so the NPC stops at a
@@ -375,28 +389,19 @@ public class NpcSchedule3D : MonoBehaviour
             body.MovePosition(body.position + desiredVelocity * Time.fixedDeltaTime);
     }
 
-    // Ends the current trip, keeps the door locked, and resumes wandering after the retry delay.
-    private void CancelTrip(float retrySeconds)
+    // Locks or unlocks this NPC's home door. Open = no key required (the owner is home).
+    private void SetHomeDoorOpen(bool open)
     {
-        route.Clear();
-        HaltBody();
-        SetHomeDoorLocked(true);
-        model.SetPhase(NpcSchedulePhase.Away, retrySeconds);
-        if (wanderer != null)
-            wanderer.enabled = true;
-    }
+        homeDoorOpen = open;
 
-    // Locks or unlocks this NPC's home door. Locked = the owner's key is required.
-    private void SetHomeDoorLocked(bool locked)
-    {
         PortalManager manager = PortalManager.Instance;
         if (manager == null || string.IsNullOrWhiteSpace(homeDoorPortalId))
             return;
 
-        if (manager.TryFindPortal(homeDoorPortalId, out IPortalRoute route) &&
-            route.Self is PortalTrigger3D door)
+        if (manager.TryFindPortal(homeDoorPortalId, out IPortalRoute portal) &&
+            portal.Self is PortalTrigger3D door)
         {
-            door.SetRequiredKeyId(locked ? homeKeyId : string.Empty);
+            door.SetRequiredKeyId(open ? string.Empty : homeKeyId);
         }
     }
 

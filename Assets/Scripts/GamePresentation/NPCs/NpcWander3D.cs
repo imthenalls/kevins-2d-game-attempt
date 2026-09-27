@@ -38,10 +38,8 @@ public class NpcWander3D : MonoBehaviour
     [SerializeField] private LayerMask wallLayers = ~0;
     [Tooltip("Layers whose members this NPC steers around so wanderers can pass, not deadlock.")]
     [SerializeField] private LayerMask neighborLayers = 0;
-    [Tooltip("Distance at which nearby NPCs start pushing this one aside.")]
-    [SerializeField, Min(0f)] private float neighborSeparation = 0.9f;
-    [Tooltip("How strongly nearby NPCs deflect movement (0 = ignore neighbors).")]
-    [SerializeField, Min(0f)] private float neighborSteerStrength = 1.5f;
+    [Tooltip("Local-avoidance tuning (neighbor separation + steer strength).")]
+    [SerializeField] private NpcLocalAvoidanceConfig avoidanceConfig = new NpcLocalAvoidanceConfig();
     [Tooltip("Route around buildings with NpcPathfinder3D when the target is not in a straight line.")]
     [SerializeField] private bool usePathfinding = true;
     [Tooltip("Log stall/repath decisions. Development only.")]
@@ -189,8 +187,8 @@ public class NpcWander3D : MonoBehaviour
         Vector3 direction = delta / distance;
 
         Vector3 separation = NpcLocalAvoidance.Compute(
-            position, body, bodyCollider, neighborLayers, neighborSeparation, gameObject.name.GetHashCode());
-        direction = NpcLocalAvoidance.Steer(direction, separation, neighborSteerStrength);
+            position, body, bodyCollider, neighborLayers, avoidanceConfig.NeighborSeparation, gameObject.name.GetHashCode());
+        direction = NpcLocalAvoidance.Steer(direction, separation, avoidanceConfig.NeighborSteerStrength);
 
         if (HitsWall(direction, distance))
         {

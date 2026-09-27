@@ -3,13 +3,17 @@ using System;
 namespace Game.Core
 {
     /// <summary>
-    /// Authoritative, saveable schedule state for one NPC: the current home-schedule phase and the
-    /// seconds left in it. Plain C# — no Unity dependency — so it can be tested without a scene.
+    /// Authoritative, saveable schedule state machine for one NPC. It owns the phase, its timer, and
+    /// every transition: Away→ToHome→Home, portal success/failure, retry timing, and the randomized
+    /// first Away leg. Inputs are timer expiries (via <see cref="Tick"/>) and
+    /// <see cref="NpcScheduleEvent"/> reports from the facade; the output is an
+    /// <see cref="NpcScheduleCommand"/> the MonoBehaviour executes. No Unity dependency, so the whole
+    /// schedule is unit-tested without a scene.
     ///
     /// Unity setup: none. Created and owned by GameSession (via NpcScheduleRepository); the
-    /// NpcSchedule3D MonoBehaviour is a thin facade that reads/writes it.
+    /// NpcSchedule3D MonoBehaviour is a thin facade that performs the returned Unity operations.
     ///
-    /// Runtime API: Phase, SecondsRemaining, Tick, SetPhase, Restore, IsHome, Changed.
+    /// Runtime API: Phase, SecondsRemaining, Tick, Handle, Restore, IsHome, Changed.
     /// </summary>
     public sealed class NpcScheduleState
     {
@@ -17,7 +21,7 @@ namespace Game.Core
         public NpcSchedulePhase Phase { get; private set; }
         public float SecondsRemaining { get; private set; }
 
-        /// <summary>Fired when the phase (or its timer) changes. Tick does not raise it.</summary>
+        /// <summary>Fired when the phase or its timer changes. Tick does not raise it.</summary>
         public event Action<NpcScheduleState> Changed;
 
         public NpcScheduleState(string npcId, NpcSchedulePhase phase, float secondsRemaining)
@@ -32,25 +36,82 @@ namespace Game.Core
 
         public bool IsHome => Phase == NpcSchedulePhase.Home;
 
-        /// <summary>Advances the phase timer. Called every frame, so it does not raise Changed.</summary>
-        public void Tick(float deltaSeconds)
+        /// <summary>
+        /// Advances the phase timer. Returns the command produced by an expiry: Away → RequestRoute
+        /// (and the phase becomes ToHome), Home → LeaveHomePortal. Returns None otherwise. Called every
+        /// frame, so it does not raise <see cref="Changed"/>.
+        /// </summary>
+        public NpcScheduleCommand Tick(float deltaSeconds, NpcScheduleConfig config)
         {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
             if (deltaSeconds <= 0f || SecondsRemaining <= 0f)
-                return;
+                return NpcScheduleCommand.None;
 
             SecondsRemaining = Math.Max(0f, SecondsRemaining - deltaSeconds);
+            if (SecondsRemaining > 0f)
+                return NpcScheduleCommand.None;
+
+            switch (Phase)
+            {
+                case NpcSchedulePhase.Away:
+                    SetPhase(NpcSchedulePhase.ToHome, 0f);
+                    return NpcScheduleCommand.RequestRoute;
+
+                case NpcSchedulePhase.Home:
+                    return NpcScheduleCommand.LeaveHomePortal;
+
+                default:
+                    return NpcScheduleCommand.None;
+            }
         }
 
-        /// <summary>Moves to a phase and resets its timer.</summary>
-        public void SetPhase(NpcSchedulePhase phase, float secondsRemaining)
+        /// <summary>Applies a facade-reported event and returns the resulting command.</summary>
+        public NpcScheduleCommand Handle(NpcScheduleEvent scheduleEvent, NpcScheduleConfig config)
         {
-            float next = Math.Max(0f, secondsRemaining);
-            if (phase == Phase && Math.Abs(next - SecondsRemaining) < 0.0001f)
-                return;
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
 
-            Phase = phase;
-            SecondsRemaining = next;
-            Changed?.Invoke(this);
+            switch (Phase)
+            {
+                case NpcSchedulePhase.ToHome:
+                    switch (scheduleEvent)
+                    {
+                        case NpcScheduleEvent.RouteFailed:
+                            SetPhase(NpcSchedulePhase.Away, config.RetrySeconds);
+                            return NpcScheduleCommand.CloseHomeDoor;
+
+                        case NpcScheduleEvent.ReachedEntrance:
+                            return NpcScheduleCommand.EnterHomePortal;
+
+                        case NpcScheduleEvent.PortalSucceeded:
+                            SetPhase(NpcSchedulePhase.Home, config.HomeSeconds);
+                            return NpcScheduleCommand.OpenHomeDoor;
+
+                        case NpcScheduleEvent.PortalFailed:
+                            SetPhase(NpcSchedulePhase.Away, config.AwaySeconds);
+                            return NpcScheduleCommand.CloseHomeDoor;
+                    }
+
+                    break;
+
+                case NpcSchedulePhase.Home:
+                    switch (scheduleEvent)
+                    {
+                        case NpcScheduleEvent.PortalSucceeded:
+                            SetPhase(NpcSchedulePhase.Away, config.AwaySeconds);
+                            return NpcScheduleCommand.CloseHomeDoor;
+
+                        case NpcScheduleEvent.PortalFailed:
+                            // Still inside; stay Home and try again after the retry delay.
+                            SetPhase(NpcSchedulePhase.Home, config.RetrySeconds);
+                            return NpcScheduleCommand.None;
+                    }
+
+                    break;
+            }
+
+            return NpcScheduleCommand.None;
         }
 
         /// <summary>Restores a saved snapshot (used by load).</summary>
@@ -58,6 +119,17 @@ namespace Game.Core
         {
             Phase = phase;
             SecondsRemaining = Math.Max(0f, secondsRemaining);
+            Changed?.Invoke(this);
+        }
+
+        private void SetPhase(NpcSchedulePhase phase, float secondsRemaining)
+        {
+            float next = Math.Max(0f, secondsRemaining);
+            if (phase == Phase && Math.Abs(next - SecondsRemaining) < 0.0001f)
+                return;
+
+            Phase = phase;
+            SecondsRemaining = next;
             Changed?.Invoke(this);
         }
     }
