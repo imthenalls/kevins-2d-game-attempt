@@ -55,8 +55,7 @@ public class NpcWander3D : MonoBehaviour
     private NpcController controller;
     private NpcPathfinder3D pathfinder;
     private WanderModel model;
-    private List<Vector3> path;
-    private int pathIndex;
+    private readonly RouteFollower route = new RouteFollower();
     private Vector3 desiredVelocity;
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
@@ -122,7 +121,7 @@ public class NpcWander3D : MonoBehaviour
         {
             if (!TryAcquireTarget())
             {
-                model.BeginIdle();
+                EnterIdle();
                 Stop();
                 return;
             }
@@ -154,7 +153,7 @@ public class NpcWander3D : MonoBehaviour
             else
             {
                 model.AbortTarget();
-                model.BeginIdle();
+                EnterIdle();
                 Stop();
             }
 
@@ -164,27 +163,19 @@ public class NpcWander3D : MonoBehaviour
         Move(position);
     }
 
-    // Drives toward the current waypoint, or the target when no route is active. Nearby NPCs are
-    // steered around; the static world blocks movement and lets recovery repath.
+    // Drives toward the current route waypoint, or the target when no route is active. Nearby NPCs
+    // are steered around; the static world blocks movement and lets recovery repath.
     private void Move(Vector3 position)
     {
+        // Consume any waypoints already reached before picking the next one, so a routed NPC walks
+        // the whole route. (Previously the index never advanced, freezing NPCs on the first node.)
+        route.Advance(position.x, position.z, WaypointReached);
+
         Vector3 waypoint;
-        bool onPath = path != null && pathIndex < path.Count;
-
-        if (onPath)
-        {
-            waypoint = path[pathIndex];
-        }
+        if (route.TryCurrent(out float waypointX, out float waypointZ))
+            waypoint = new Vector3(waypointX, position.y, waypointZ);
         else
-        {
-            if (path != null)
-            {
-                path = null; // exhausted; fall back to the target itself
-                pathIndex = 0;
-            }
-
             waypoint = new Vector3(model.TargetX, position.y, model.TargetZ);
-        }
 
         Vector3 delta = waypoint - position;
         delta.y = 0f;
@@ -233,10 +224,17 @@ public class NpcWander3D : MonoBehaviour
 
     private void FailTarget()
     {
-        path = null;
         model.FailTarget();
-        model.BeginIdle();
+        EnterIdle();
         Stop();
+    }
+
+    // Clears the active route and starts the idle pause. Every idle entry point routes through here
+    // so a stale route can never outlive its target.
+    private void EnterIdle()
+    {
+        route.Clear();
+        model.BeginIdle();
     }
 
     // Tries up to the model's candidate budget. A candidate is accepted when the straight line to it
@@ -257,8 +255,7 @@ public class NpcWander3D : MonoBehaviour
             if (!HitsWall(direction, distance))
             {
                 model.BeginTarget(candidateX, candidateZ, origin.x, origin.z);
-                path = null;
-                pathIndex = 0;
+                route.Clear();
                 return true;
             }
 
@@ -268,8 +265,7 @@ public class NpcWander3D : MonoBehaviour
                 if (routed != null && routed.Count > 0)
                 {
                     model.BeginTarget(candidateX, candidateZ, origin.x, origin.z);
-                    path = routed;
-                    pathIndex = 0;
+                    route.SetRoute(NpcRoute.FromXZ(routed));
                     return true;
                 }
             }
@@ -289,8 +285,7 @@ public class NpcWander3D : MonoBehaviour
         if (routed == null || routed.Count == 0)
             return false;
 
-        path = routed;
-        pathIndex = 0;
+        route.SetRoute(NpcRoute.FromXZ(routed));
         return true;
     }
 
@@ -332,6 +327,6 @@ public class NpcWander3D : MonoBehaviour
 
         Vector3 target = new Vector3(model.TargetX, 0f, model.TargetZ);
         Debug.Log($"[NpcWander3D] '{name}' {message}. pos={body.position} target={target} " +
-                  $"waypoint={pathIndex}/{ (path != null ? path.Count : 0) }", this);
+                  $"waypointsRemaining={route.Remaining}", this);
     }
 }

@@ -62,8 +62,7 @@ public class NpcSchedule3D : MonoBehaviour
     private NpcController controller;
     private NpcScheduleState model;
     private TravelRecoveryModel recovery;
-    private List<Vector3> path;
-    private int pathIndex;
+    private readonly RouteFollower route = new RouteFollower();
     private Vector3 desiredVelocity;
 
     private static readonly RaycastHit[] HitBuffer = new RaycastHit[16];
@@ -175,7 +174,7 @@ public class NpcSchedule3D : MonoBehaviour
     {
         // Restored mid-trip (or route lost): rebuild the route before moving, and restart stall
         // tracking at the current position so the fresh route gets its own grace period.
-        if (path == null)
+        if (!route.HasRoute)
         {
             if (!EnsureRoute())
             {
@@ -202,26 +201,17 @@ public class NpcSchedule3D : MonoBehaviour
             }
         }
 
-        // Skip over any waypoints already reached this frame.
-        bool atWaypoint = false;
-        while (pathIndex < path.Count)
-        {
-            Vector3 toWaypoint = path[pathIndex] - position;
-            toWaypoint.y = 0f;
-            if (toWaypoint.magnitude > WaypointReached)
-                break;
+        // Consume waypoints already reached this frame, then head for the current one. When the
+        // route is exhausted the NPC has arrived at the door approach.
+        bool atWaypoint = route.Advance(position.x, position.z, WaypointReached) > 0;
 
-            pathIndex++;
-            atWaypoint = true;
-        }
-
-        if (pathIndex >= path.Count)
+        if (!route.TryCurrent(out float waypointX, out float waypointZ))
         {
             EnterHome();
             return;
         }
 
-        Vector3 delta = path[pathIndex] - position;
+        Vector3 delta = new Vector3(waypointX, position.y, waypointZ) - position;
         delta.y = 0f;
         float distanceToWaypoint = delta.magnitude;
         Vector3 direction = delta / distanceToWaypoint;
@@ -231,14 +221,12 @@ public class NpcSchedule3D : MonoBehaviour
             position, body, bodyCollider, neighborLayers, neighborSeparation, StableSeed());
         direction = NpcLocalAvoidance.Steer(direction, separation, neighborSteerStrength);
 
-        // Do not drive into the static world; standing still lets the recovery model repath.
+        // Do not drive into the static world, but keep ticking recovery so a permanently blocked NPC
+        // still repaths (then abandons the trip) instead of pressing into the wall forever.
         if (HitsWall(direction, distanceToWaypoint))
-        {
             HaltBody();
-            return;
-        }
-
-        Drive(direction * movementConfig.MoveSpeed);
+        else
+            Drive(direction * movementConfig.MoveSpeed);
 
         TravelRecoveryDecision decision =
             recovery.Evaluate(position.x, position.z, Time.deltaTime, atWaypoint);
@@ -266,24 +254,27 @@ public class NpcSchedule3D : MonoBehaviour
         if (homeEntrance == null)
             return false;
 
-        path = pathfinder != null
-            ? pathfinder.FindPath(transform.position, homeEntrance.position)
-            : new List<Vector3> { homeEntrance.position };
-
-        if (path == null || path.Count == 0)
+        if (pathfinder == null)
         {
-            path = null;
+            route.SetRoute(new List<PathPoint> { new PathPoint(homeEntrance.position.x, homeEntrance.position.z) });
+            return true;
+        }
+
+        List<Vector3> found = pathfinder.FindPath(transform.position, homeEntrance.position);
+        if (found == null || found.Count == 0)
+        {
+            route.Clear();
             return false;
         }
 
-        pathIndex = 0;
+        route.SetRoute(NpcRoute.FromXZ(found));
         return true;
     }
 
     private void EnterHome()
     {
         HaltBody();
-        path = null;
+        route.Clear();
 
         PortalManager manager = PortalManager.Instance;
         // Route through the town door so its key requirement is enforced for the NPC.
@@ -320,7 +311,7 @@ public class NpcSchedule3D : MonoBehaviour
 
         // The owner has left, so the door locks behind them.
         SetHomeDoorLocked(true);
-        path = null;
+        route.Clear();
         model.SetPhase(NpcSchedulePhase.Away, scheduleConfig.AwaySeconds);
         if (wanderer != null)
             wanderer.enabled = true;
@@ -387,7 +378,7 @@ public class NpcSchedule3D : MonoBehaviour
     // Ends the current trip, keeps the door locked, and resumes wandering after the retry delay.
     private void CancelTrip(float retrySeconds)
     {
-        path = null;
+        route.Clear();
         HaltBody();
         SetHomeDoorLocked(true);
         model.SetPhase(NpcSchedulePhase.Away, retrySeconds);
@@ -415,6 +406,6 @@ public class NpcSchedule3D : MonoBehaviour
             return;
 
         Debug.Log($"[NpcSchedule3D] '{name}' {message}. phase={model?.Phase} " +
-                  $"pos={body.position} route={pathIndex}/{(path != null ? path.Count : 0)}", this);
+                  $"pos={body.position} waypointsRemaining={route.Remaining}", this);
     }
 }

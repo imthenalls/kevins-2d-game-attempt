@@ -33,10 +33,8 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
     private int phase; // 0 = approach, 1 = pass through
     private Vector2 passTarget;
 
-    private List<Vector2> path;
-    private int pathIndex;
-    private List<Vector2> passPath;
-    private int passIndex;
+    private readonly RouteFollower approachRoute = new RouteFollower();
+    private readonly RouteFollower passRoute = new RouteFollower();
 
     protected override void Awake()
     {
@@ -58,8 +56,13 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
             return;
         }
 
-        path = Pathfinder != null ? Pathfinder.FindPath(Body.position, gate.transform.position) : null;
-        pathIndex = 0;
+        approachRoute.Clear();
+        if (Pathfinder != null)
+        {
+            List<Vector2> found = Pathfinder.FindPath(Body.position, gate.transform.position);
+            if (found != null && found.Count > 0)
+                approachRoute.SetRoute(NpcRoute.FromXY(found));
+        }
     }
 
     protected override void TickBehavior()
@@ -107,15 +110,20 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
             return;
         }
 
-        if (path != null)
+        if (approachRoute.HasRoute)
         {
-            if (FollowPath(path, ref pathIndex))
+            Vector2 position = Body.position;
+            approachRoute.Advance(position.x, position.y, doorConfig.WaypointThreshold);
+            if (approachRoute.TryCurrent(out float waypointX, out float waypointY))
             {
-                // Reached the end of the path but still not in range; wait/attempt next tick.
-                StopMoving();
-                if (gate.CanInteract(transform.position))
-                    AttemptUse();
+                MoveToward(new Vector2(waypointX, waypointY), Config.MoveSpeed);
+                return;
             }
+
+            // Reached the end of the path but still not in range; wait/attempt next tick.
+            StopMoving();
+            if (gate.CanInteract(transform.position))
+                AttemptUse();
             return;
         }
 
@@ -156,20 +164,31 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
             direction = Vector2.up;
 
         passTarget = (Vector2)gate.transform.position + direction.normalized * doorConfig.PassThroughDistance;
-        passPath = Pathfinder != null ? Pathfinder.FindPath(Body.position, passTarget) : null;
-        passIndex = 0;
+        passRoute.Clear();
+        if (Pathfinder != null)
+        {
+            List<Vector2> found = Pathfinder.FindPath(Body.position, passTarget);
+            if (found != null && found.Count > 0)
+                passRoute.SetRoute(NpcRoute.FromXY(found));
+        }
+
         phase = 1;
     }
 
     private void TickPass()
     {
-        if (passPath != null)
+        if (passRoute.HasRoute)
         {
-            if (FollowPath(passPath, ref passIndex))
+            Vector2 position = Body.position;
+            passRoute.Advance(position.x, position.y, doorConfig.WaypointThreshold);
+            if (passRoute.TryCurrent(out float waypointX, out float waypointY))
             {
-                StopMoving();
-                Complete();
+                MoveToward(new Vector2(waypointX, waypointY), Config.MoveSpeed);
+                return;
             }
+
+            StopMoving();
+            Complete();
             return;
         }
 
@@ -181,25 +200,6 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
         }
 
         MoveToward(passTarget, Config.MoveSpeed);
-    }
-
-    // Advances through a list of waypoints. Returns true when the path is exhausted.
-    private bool FollowPath(List<Vector2> waypoints, ref int index)
-    {
-        while (index < waypoints.Count)
-        {
-            Vector2 waypoint = waypoints[index];
-            if (Arrived(waypoint, doorConfig.WaypointThreshold))
-            {
-                index++;
-                continue;
-            }
-
-            MoveToward(waypoint, Config.MoveSpeed);
-            return false;
-        }
-
-        return true;
     }
 
     private SlidingDoor FindNearestGateFallback()

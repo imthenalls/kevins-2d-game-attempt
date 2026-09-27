@@ -67,6 +67,7 @@ Migrate top-down. Update this table as items land.
 | ✅ | `NPCs/NpcProximityMelee3D.cs`, `NpcProximityMeleeController.cs` | Engage/chase/attack/disengage → `Game.Core.MeleeEngagementPolicy` (both facades done) |
 | ✅ | `NPCs/NpcDashMelee3D.cs`, `NpcDashMeleeController.cs` | Approach/Warning/Dash/Swing/Recovery → `Game.Core.NpcDashMeleeModel` (both facades done) |
 | ✅ | `NPCs/NpcWander3D.cs`, `NpcWanderBehavior.cs` | Wander target/idle/stall/arrival + dead-end memory → `Game.Core.WanderModel` (both facades done; stall/repath recovery shared via `TravelRecoveryModel`) |
+| ✅ | `NPCs/NpcWander3D.cs`, `NpcSchedule3D.cs`, `NpcWanderBehavior.cs`, `NpcChaseNavigator.cs`, `NpcUseDoorBehavior.cs` | Route/waypoint following → `Game.Core.RouteFollower`; local-avoidance math → `Game.Core.LocalAvoidance` (the facades only sample physics and apply motion) |
 | ✅ | `NPCs/NpcSchedule3D.cs` | Home-trip stall/repath/abandon policy → `Game.Core.TravelRecoveryModel` (facade applies movement, pathfinding and portal travel) |
 | ✅ | `NPCs/NpcBehaviorManager.cs` | Weighted behavior selection → `Game.Core.NpcBehaviorScheduler` |
 | ✅ | `NPCs/NpcIdleBehavior.cs` | Idle-timer rule → `Game.Core.IdleTimer` |
@@ -102,10 +103,11 @@ Legend: ⬜ todo, 🟨 in progress, ✅ done.
 
 **Landed so far (Core types in `Assets/Scripts/GameData/`):** `GridPathfinder` + `IWalkabilityGrid`,
 `MeleeEngagementPolicy`, `NpcDashMeleeModel` (+ `NpcDashPhase`/`NpcDashIntent`/`NpcDashDecision`),
-`AttackModel`, `WanderModel`, `TravelRecoveryModel`, `NpcBehaviorScheduler`, `IdleTimer`,
-`DamagePolicy`. The 2D and 3D pathfinder/melee/dash/attack/wander/schedule components and the
-behavior manager/idle/receiver are now thin facades over them. Engine-free tests:
-`Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,TravelRecoveryModelTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
+`AttackModel`, `WanderModel`, `TravelRecoveryModel`, `RouteFollower` (+ `PathPoint`),
+`LocalAvoidance` (+ `NeighborSample`), `NpcBehaviorScheduler`, `IdleTimer`, `DamagePolicy`. The 2D and
+3D pathfinder/melee/dash/attack/wander/schedule/chase/door components and the behavior manager/idle/
+receiver are now thin facades over them. Engine-free tests:
+`Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,TravelRecoveryModelTests,RouteFollowerTests,LocalAvoidanceTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
 
 Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, `DoorLockPolicy`, `PortalAccessPolicy`, and `WeaponSwingPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
 

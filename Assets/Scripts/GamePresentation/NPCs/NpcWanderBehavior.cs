@@ -25,8 +25,7 @@ public class NpcWanderBehavior : NpcBehaviorBase
 
     private Collider2D[] ownColliders;
     private WanderModel model;
-    private List<Vector2> path;
-    private int pathIndex;
+    private readonly RouteFollower route = new RouteFollower();
 
     private static readonly RaycastHit2D[] hitBuffer = new RaycastHit2D[16];
 
@@ -46,7 +45,7 @@ public class NpcWanderBehavior : NpcBehaviorBase
     }
 
     /// <summary>True when the behavior is currently following a computed path.</summary>
-    public bool HasPath => path != null && path.Count > 0;
+    public bool HasPath => route.HasRoute;
 
     /// <summary>
     /// Re-selects a destination and rebuilds the path without waiting for a new activation. Used by
@@ -60,7 +59,7 @@ public class NpcWanderBehavior : NpcBehaviorBase
 
     protected override void TickBehavior()
     {
-        if (path != null)
+        if (route.HasRoute)
         {
             FollowPath();
             return;
@@ -126,40 +125,30 @@ public class NpcWanderBehavior : NpcBehaviorBase
     /// <summary>Builds a grid path to the current target when pathfinding is enabled.</summary>
     private void BuildPath()
     {
-        path = null;
-        pathIndex = 0;
+        route.Clear();
 
         if (!wanderConfig.UsePathfinding || Pathfinder == null || Body == null || !model.HasTarget)
             return;
 
         List<Vector2> computed = Pathfinder.FindPath(Body.position, new Vector2(model.TargetX, model.TargetZ));
         if (computed != null && computed.Count > 0)
-            path = computed;
+            route.SetRoute(NpcRoute.FromXY(computed));
     }
 
     /// <summary>Follows the current path waypoint by waypoint; straight-line is the fallback.</summary>
     private void FollowPath()
     {
-        if (pathIndex >= path.Count)
+        Vector2 position = Body.position;
+        route.Advance(position.x, position.y, wanderConfig.ArrivalThreshold);
+
+        if (!route.TryCurrent(out float waypointX, out float waypointY))
         {
             StopMoving();
             Complete();
             return;
         }
 
-        Vector2 waypoint = path[pathIndex];
-        if (Arrived(waypoint, wanderConfig.ArrivalThreshold))
-        {
-            pathIndex++;
-            if (pathIndex >= path.Count)
-            {
-                StopMoving();
-                Complete();
-            }
-            return;
-        }
-
-        MoveToward(waypoint, Config.MoveSpeed);
+        MoveToward(new Vector2(waypointX, waypointY), Config.MoveSpeed);
     }
 
     /// <summary>

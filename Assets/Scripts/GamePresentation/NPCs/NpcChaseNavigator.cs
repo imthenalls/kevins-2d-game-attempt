@@ -24,8 +24,7 @@ public sealed class NpcChaseNavigator : MonoBehaviour
     [SerializeField, Min(1f)] private float maxPathDistance = 25f;
 
     private NpcPathfinder3D pathfinder;
-    private readonly List<Vector3> path = new List<Vector3>();
-    private int pathIndex;
+    private readonly RouteFollower route = new RouteFollower();
     private float nextRepathAt;
     private Vector3 lastPathGoal;
 
@@ -50,8 +49,7 @@ public sealed class NpcChaseNavigator : MonoBehaviour
         // pathable range. A wall within directRange must still be routed around, not jammed into.
         if (HasClearLine(self, target) || distance > maxPathDistance)
         {
-            path.Clear();
-            pathIndex = 0;
+            route.Clear();
             return flat / distance;
         }
 
@@ -59,21 +57,19 @@ public sealed class NpcChaseNavigator : MonoBehaviour
         {
             nextRepathAt = Time.time + Mathf.Max(0.05f, repathInterval);
             lastPathGoal = target;
-            pathIndex = 0;
-            path.Clear();
+            route.Clear();
 
             List<Vector3> found = pathfinder.FindPath(self, target);
             if (found != null && found.Count > 0)
-                path.AddRange(found);
+                route.SetRoute(NpcRoute.FromXZ(found));
         }
 
-        while (pathIndex < path.Count)
+        route.Advance(self.x, self.z, WaypointReached);
+        if (route.TryCurrent(out float waypointX, out float waypointZ))
         {
-            Vector3 toWaypoint = path[pathIndex] - self;
-            toWaypoint.y = 0f;
-            if (toWaypoint.magnitude > WaypointReached)
+            Vector3 toWaypoint = new Vector3(waypointX - self.x, 0f, waypointZ - self.z);
+            if (toWaypoint.sqrMagnitude > 0.0001f)
                 return toWaypoint.normalized;
-            pathIndex++;
         }
 
         // No usable path: fall back to a direct step so the enemy at least tries.
