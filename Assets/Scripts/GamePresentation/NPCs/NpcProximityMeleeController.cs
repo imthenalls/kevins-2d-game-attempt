@@ -51,32 +51,33 @@ public class NpcProximityMeleeController : MonoBehaviour
         if (player == null)
             player = FindAnyObjectByType<PlayerController2D>();
 
-        if (player == null || player.Stats == null || !player.Stats.IsAlive ||
-            npcController == null || attacker == null || !attacker.isActiveAndEnabled)
+        bool hasTarget = player != null && player.Stats != null && player.Stats.IsAlive;
+        if (!hasTarget || npcController == null || attacker == null || !attacker.isActiveAndEnabled)
         {
             LeaveCombatState();
-            return;
-        }
-
-        NpcBehaviorState state = npcController.BehaviorState;
-        if (state == NpcBehaviorState.Talking || state == NpcBehaviorState.Disabled)
-        {
-            StopMoving();
-            IsEngaged = false;
             return;
         }
 
         Vector2 toPlayer = player.transform.position - transform.position;
-        float range = attacker.AttackRange;
 
-        // The engage/attack decision lives in Game.Core (engine-free, shared with 3D).
-        // Multiplier 1 keeps the 2D behavior: out of range drops combat (movement is behavior-driven).
-        MeleeEngagement decision = MeleeEngagementPolicy.Evaluate(toPlayer.magnitude, range, 1f);
+        // The engage/blocked/attack/disengage decision lives in Game.Core (engine-free, shared with
+        // 3D). Multiplier 1 keeps the 2D behavior: out of attack range drops combat (movement is
+        // behavior-driven; the 2D melee never chases).
+        MeleeEngagement decision = MeleeEngagementPolicy.Evaluate(
+            toPlayer.magnitude, attacker.AttackRange, 1f,
+            targetAlive: true, npcController.BehaviorState);
 
-        if (decision == MeleeEngagement.Disengage)
+        switch (decision)
         {
-            LeaveCombatState();
-            return;
+            case MeleeEngagement.Idle:
+            case MeleeEngagement.Disengage:
+                LeaveCombatState();
+                return;
+
+            case MeleeEngagement.Blocked:
+                StopMoving();
+                IsEngaged = false;
+                return;
         }
 
         IsEngaged = true;

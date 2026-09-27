@@ -10,6 +10,14 @@ and repeatedly calls `CombatAttacker.TryAttack()`.
 The attack component's cooldown prevents attack spam. Its `OnAttackStarted` event drives
 `EquippedWeaponVisual`, so NPC and player swords use the same swing and impact timing.
 
+## Architecture
+
+The engage/blocked/chase/attack/disengage decision lives in `Game.Core.MeleeEngagementPolicy` and the
+chase/disengage/repath tuning in `Game.Core.NpcMeleeEngagementConfig`. Both the 2D
+`NpcProximityMeleeController` and the 3D `NpcProximityMelee3D` forward into that policy and only do
+the Unity work: player lookup, pathing, velocity, facing, and `CombatAttacker.TryAttack()`. The rule
+is engine-free and unit-tested (`MeleeEngagementPolicyTests`).
+
 ## Unity Setup
 
 Add these components to the NPC root:

@@ -71,7 +71,7 @@ Migrate top-down. Update this table as items land.
 | ✅ | `NPCs/NpcSchedule3D.cs` | Home-trip stall/repath/abandon policy → `Game.Core.TravelRecoveryModel`; route following → `Game.Core.RouteFollower`; the **schedule state machine** (Away→ToHome→Home, portal success/failure, retry timing, randomized initial time) → `Game.Core.NpcScheduleState` with events in / commands out. Tuning (entry radius, waypoint threshold, retry, initial fraction) in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. |
 | ✅ | `NPCs/NpcMemory.cs` | Persistent gate knowledge + remember/skip/forget rules → `Game.Core.NpcMemoryModel`, owned by `GameSession` (saved via `NpcSaveEntry.lockedGates`); the facade resolves `SlidingDoor` + key holder into ids/booleans. |
 | ✅ | `NPCs/NpcPerception.cs` | Scan radius config → `Game.Core.NpcPerceptionConfig`; nearest-target/gate ranking (open/invalid filtered) → `Game.Core.NpcTargetSelection` (+`NpcTargetCandidate`). The `Physics2D` overlap sampling and component resolution stay in the adapter, and player discovery uses `PlayerControllerBase`. |
-| ⬜ | `NPCs/NpcProximityMelee3D.cs`, `NpcProximityMeleeController.cs` | Chase/disengage tuning + target-validity and behavior-blocked transitions → extend `Game.Core.MeleeEngagementPolicy` to take alive/behavior inputs and return an intent. |
+| ✅ | `NPCs/NpcProximityMelee3D.cs`, `NpcProximityMeleeController.cs` | Chase/disengage/repath tuning → `Game.Core.NpcMeleeEngagementConfig`; the policy takes alive + behavior-state inputs and returns `Idle` / `Blocked` / `Disengage` / `Chase` / `Attack`. Both components only apply the intent. |
 | ✅ | `NPCs/NpcInventoryDatabase.cs` | Starting-inventory seeding policy + "has this NPC been initialized?" → `Game.Core.NpcStartingInventory` DTOs + `Game.Core.NpcInventoryInitializationService` (owned by `GameSession`), using `InventoryModel.IsInitialized` (not "has an item"), saved via `NpcSaveEntry.inventoryInitialized` (v10). The facade only parses JSON, resolves `ItemData`, and applies the seed. |
 | ✅ | `NPCs/NpcBehaviorManager.cs` | Weighted behavior selection → `Game.Core.NpcBehaviorScheduler` |
 | ✅ | `NPCs/NpcIdleBehavior.cs` | Idle-timer rule → `Game.Core.IdleTimer` |
@@ -116,16 +116,16 @@ receiver are now thin facades over them. Engine-free tests:
 Also in Core: `NpcBehaviorState` / `NpcType` enums, `NpcMemoryModel` (+ repo/service/snapshot),
 `NpcScheduleState` (+ event/command/config), `NpcStartingInventory`/`NpcStartingItem`,
 `NpcInventoryInitializationModel`/`NpcInventoryInitializationService` (+ snapshot),
-`NpcPerceptionConfig`, `NpcTargetSelection` (+ `NpcTargetCandidate`),
+`NpcPerceptionConfig`, `NpcTargetSelection` (+ `NpcTargetCandidate`), `NpcMeleeEngagementConfig`,
 `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw
 `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`,
 `DoorLockPolicy`, `PortalAccessPolicy`, and `WeaponSwingPolicy`. `NpcKeyring` is now a facade over
 `Game.Core.Keyring`.
 
-**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and
-Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. **This is not yet
-true of every file.** The only file still tracked as debt is `NpcProximityMelee3D` (residual engagement
-decisions).
+**All tracked `GamePresentation` debt is migrated.** The remaining entries below are orchestration or
+serialization adapters — one-line conditions and Unity instantiation/animation — which the guardrail
+intentionally leaves in the Shell. The only documented exception is the player's continuous physics
+position (`PositionModel` transitional compromise, not a rule).
 
 ## Known-good (do not "fix")
 

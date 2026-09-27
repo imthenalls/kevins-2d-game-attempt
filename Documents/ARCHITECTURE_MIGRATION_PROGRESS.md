@@ -30,23 +30,14 @@ safe to commit. Engine-free tests live in `Assets/Tests/EditMode/` and are mirro
 | NPC home-schedule state machine | `5bc58d1` | `Game.Core.NpcScheduleState` is now a state machine: events in (`NpcScheduleEvent`) / commands out (`NpcScheduleCommand`). All schedule tuning in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. `NpcSchedule3D` is a facade. Tests: `NpcScheduleStateTests`. |
 | NPC starting-inventory seeding | `9400249` | Parsed definitions → `Game.Core.NpcStartingInventory`/`NpcStartingItem`; seed-once state → `Game.Core.NpcInventoryInitializationModel`/`NpcInventoryInitializationService` owned by `GameSession` (saved via `NpcSaveEntry.inventoryInitialized`, v10). `InventoryModel.IsInitialized` replaces the old "has ≥1 item" check, so an emptied inventory is not reseeded. `NpcInventoryDatabase` is a facade. Tests: `NpcInventoryInitializationTests`. |
 | NPC perception tuning + target ranking | `4a069c4` | Scan radius → `Game.Core.NpcPerceptionConfig`; nearest-target/gate ranking (open/invalid filtered) → `Game.Core.NpcTargetSelection` (+`NpcTargetCandidate`). `NpcPerception` only samples `Physics2D`, resolves components, and finds the player through `PlayerControllerBase` (works in 2D and 3D). Tests: `NpcTargetSelectionTests`. |
+| NPC melee engagement decisions | (this handoff commit) | Chase/disengage/repath tuning → `Game.Core.NpcMeleeEngagementConfig`; `Game.Core.MeleeEngagementPolicy` now takes target-alive + behavior-state inputs and returns `Idle` / `Blocked` / `Disengage` / `Chase` / `Attack`. Both `NpcProximityMelee3D` and `NpcProximityMeleeController` only apply the intent (lookup, pathing, velocity, attack stay in the Shell). Tests: `MeleeEngagementPolicyTests`. |
 
-## Remaining migrations (in order)
+## Remaining migrations
 
-Follow the same pattern: add Core type(s) + a config, make the MonoBehaviour a facade, add engine-free
-tests, run `verify-all`, update the two docs above, commit.
-
-### 1. `NpcProximityMelee3D` — remaining engagement decisions → Core
-
-- **Violation:** `Assets/Scripts/GamePresentation/NPCs/NpcProximityMelee3D.cs` (and its 2D sibling
-  `NpcProximityMeleeController.cs`). It uses `MeleeEngagementPolicy`, but `chaseSpeed`,
-  `disengageRangeMultiplier`, `repathInterval` are raw serialized fields, and target validity /
-  behavior-blocked transitions / combat enter-exit are decided in the MonoBehaviour.
-- **Target:** add a Core `NpcMeleeEngagementConfig` (or extend the existing config). Expand
-  `Game.Core.MeleeEngagementPolicy` to accept target-alive and behavior-state inputs and return an
-  intent (`Idle` / `Blocked` / `Chase` / `Attack` / `Disengage`). Keep player lookup, path queries,
-  velocity, and attack execution in the Shell. `IsEngaged` stays transient presentation state.
-- **Tests:** intent table across range/alive/blocked combinations.
+All tracked Engine-Free Core migrations are complete. The debt table in
+[ARCHITECTURE_GUARDRAILS.md](ARCHITECTURE_GUARDRAILS.md) has no open rows; the only remaining entry
+is the documented transitional compromise (the player's continuous physics position). Re-audit the
+NPC folder before starting new work.
 
 ## Known open item (not part of this migration)
 

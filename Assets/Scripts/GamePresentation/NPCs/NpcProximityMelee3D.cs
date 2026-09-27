@@ -27,14 +27,8 @@ public class NpcProximityMelee3D : MonoBehaviour
     [SerializeField] private Rigidbody body;
     [SerializeField] private CombatAttacker attacker;
 
-    [Tooltip("Movement speed while closing on the player.")]
-    [SerializeField, Min(0f)] private float chaseSpeed = 2.6f;
-
-    [Tooltip("Give up and resume wandering once the player is this many attack ranges away.")]
-    [SerializeField, Min(1f)] private float disengageRangeMultiplier = 4f;
-
-    [Tooltip("How often to recompute the chase path (seconds).")]
-    [SerializeField, Min(0.05f)] private float repathInterval = 0.4f;
+    [Header("Config (Game.Data)")]
+    [SerializeField] private NpcMeleeEngagementConfig config = new NpcMeleeEngagementConfig();
 
     private NpcChaseNavigator navigator;
 
@@ -51,55 +45,64 @@ public class NpcProximityMelee3D : MonoBehaviour
         navigator = GetComponent<NpcChaseNavigator>();
     }
 
+    private void OnValidate()
+    {
+        config.ChaseSpeed = Mathf.Max(0f, config.ChaseSpeed);
+        config.DisengageRangeMultiplier = Mathf.Max(1f, config.DisengageRangeMultiplier);
+        config.RepathInterval = Mathf.Max(0.05f, config.RepathInterval);
+    }
+
     private void LateUpdate()
     {
         if (player == null)
             player = FindAnyObjectByType<PlayerControllerBase>();
 
-        if (player == null || player.Stats == null || !player.Stats.IsAlive ||
-            npcController == null || attacker == null || !attacker.isActiveAndEnabled)
+        bool hasTarget = player != null && player.Stats != null && player.Stats.IsAlive;
+        if (!hasTarget || npcController == null || attacker == null || !attacker.isActiveAndEnabled)
         {
             LeaveCombatState();
-            return;
-        }
-
-        NpcBehaviorState state = npcController.BehaviorState;
-        if (state == NpcBehaviorState.Talking || state == NpcBehaviorState.Disabled)
-        {
-            StopMoving();
-            IsEngaged = false;
             return;
         }
 
         Vector3 toPlayer = player.transform.position - transform.position;
         toPlayer.y = 0f;
         float distance = toPlayer.magnitude;
-        float range = attacker.AttackRange;
 
-        // The engage/chase/attack decision lives in Game.Core (engine-free, shared with 2D).
-        MeleeEngagement decision = MeleeEngagementPolicy.Evaluate(distance, range, disengageRangeMultiplier);
+        // The engage/blocked/chase/attack/disengage decision lives in Game.Core (engine-free, shared
+        // with 2D); this component only applies the returned intent.
+        MeleeEngagement decision = MeleeEngagementPolicy.Evaluate(
+            distance, attacker.AttackRange, config.DisengageRangeMultiplier,
+            targetAlive: true, npcController.BehaviorState);
 
-        if (decision == MeleeEngagement.Disengage)
+        switch (decision)
         {
-            LeaveCombatState();
-            return;
+            case MeleeEngagement.Idle:
+            case MeleeEngagement.Disengage:
+                LeaveCombatState();
+                return;
+
+            case MeleeEngagement.Blocked:
+                StopMoving();
+                IsEngaged = false;
+                return;
+
+            case MeleeEngagement.Chase:
+                IsEngaged = true;
+                npcController.SetBehaviorState(NpcBehaviorState.Combat);
+                // Route around obstacles instead of pressing straight into them.
+                Vector3 step = navigator != null
+                    ? navigator.TryGetStepDirection(player.transform.position, transform.position, config.RepathInterval)
+                    : (distance > 0.0001f ? toPlayer / distance : Vector3.zero);
+                body.linearVelocity = step * config.ChaseSpeed;
+                return;
+
+            default: // Attack
+                IsEngaged = true;
+                npcController.SetBehaviorState(NpcBehaviorState.Combat);
+                StopMoving();
+                attacker.TryAttack();
+                return;
         }
-
-        IsEngaged = true;
-        npcController.SetBehaviorState(NpcBehaviorState.Combat);
-
-        if (decision == MeleeEngagement.Chase)
-        {
-            // Route around obstacles instead of pressing straight into them.
-            Vector3 step = navigator != null
-                ? navigator.TryGetStepDirection(player.transform.position, transform.position, repathInterval)
-                : (distance > 0.0001f ? toPlayer / distance : Vector3.zero);
-            body.linearVelocity = step * chaseSpeed;
-            return;
-        }
-
-        StopMoving();
-        attacker.TryAttack();
     }
 
     private void OnDisable()

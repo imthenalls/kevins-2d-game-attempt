@@ -738,7 +738,7 @@ public static class Town3DSceneBuilder
         AddWeaponRig(brute, usePlayerInput: false, damage: 16, range: 1.8f, duration: 0.45f, cooldown: 1.2f);
 
         var melee = brute.AddComponent<NpcProximityMelee3D>();
-        SetFloatField(melee, "chaseSpeed", 1.8f);
+        SetNestedFloat(melee, "config", "ChaseSpeed", 1.8f);
 
         var visual = new GameObject("NpcVisual");
         visual.transform.SetParent(brute.transform, false);

@@ -11,11 +11,12 @@ by convention. Most authoritative state — NPC state, inventory contents, tunin
 facts, quests, equipment, hotbar, keys, player health, and the save shape — lives in the Core, and
 the player's continuous physics position is a documented transitional compromise.
 
-**However, the migration is not complete.** A re-audit of the NPC folder found one remaining
-Shell-owned rule: residual `NpcProximityMelee3D` engagement decisions. It is tracked in **Deviations**
-below and must not be described as migrated. (`NpcMemory`, the `NpcSchedule3D` state machine,
-`NpcInventoryDatabase` starting-inventory seeding, and `NpcPerception` target ranking were migrated —
-see **Migrated since the first audit**.)
+**The tracked migration is complete.** Every Shell-owned NPC rule and persistent state found by the
+first re-audit has moved into Core (`NpcMemory`, the `NpcSchedule3D` state machine,
+`NpcInventoryDatabase` starting-inventory seeding, `NpcPerception` target ranking, and the residual
+`NpcProximityMelee3D` engagement decisions). The only remaining deviation is the documented
+transitional compromise for the player's continuous physics position. See **Migrated since the first
+audit**.
 
 This is also the project's named architecture: **Engine-Free Core**.
 
@@ -112,26 +113,28 @@ This is also the project's named architecture: **Engine-Free Core**.
   `Physics2D`, resolves components, and discovers the player through `PlayerControllerBase` instead of
   `PlayerController2D`, so the same component works in 2D and 3D. Engine-free tests:
   `Assets/Tests/EditMode/NpcTargetSelectionTests.cs`.
+- **NPC melee engagement decisions** — chase/disengage/repath tuning moved into
+  `Game.Core.NpcMeleeEngagementConfig`, and `Game.Core.MeleeEngagementPolicy` now takes target-alive
+  and behavior-state inputs and returns `Idle` / `Blocked` / `Disengage` / `Chase` / `Attack`.
+  `NpcProximityMelee3D` and `NpcProximityMeleeController` are now facades that only apply the returned
+  intent (player lookup, pathing, velocity, and attack execution stay in the Shell). Engine-free tests:
+  `Assets/Tests/EditMode/MeleeEngagementPolicyTests.cs`.
 
 ## Deviations — authoritative state / rules still in Presentation
 
 | # | State / rule | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Residual engagement decisions | `NPCs/NpcProximityMelee3D.cs` | Uses `MeleeEngagementPolicy`, but tuning fields and target-validity/behavior-blocked transitions remain in the MonoBehaviour. | Extend the Core policy to take alive/behavior inputs and return an intent. |
 | — | Player continuous physics position | `PlayerController2D/3D` | Grid-anchored via `PositionModel`; the raw physics transform is still Shell-owned. | Documented transitional compromise. |
 
 ## Practical consequence
 
-The migration is **in progress**, not complete. Most authoritative state lives in the Engine-Free
-Core with fast engine-free tests, but the one deviation above still places gameplay rules in
-`Game.Presentation`.
+The tracked migration is complete: no authoritative NPC rule or saveable state is left in
+`Game.Presentation`. The only remaining item is the deliberate position compromise, which is
+grid-anchored by `PositionModel`.
 
 ## Recommended migration order
 
-Work top-down; each step must keep `Tools/verify-all.ps1` green and add engine-free tests.
-
-1. **`NpcProximityMelee3D`** → extend `MeleeEngagementPolicy` to return an intent (Idle / Blocked /
-   Chase / Attack / Disengage) from tuning + alive/behavior inputs.
+None outstanding. Re-audit the NPC folder (and any new systems) before relying on this document.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.
