@@ -1,32 +1,5 @@
+using Game.Core;
 using UnityEngine;
-
-/// <summary>Which boolean rule to toggle via <see cref="RuleTrigger2D"/>.</summary>
-public enum SceneRuleTarget
-{
-    InventoryLocked,
-    SavingEnabled,
-    PlayerInvincible,
-    PlayerAttackEnabled,
-    PlayerMovementEnabled,
-    EnemiesInvincible,
-    NpcAttackEnabled,
-    NpcMovementEnabled,
-    NpcDialogueEnabled,
-    PortalsBlocked,
-    DotEnabled,
-    HotEnabled,
-}
-
-/// <summary>Which physics event fires the rule change.</summary>
-public enum RuleTriggerFireOn
-{
-    /// <summary>Fire only when the activator enters the trigger.</summary>
-    Enter,
-    /// <summary>Fire only when the activator exits the trigger.</summary>
-    Exit,
-    /// <summary>Fire on enter with <c>value</c>, and on exit with <c>!value</c>.</summary>
-    Both,
-}
 
 /// <summary>
 /// One-shot or repeatable trigger that calls a single boolean setter on
@@ -70,40 +43,73 @@ public class RuleTrigger2D : MonoBehaviour
              "Re-enable the component to reset it.")]
     [SerializeField] private bool oneShot;
 
-    private bool _fired;
+    [Tooltip("Optional stable id. When set, a fired one-shot is remembered in WorldFacts so it " +
+             "survives scene reloads and saves.")]
+    [SerializeField] private string triggerId;
+
+    // The Enter/Exit/Both and one-shot rules live in Core; this adapter only feeds observations in.
+    private readonly RuleTriggerPolicy policy = new RuleTriggerPolicy();
 
     private void Awake()
     {
         GetComponent<Collider2D>().isTrigger = true;
+        RestorePersistedState();
     }
 
     private void OnEnable()
     {
-        _fired = false;
+        policy.Reset();
+        RestorePersistedState();
+    }
+
+    private void RestorePersistedState()
+    {
+        if (string.IsNullOrWhiteSpace(triggerId) || WorldStateManager.Instance == null)
+            return;
+
+        if (WorldStateManager.Instance.HasFlag(RuleTriggerPolicy.FiredKey(triggerId)))
+            policy.SeedFired(true);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (fireOn == RuleTriggerFireOn.Exit) return;
         if (!other.CompareTag(activatorTag)) return;
-        Fire(value);
+        TryFire(entered: true);
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (fireOn == RuleTriggerFireOn.Enter) return;
         if (!other.CompareTag(activatorTag)) return;
-        // Both mode inverts value on exit; Exit mode uses value as-is.
-        Fire(fireOn == RuleTriggerFireOn.Both ? !value : value);
+        TryFire(entered: false);
     }
 
-    private void Fire(bool v)
+    private void TryFire(bool entered)
     {
-        if (oneShot && _fired) return;
-        _fired = true;
+        // Apply silently no-ops when there is no SceneRulesManager. Check that first so a trigger
+        // that never applied its rule is not permanently marked as fired.
+        if (SceneRulesManager.Instance == null)
+            return;
 
+        // Resolve without committing, so the one-shot is consumed only after the rule is applied.
+        if (!policy.TryResolvePending(fireOn, value, entered, oneShot, out bool appliedValue))
+            return;
+
+        if (!Apply(appliedValue))
+            return;
+
+        // The rule was applied: a one-shot may now be consumed and persisted.
+        if (oneShot)
+        {
+            policy.CommitFired();
+            if (!string.IsNullOrWhiteSpace(triggerId))
+                WorldStateManager.Instance?.SetFlag(RuleTriggerPolicy.FiredKey(triggerId));
+        }
+    }
+
+    private bool Apply(bool v)
+    {
         var mgr = SceneRulesManager.Instance;
-        if (mgr == null) return;
+        if (mgr == null) return false;
 
         switch (rule)
         {
@@ -120,5 +126,7 @@ public class RuleTrigger2D : MonoBehaviour
             case SceneRuleTarget.DotEnabled:            mgr.SetDotEnabled(v);            break;
             case SceneRuleTarget.HotEnabled:            mgr.SetHotEnabled(v);            break;
         }
+
+        return true;
     }
 }

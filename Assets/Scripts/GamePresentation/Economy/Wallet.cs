@@ -214,7 +214,14 @@ public class Wallet : MonoBehaviour
             account.BalanceChanged += balance => OnBalanceChanged?.Invoke(balance);
             account.CapacityChanged += capacity => OnCapacityChanged?.Invoke(capacity);
             account.TransactionRecorded += transaction => OnTransactionRecorded?.Invoke(transaction);
-            account.Credited += amount => characterStatistics?.RecordMoneyGained(amount);
+            // Resolve lazily: CharacterStatistics may be added after this wallet (e.g. by
+            // WorldCharacter.Awake), so a value cached in Awake could be permanently null and
+            // silently drop every credited amount.
+            account.Credited += amount =>
+            {
+                characterStatistics ??= GetComponent<CharacterStatistics>();
+                characterStatistics?.RecordMoneyGained(amount);
+            };
         }
 
         return account;

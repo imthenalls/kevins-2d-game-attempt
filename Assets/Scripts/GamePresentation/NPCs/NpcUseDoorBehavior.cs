@@ -11,6 +11,11 @@ using UnityEngine;
 /// persist across saves) and gives up until it holds the required key. On success it walks
 /// through the opening.
 ///
+/// This component is a thin facade over the engine-free <see cref="NpcUseDoorModel"/> (Game.Data):
+/// the model owns the Approach/PassThrough phases and the response to each door result; this
+/// component only samples the world (gate proximity/motion, route state) and executes the returned
+/// <see cref="NpcDoorCommand"/> (movement, gate use, memory/quest side effects).
+///
 /// Unity setup:
 ///   1. Add to an NPC GameObject alongside NpcBehaviorManager.
 ///   2. Requires a Rigidbody2D (Gravity Scale = 0, freeze Z rotation).
@@ -29,8 +34,8 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
     /// <summary>Raised with the gate when the NPC finds it locked and stops trying.</summary>
     public event Action<SlidingDoor> OnLockedGate;
 
+    private readonly NpcUseDoorModel doorModel = new NpcUseDoorModel();
     private SlidingDoor gate;
-    private int phase; // 0 = approach, 1 = pass through
     private Vector2 passTarget;
 
     private readonly RouteFollower approachRoute = new RouteFollower();
@@ -44,7 +49,10 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
 
     protected override void Enter()
     {
-        phase = 0;
+        doorModel.Enter();
+        approachRoute.Clear();
+        passRoute.Clear();
+
         gate = Perception != null
             ? Perception.FindNearestGate(Body.position, doorConfig.DetectionRadius)
             : FindNearestGateFallback();
@@ -56,7 +64,6 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
             return;
         }
 
-        approachRoute.Clear();
         if (Pathfinder != null)
         {
             List<Vector2> found = Pathfinder.FindPath(Body.position, gate.transform.position);
@@ -73,88 +80,108 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
             return;
         }
 
-        if (phase == 0) TickApproach();
-        else TickPass();
+        Execute(doorModel.Tick(BuildObservation(stalled: false)));
     }
 
-    // If the NPC stalls, either try from where it stopped (if close enough) or give up.
+    // A stall is just another observation for the model: it retries when in range, else gives up.
     protected override void OnStalled()
     {
-        if (gate != null && gate.IsMoving)
+        if (gate == null || gate.IsMoving)
             return;
 
-        if (phase == 0 && gate != null && gate.CanInteract(transform.position))
-            AttemptUse();
-        else
-            Complete();
+        Execute(doorModel.Tick(BuildObservation(stalled: true)));
     }
 
-    private void TickApproach()
+    // Samples Unity state (route progress, gate motion/range) into the Core observation struct.
+    private NpcDoorObservation BuildObservation(bool stalled)
     {
-        if (gate.IsOpen)
-        {
-            BeginPass();
-            return;
-        }
+        bool routeExhausted = false;
+        bool arrivedAtPassTarget = false;
 
-        if (gate.IsMoving)
+        if (doorModel.Phase == NpcDoorPhase.Approach)
         {
-            StopMoving();
-            return;
-        }
-
-        // Interaction happens only within one tile of the nearest gate cell.
-        if (gate.CanInteract(transform.position))
-        {
-            AttemptUse();
-            return;
-        }
-
-        if (approachRoute.HasRoute)
-        {
-            Vector2 position = Body.position;
-            approachRoute.Advance(position.x, position.y, doorConfig.WaypointThreshold);
-            if (approachRoute.TryCurrent(out float waypointX, out float waypointY))
+            if (approachRoute.HasRoute)
             {
-                MoveToward(new Vector2(waypointX, waypointY), Config.MoveSpeed);
-                return;
+                approachRoute.Advance(Body.position.x, Body.position.y, doorConfig.WaypointThreshold);
+                routeExhausted = approachRoute.IsComplete;
             }
+        }
+        else if (passRoute.HasRoute)
+        {
+            passRoute.Advance(Body.position.x, Body.position.y, doorConfig.WaypointThreshold);
+            routeExhausted = passRoute.IsComplete;
+        }
+        else
+        {
+            arrivedAtPassTarget = Arrived(passTarget, doorConfig.WaypointThreshold);
+        }
 
-            // Reached the end of the path but still not in range; wait/attempt next tick.
-            StopMoving();
-            if (gate.CanInteract(transform.position))
+        return new NpcDoorObservation
+        {
+            GateMissing = gate == null,
+            GateOpen = gate != null && gate.IsOpen,
+            GateMoving = gate != null && gate.IsMoving,
+            InRange = gate != null && gate.CanInteract(transform.position),
+            RouteExhausted = routeExhausted,
+            ArrivedAtPassTarget = arrivedAtPassTarget,
+            Stalled = stalled,
+        };
+    }
+
+    private void Execute(NpcDoorCommand command)
+    {
+        switch (command)
+        {
+            case NpcDoorCommand.FollowRoute:
+                FollowCurrentRoute();
+                break;
+
+            case NpcDoorCommand.AttemptUse:
                 AttemptUse();
+                break;
+
+            case NpcDoorCommand.BeginPass:
+                BeginPass();
+                break;
+
+            case NpcDoorCommand.Complete:
+                StopMoving();
+                Complete();
+                break;
+
+            default: // None, Wait
+                StopMoving();
+                break;
+        }
+    }
+
+    private void FollowCurrentRoute()
+    {
+        RouteFollower active = doorModel.Phase == NpcDoorPhase.Approach ? approachRoute : passRoute;
+        if (active.HasRoute && active.TryCurrent(out float waypointX, out float waypointY))
+        {
+            MoveToward(new Vector2(waypointX, waypointY), Config.MoveSpeed);
             return;
         }
 
-        MoveToward(gate.transform.position, Config.MoveSpeed);
+        if (doorModel.Phase == NpcDoorPhase.Approach)
+            MoveToward(gate.transform.position, Config.MoveSpeed);
+        else
+            MoveToward(passTarget, Config.MoveSpeed);
     }
 
     private void AttemptUse()
     {
         GateUseResult result = gate.TryUse(gameObject);
-        switch (result)
+
+        if (result == GateUseResult.Locked)
         {
-            case GateUseResult.Opened:
-                BeginPass();
-                break;
-
-            case GateUseResult.Locked:
-                Memory?.RememberLockedGate(gate, gate.RequiredKeyId);
-                OnLockedGate?.Invoke(gate);
-                QuestEventBus.Raise("DoorLocked", gate.RequiredKeyId, 0);
-                StopMoving();
-                Complete();
-                break;
-
-            case GateUseResult.Busy:
-                StopMoving();
-                break;
-
-            default:
-                Complete();
-                break;
+            Memory?.RememberLockedGate(gate, gate.RequiredKeyId);
+            OnLockedGate?.Invoke(gate);
+            QuestEventBus.Raise("DoorLocked", gate.RequiredKeyId, 0);
         }
+
+        Execute(doorModel.ResolveUse(result));
     }
 
     private void BeginPass()
@@ -171,35 +198,6 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
             if (found != null && found.Count > 0)
                 passRoute.SetRoute(NpcRoute.FromXY(found));
         }
-
-        phase = 1;
-    }
-
-    private void TickPass()
-    {
-        if (passRoute.HasRoute)
-        {
-            Vector2 position = Body.position;
-            passRoute.Advance(position.x, position.y, doorConfig.WaypointThreshold);
-            if (passRoute.TryCurrent(out float waypointX, out float waypointY))
-            {
-                MoveToward(new Vector2(waypointX, waypointY), Config.MoveSpeed);
-                return;
-            }
-
-            StopMoving();
-            Complete();
-            return;
-        }
-
-        if (Arrived(passTarget, doorConfig.WaypointThreshold))
-        {
-            StopMoving();
-            Complete();
-            return;
-        }
-
-        MoveToward(passTarget, Config.MoveSpeed);
     }
 
     private SlidingDoor FindNearestGateFallback()

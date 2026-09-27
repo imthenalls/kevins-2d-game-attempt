@@ -30,10 +30,22 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 10;
+    private const int CurrentSaveVersion = SaveData.CurrentVersion;
     private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
-    private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
+
+    /// <summary>
+    /// Test seam: when set, every save read/write uses this directory instead of
+    /// <see cref="Application.persistentDataPath"/>. Production leaves it null. Tests set it to a
+    /// disposable sandbox so they can never read, overwrite, or delete the player's real save.
+    /// </summary>
+    public static string SaveDirectoryOverride { get; set; }
+
+    private string SaveDirectory => string.IsNullOrEmpty(SaveDirectoryOverride)
+        ? Application.persistentDataPath
+        : SaveDirectoryOverride;
+
+    private string SavePath => Path.Combine(SaveDirectory, FileName);
     private string TempPath => SavePath + ".tmp";
     private string BackupPath => SavePath + ".bak";
 
@@ -137,6 +149,9 @@ public class SaveManager : MonoBehaviour
 
             if (player.TryGetComponent<Wallet>(out var wallet))
                 data.wallet = wallet.GetSaveData();
+
+            if (player.TryGetComponent<CharacterStatistics>(out var characterStats))
+                data.playerStatistics = characterStats.GetSnapshot();
         }
 
         if (WorldTravelState.Instance != null)
@@ -475,6 +490,7 @@ public class SaveManager : MonoBehaviour
         data.marketTransactions ??= new();
         data.wallet ??= new WalletSaveData();
         data.wallet.transactions ??= new();
+        data.playerStatistics ??= new CharacterStatisticsSnapshot();
     }
 
     public static string ValidateSave(SaveData data)
@@ -525,6 +541,9 @@ public class SaveManager : MonoBehaviour
 
             if (player.TryGetComponent<Wallet>(out var wallet))
                 wallet.LoadSaveData(BuildWalletSaveDataForLoad(data));
+
+            if (player.TryGetComponent<CharacterStatistics>(out var characterStats))
+                characterStats.Load(data.playerStatistics);
 
             WorldTravelState.Instance?.CaptureSharedPlayerState(player.transform);
         }

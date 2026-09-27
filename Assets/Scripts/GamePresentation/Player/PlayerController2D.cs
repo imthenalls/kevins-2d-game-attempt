@@ -50,11 +50,7 @@ public class PlayerController2D : PlayerControllerBase
     private Vector2 lastMovementDirection = Vector2.up;
     private Vector2 dashDirection;
     private float playerLength;
-    private float dashTimeRemaining;
-    private float dashCooldownRemaining;
-    private float dashRechargeRemaining;
-    private int currentDashCharges;
-    private bool isDashing;
+    private PlayerDashModel dash;
     private TrailRenderer dashTrail;
 
     private EntityStats stats;
@@ -68,8 +64,8 @@ public class PlayerController2D : PlayerControllerBase
     public override Wallet ManaWallet => manaWallet;
     public override CombatReceiver CombatReceiver => combatReceiver;
     public override bool MovementEnabled => movementEnabled;
-    public bool IsDashing => isDashing;
-    public int CurrentDashCharges => currentDashCharges;
+    public bool IsDashing => dash != null && dash.IsDashing;
+    public int CurrentDashCharges => dash != null ? dash.Charges : 0;
     public int MaxDashCharges => settings.MaxDashCharges;
 
     // Pure form of the trail color; converted to a UnityEngine.Color only where needed.
@@ -88,8 +84,7 @@ public class PlayerController2D : PlayerControllerBase
         settings.DashCooldown = Mathf.Max(settings.MinDashCooldown, profile.DashCooldown);
         settings.MaxDashCharges = Mathf.Max(settings.MinDashCharges, profile.MaxDashCharges);
         settings.DashRechargeSeconds = Mathf.Max(settings.MinDashRechargeSeconds, profile.DashRechargeSeconds);
-        currentDashCharges = settings.MaxDashCharges;
-        dashRechargeRemaining = 0f;
+        dash?.ResetCharges();
     }
 
     /// <summary>Movement speed in units/s. Reads/writes Settings.MoveSpeed.</summary>
@@ -151,7 +146,7 @@ public class PlayerController2D : PlayerControllerBase
             playerLength = Mathf.Max(settings.MinPlayerLength, colliderSize.x, colliderSize.y);
         }
 
-        currentDashCharges = Mathf.Max(settings.MinDashCharges, settings.MaxDashCharges);
+        dash = new PlayerDashModel(settings);
         EnsureDashTrail();
     }
 
@@ -215,10 +210,7 @@ public class PlayerController2D : PlayerControllerBase
 
     private void Update()
     {
-        if (dashCooldownRemaining > 0f)
-            dashCooldownRemaining = Mathf.Max(0f, dashCooldownRemaining - Time.deltaTime);
-
-        RechargeDashCharges();
+        dash.TickTimers(Time.deltaTime);
 
         if (!movementEnabled)
         {
@@ -266,25 +258,19 @@ public class PlayerController2D : PlayerControllerBase
         if (moveInput.sqrMagnitude > settings.FacingInputDeadZone * settings.FacingInputDeadZone)
             lastMovementDirection = moveInput.normalized;
 
-        if (settings.DashEnabled && !isDashing && currentDashCharges > 0 &&
-            dashCooldownRemaining <= 0f && WasDashPressedThisFrame())
+        if (dash.CanStart && WasDashPressedThisFrame())
             BeginDash();
     }
 
     private void FixedUpdate()
     {
-        if (movementEnabled && isDashing)
+        if (movementEnabled && dash.IsDashing)
         {
             float dashSpeed = Mathf.Max(settings.MinDashSpeed, settings.MoveSpeed * settings.DashSpeedMultiplier);
-            float stepFraction = Mathf.Clamp01(dashTimeRemaining / Time.fixedDeltaTime);
+            float stepFraction = dash.DashStepFraction(Time.fixedDeltaTime);
             rb.linearVelocity = dashDirection * dashSpeed * stepFraction;
-            dashTimeRemaining -= Time.fixedDeltaTime;
-            if (dashTimeRemaining <= 0f)
-            {
-                dashTimeRemaining = 0f;
-                isDashing = false;
+            if (dash.TickDash(Time.fixedDeltaTime) == PlayerDashCommand.StopDash)
                 EndDashTrailEmission();
-            }
             return;
         }
 
@@ -294,42 +280,11 @@ public class PlayerController2D : PlayerControllerBase
     // Starts a fixed-distance dash in the direction the player visual currently faces.
     private void BeginDash()
     {
-        if (currentDashCharges <= 0)
-            return;
-
-        bool wasFullyCharged = currentDashCharges == settings.MaxDashCharges;
-        currentDashCharges--;
-        if (wasFullyCharged)
-            dashRechargeRemaining = settings.DashRechargeSeconds;
-
         dashDirection = GetFacingDirection();
         float dashSpeed = Mathf.Max(settings.MinDashSpeed, settings.MoveSpeed * settings.DashSpeedMultiplier);
         float dashDistance = playerLength * settings.DashDistanceInPlayerLengths;
-        dashTimeRemaining = dashDistance / dashSpeed;
-        dashCooldownRemaining = settings.DashCooldown;
-        isDashing = true;
-        BeginDashTrail();
-    }
-
-    // Restores one missing dash every configured recharge interval until all charges are full.
-    private void RechargeDashCharges()
-    {
-        if (currentDashCharges >= settings.MaxDashCharges)
-        {
-            currentDashCharges = settings.MaxDashCharges;
-            dashRechargeRemaining = 0f;
-            return;
-        }
-
-        dashRechargeRemaining -= Time.deltaTime;
-        while (dashRechargeRemaining <= 0f && currentDashCharges < settings.MaxDashCharges)
-        {
-            currentDashCharges++;
-            if (currentDashCharges < settings.MaxDashCharges)
-                dashRechargeRemaining += Mathf.Max(settings.MinDashRechargeInterval, settings.DashRechargeSeconds);
-            else
-                dashRechargeRemaining = 0f;
-        }
+        if (dash.RequestDash(dashDistance / dashSpeed) == PlayerDashCommand.StartDash)
+            BeginDashTrail();
     }
 
     // Creates the tapered runtime TrailRenderer used only by the dash.
@@ -469,8 +424,7 @@ public class PlayerController2D : PlayerControllerBase
         if (!movementEnabled)
         {
             moveInput = Vector2.zero;
-            isDashing = false;
-            dashTimeRemaining = 0f;
+            dash.CancelDash();
             StopAndClearDashTrail();
             rb.linearVelocity = Vector2.zero;
         }

@@ -11,12 +11,14 @@ by convention. Most authoritative state — NPC state, inventory contents, tunin
 facts, quests, equipment, hotbar, keys, player health, and the save shape — lives in the Core, and
 the player's continuous physics position is a documented transitional compromise.
 
-**The tracked migration is complete.** Every Shell-owned NPC rule and persistent state found by the
-first re-audit has moved into Core (`NpcMemory`, the `NpcSchedule3D` state machine,
-`NpcInventoryDatabase` starting-inventory seeding, `NpcPerception` target ranking, and the residual
-`NpcProximityMelee3D` engagement decisions). The only remaining deviation is the documented
-transitional compromise for the player's continuous physics position. See **Migrated since the first
-audit**.
+A **second re-audit** widened the scope beyond the NPC folder and found seven further
+Presentation-owned gameplay models (world travel/progression, player dash, pending quest rewards,
+one-time world objects, NPC door/recovery/navigation, character statistics, and rule-trigger
+policy). Those are now migrated too; see **Migrated since the second audit**. Every Shell-owned NPC
+rule and persistent state found by the first re-audit is also in Core (`NpcMemory`, the
+`NpcSchedule3D` state machine, `NpcInventoryDatabase` starting-inventory seeding, `NpcPerception`
+target ranking, and the residual `NpcProximityMelee3D` engagement decisions). The only remaining
+deviation is the documented transitional compromise for the player's continuous physics position.
 
 This is also the project's named architecture: **Engine-Free Core**.
 
@@ -57,6 +59,14 @@ This is also the project's named architecture: **Engine-Free Core**.
 | Player health | `HealthModel` (owned by `GameSession`) | `PlayerController2D` binds it to `EntityStats`; `WorldTravelState` shares mana/positions only |
 | Player position | `PositionModel` (owned by `GameSession`) | `PlayerController2D` mirrors the physics transform to/from it |
 | Per-world remembered positions | `WorldPositionSaveEntry` (cell + local offset, v7) | `WorldTravelState` converts through the scene Grid |
+| World travel / progression | `WorldTravelModel` (+ `WorldLayer`, `RememberedWorldPosition`), owned by `GameSession` | `WorldTravelState` (facade: scene load, Grid conversion, character activation, stats binding) |
+| Player dash | `PlayerDashModel` (+ `PlayerDashCommand`) | `PlayerController2D` / `PlayerController3D` (input, Rigidbody motion, trail) |
+| Pending quest rewards | `PendingRewardLedger` (+ `PendingRewardDelivery`, `PendingRewardClaimResult`), owned by `GameSession` | `PendingRewardManager` (ItemData lookup, inventory bridge) |
+| One-time world objects | `WorldObjectInteractionModel` (completed set in `WorldFacts`) | `WorldObject` (dialogue paging, reward delivery, activation) |
+| NPC door use | `NpcUseDoorModel` (+ `NpcDoorPhase` / `NpcDoorCommand` / `NpcDoorObservation`) | `NpcUseDoorBehavior` (gate lookup, pathfinding, memory/quest side effects) |
+| Chase navigation | `NpcChaseNavigationPolicy` (+ `NpcChaseNavigationConfig` / `NpcChaseNavigationDecision`) | `NpcChaseNavigator` (raycast line-of-sight, pathfinding, motion) |
+| Character statistics | `CharacterStatisticsModel` (+ `CharacterStatisticsRepository`, `CharacterStatisticsSnapshot`), owned by `GameSession` | `CharacterStatistics` (combat-event sampling, convenience events) |
+| Rule triggers | `RuleTriggerPolicy` (+ `SceneRuleTarget`, `RuleTriggerFireOn`) | `RuleTrigger2D` (collider callbacks, tag filter, SceneRulesManager calls) |
 
 ## Migrated since the first audit
 
@@ -125,6 +135,45 @@ This is also the project's named architecture: **Engine-Free Core**.
   execution stay in the Shell. Engine-free tests:
   `Assets/Tests/EditMode/MeleeEngagementPolicyTests.cs`.
 
+## Migrated since the second audit
+
+- **World travel / progression** — `WorldLayer` moved to Core and a `Game.Core.WorldTravelModel`
+  (active world, per-world remembered logical positions, ability unlocks, shared wallet snapshot) is
+  owned by `GameSession.WorldTravel`. `WorldTravelState` is now a facade: scene loading, Grid
+  conversion, character activation, and transform/stats binding stay in the Shell. `SaveData` shape
+  is unchanged (`WorldPositionSaveEntry` / `WorldAbilitySaveEntry`). Engine-free tests:
+  `Assets/Tests/EditMode/WorldTravelModelTests.cs`.
+- **Player dash** — the duplicated 2D/3D dash charges, cooldown, recharge timing, duration, and
+  eligibility moved to `Game.Core.PlayerDashModel` (+ `PlayerDashCommand`); both controllers feed it
+  elapsed time and a duration and execute the returned commands, keeping input, Rigidbody motion,
+  and trails in the Shell. Engine-free tests: `Assets/Tests/EditMode/PlayerDashModelTests.cs`.
+- **Pending quest rewards** — merging, remaining quantities, claim results, and the save snapshot
+  moved to `Game.Core.PendingRewardLedger` (owned by `GameSession.PendingRewards`); the
+  `PendingRewardManager` only resolves `ItemData` and bridges to `InventoryHelper`. Engine-free
+  tests: `Assets/Tests/EditMode/PendingRewardLedgerTests.cs`.
+- **One-time world objects** — completion/one-time-use rules moved to
+  `Game.Core.WorldObjectInteractionModel`, recording completion in `WorldFacts` under a stable
+  per-object key so a reloaded scene or a restart cannot duplicate the reward. `WorldObject` keeps
+  dialogue paging, reward delivery, and activation. Engine-free tests:
+  `Assets/Tests/EditMode/WorldObjectInteractionModelTests.cs`.
+- **NPC door / recovery / navigation** — the use-door phase machine moved to
+  `Game.Core.NpcUseDoorModel` (phases + `NpcDoorCommand` / `NpcDoorObservation`); the
+  `NpcBehaviorBase` stall timer was replaced with `Game.Core.TravelRecoveryModel`; and the chase
+  repath cadence / direct-step fallback moved to `Game.Core.NpcChaseNavigationPolicy` (+
+  `NpcChaseNavigationConfig` / `NpcChaseNavigationDecision`). Raycasts, pathfinding, Rigidbody
+  changes, and door lookup stay in the Shell. Engine-free tests:
+  `Assets/Tests/EditMode/NpcUseDoorModelTests.cs`,
+  `Assets/Tests/EditMode/NpcChaseNavigationPolicyTests.cs`.
+- **Character statistics** — cumulative counters moved to `Game.Core.CharacterStatisticsModel`,
+  registered per character by `GameSession.Statistics`; `CharacterStatistics` forwards combat/economy
+  events and the player's totals are saved via `SaveData.playerStatistics` (v11). Engine-free tests:
+  `Assets/Tests/EditMode/CharacterStatisticsModelTests.cs`.
+- **Rule triggers** — `SceneRuleTarget` / `RuleTriggerFireOn` moved to Core and the enter/exit
+  inversion + one-shot rule to `Game.Core.RuleTriggerPolicy`; `RuleTrigger2D` keeps the collider
+  callbacks, tag filter, and `SceneRulesManager` calls. One-shots can persist via stable trigger ids
+  and `RuleTriggerPolicy.FiredKey` in `WorldFacts`. Engine-free tests:
+  `Assets/Tests/EditMode/RuleTriggerPolicyTests.cs`.
+
 ## Deviations — authoritative state / rules still in Presentation
 
 | # | State / rule | Location | Impact | Note |
@@ -133,13 +182,14 @@ This is also the project's named architecture: **Engine-Free Core**.
 
 ## Practical consequence
 
-The tracked migration is complete: no authoritative NPC rule or saveable state is left in
-`Game.Presentation`. The only remaining item is the deliberate position compromise, which is
-grid-anchored by `PositionModel`.
+Both tracked migration passes are complete: no authoritative gameplay rule or saveable state found
+by either audit is left in `Game.Presentation`. The only remaining item is the deliberate position
+compromise, which is grid-anchored by `PositionModel`.
 
 ## Recommended migration order
 
-None outstanding. Re-audit the NPC folder (and any new systems) before relying on this document.
+None outstanding. Re-audit the whole `GamePresentation` tree (not just the NPC folder) before
+relying on this document, since the second pass found models outside the NPC folder.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
 `Assets/Tests/EditMode` where they can then run under `dotnet test`.

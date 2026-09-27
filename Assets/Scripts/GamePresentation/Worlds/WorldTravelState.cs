@@ -4,15 +4,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public enum WorldLayer
-{
-    WorldA,
-    WorldB,
-}
-
 /// <summary>
-/// Persistent authority for the active world, each world's last scene position and abilities,
-/// shared player HP/mana, and playable character activation. It creates itself before scene load.
+/// Unity adapter for world travel. The authoritative state — active world, each world's remembered
+/// logical return position, unlocked abilities, and the shared wallet snapshot — lives in the
+/// engine-free <see cref="WorldTravelModel"/> owned by <see cref="GameSession"/>; this component only
+/// performs the Unity operations: scene loading, Grid conversion, character activation, and
+/// transform/stats binding. It creates itself before scene load.
 ///
 /// Unity setup:
 ///   1. No manager object is required; the singleton creates itself automatically.
@@ -28,34 +25,14 @@ public enum WorldLayer
 [DisallowMultipleComponent]
 public sealed class WorldTravelState : MonoBehaviour
 {
-    private sealed class RememberedPosition
-    {
-        public string scene;
-
-        // Grid-anchored form (preferred): logical cell + local offset, like GameSession.PlayerPosition.
-        public bool hasCell;
-        public int cellX;
-        public int cellY;
-        public float offsetX;
-        public float offsetY;
-
-        // Legacy float fallback, used when no Grid was available or for pre-v7 saves.
-        public float legacyX;
-        public float legacyY;
-        public float legacyZ;
-    }
-
     public static WorldTravelState Instance { get; private set; }
 
     public event Action<WorldLayer> OnWorldChanged;
     public event Action<WorldLayer, string> OnAbilityUnlocked;
 
-    public WorldLayer CurrentWorld { get; private set; } = WorldLayer.WorldA;
+    private WorldTravelModel model;
 
-    private readonly Dictionary<WorldLayer, RememberedPosition> positions = new();
-    private readonly Dictionary<WorldLayer, HashSet<string>> unlockedAbilities = new();
-    private bool sharedPlayerStateInitialized;
-    private WalletSaveData sharedWallet;
+    public WorldLayer CurrentWorld => model != null ? model.CurrentWorld : WorldLayer.WorldA;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void EnsureInstance()
@@ -74,26 +51,34 @@ public sealed class WorldTravelState : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        GameSessionHost.EnsureExists();
+        model = GameSessionHost.Session.WorldTravel;
+        model.AbilityUnlocked += HandleAbilityUnlocked;
         SceneManager.sceneLoaded += HandleSceneLoaded;
     }
 
     private void OnDestroy()
     {
         if (Instance != this) return;
+        if (model != null)
+            model.AbilityUnlocked -= HandleAbilityUnlocked;
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         Instance = null;
     }
+
+    private void HandleAbilityUnlocked(WorldLayer world, string abilityId)
+        => OnAbilityUnlocked?.Invoke(world, abilityId);
 
     public void RememberPosition(WorldLayer world, string scene, Vector3 position)
     {
         if (string.IsNullOrWhiteSpace(scene)) return;
 
-        var remembered = new RememberedPosition
+        var remembered = new RememberedWorldPosition
         {
-            scene = scene.Trim(),
-            legacyX = position.x,
-            legacyY = position.y,
-            legacyZ = position.z,
+            Scene = scene.Trim(),
+            LegacyX = position.x,
+            LegacyY = position.y,
+            LegacyZ = position.z,
         };
 
         Grid grid = FindAnyObjectByType<Grid>();
@@ -101,14 +86,14 @@ public sealed class WorldTravelState : MonoBehaviour
         {
             Vector3Int cell = grid.WorldToCell(position);
             Vector3 center = grid.GetCellCenterWorld(cell);
-            remembered.hasCell = true;
-            remembered.cellX = cell.x;
-            remembered.cellY = cell.y;
-            remembered.offsetX = position.x - center.x;
-            remembered.offsetY = position.y - center.y;
+            remembered.HasCell = true;
+            remembered.CellX = cell.x;
+            remembered.CellY = cell.y;
+            remembered.OffsetX = position.x - center.x;
+            remembered.OffsetY = position.y - center.y;
         }
 
-        positions[world] = remembered;
+        model.SetPosition(world, remembered);
     }
 
     public void RememberTravelerPosition(Transform traveler)
@@ -119,24 +104,24 @@ public sealed class WorldTravelState : MonoBehaviour
 
         // Prefer the player's authoritative logical position so travel uses the same grid cell as
         // save/load (Engine-Free Core PositionModel) instead of recomputing from the transform.
-        PositionModel model = traveler.GetComponent<PlayerControllerBase>() != null
+        PositionModel position = traveler.GetComponent<PlayerControllerBase>() != null
             ? GameSessionHost.Session?.PlayerPosition
             : null;
 
-        if (model != null)
+        if (position != null)
         {
-            positions[CurrentWorld] = new RememberedPosition
+            model.SetPosition(CurrentWorld, new RememberedWorldPosition
             {
-                scene = scene,
-                hasCell = true,
-                cellX = model.CellX,
-                cellY = model.CellY,
-                offsetX = model.OffsetX,
-                offsetY = model.OffsetY,
-                legacyX = traveler.position.x,
-                legacyY = traveler.position.y,
-                legacyZ = traveler.position.z,
-            };
+                Scene = scene,
+                HasCell = true,
+                CellX = position.CellX,
+                CellY = position.CellY,
+                OffsetX = position.OffsetX,
+                OffsetY = position.OffsetY,
+                LegacyX = traveler.position.x,
+                LegacyY = traveler.position.y,
+                LegacyZ = traveler.position.z,
+            });
         }
         else
         {
@@ -151,9 +136,9 @@ public sealed class WorldTravelState : MonoBehaviour
         out string scene,
         out Vector3 position)
     {
-        if (positions.TryGetValue(world, out RememberedPosition remembered))
+        if (model.TryGetPosition(world, out RememberedWorldPosition remembered))
         {
-            scene = remembered.scene;
+            scene = remembered.Scene;
             position = ResolveWorldPosition(remembered);
             return true;
         }
@@ -164,32 +149,32 @@ public sealed class WorldTravelState : MonoBehaviour
     }
 
     /// <summary>Converts a remembered position back to world space, preferring the grid cell.</summary>
-    private static Vector3 ResolveWorldPosition(RememberedPosition remembered)
+    private static Vector3 ResolveWorldPosition(RememberedWorldPosition remembered)
     {
-        if (remembered.hasCell)
+        if (remembered.HasCell)
         {
             Grid grid = FindAnyObjectByType<Grid>();
             if (grid != null)
             {
-                Vector3 center = grid.GetCellCenterWorld(new Vector3Int(remembered.cellX, remembered.cellY, 0));
-                return new Vector3(center.x + remembered.offsetX, center.y + remembered.offsetY, 0f);
+                Vector3 center = grid.GetCellCenterWorld(new Vector3Int(remembered.CellX, remembered.CellY, 0));
+                return new Vector3(center.x + remembered.OffsetX, center.y + remembered.OffsetY, 0f);
             }
         }
 
-        return new Vector3(remembered.legacyX, remembered.legacyY, remembered.legacyZ);
+        return new Vector3(remembered.LegacyX, remembered.LegacyY, remembered.LegacyZ);
     }
 
     public void SetCurrentWorld(WorldLayer world)
     {
-        bool changed = CurrentWorld != world;
+        bool changed = model.CurrentWorld != world;
         if (changed)
         {
-            WorldCharacter currentCharacter = FindCharacter(CurrentWorld);
+            WorldCharacter currentCharacter = FindCharacter(model.CurrentWorld);
             if (currentCharacter != null && currentCharacter.gameObject.activeInHierarchy)
                 CaptureSharedPlayerState(currentCharacter.transform);
         }
 
-        CurrentWorld = world;
+        model.SetCurrentWorld(world);
         ApplyActiveCharacters();
         if (changed)
             OnWorldChanged?.Invoke(world);
@@ -219,26 +204,7 @@ public sealed class WorldTravelState : MonoBehaviour
     }
 
     public void WritePositions(List<WorldPositionSaveEntry> destination)
-    {
-        if (destination == null) return;
-        destination.Clear();
-        foreach (var pair in positions)
-        {
-            destination.Add(new WorldPositionSaveEntry
-            {
-                world = pair.Key.ToString(),
-                scene = pair.Value.scene,
-                hasCell = pair.Value.hasCell,
-                cellX = pair.Value.cellX,
-                cellY = pair.Value.cellY,
-                offsetX = pair.Value.offsetX,
-                offsetY = pair.Value.offsetY,
-                x = pair.Value.legacyX,
-                y = pair.Value.legacyY,
-                z = pair.Value.legacyZ,
-            });
-        }
-    }
+        => model.WritePositions(destination);
 
     public void RegisterCharacter(WorldCharacter character)
     {
@@ -248,7 +214,7 @@ public sealed class WorldTravelState : MonoBehaviour
         if (profile != null && profile.StartingAbilityIds != null)
         {
             for (int i = 0; i < profile.StartingAbilityIds.Length; i++)
-                AddAbility(profile.World, profile.StartingAbilityIds[i], notify: false);
+                model.GrantAbility(profile.World, profile.StartingAbilityIds[i]);
         }
 
         if (character.World != CurrentWorld)
@@ -258,57 +224,25 @@ public sealed class WorldTravelState : MonoBehaviour
         }
 
         character.ApplyProfile();
-        if (sharedPlayerStateInitialized)
+        if (model.HasSharedPlayerState)
             ApplySharedPlayerState(character.transform);
         else
             CaptureSharedPlayerState(character.transform);
     }
 
     public bool HasAbility(WorldLayer world, string abilityId)
-    {
-        string normalizedId = NormalizeAbilityId(abilityId);
-        return normalizedId.Length > 0 &&
-               unlockedAbilities.TryGetValue(world, out HashSet<string> abilities) &&
-               abilities.Contains(normalizedId);
-    }
+        => model.HasAbility(world, abilityId);
 
     public bool HasAbility(string abilityId) => HasAbility(CurrentWorld, abilityId);
 
     public bool UnlockAbility(WorldLayer world, string abilityId)
-    {
-        return AddAbility(world, abilityId, notify: true);
-    }
+        => model.UnlockAbility(world, abilityId);
 
     public void WriteAbilities(List<WorldAbilitySaveEntry> destination)
-    {
-        if (destination == null) return;
-        destination.Clear();
-
-        foreach (var pair in unlockedAbilities)
-        {
-            foreach (string abilityId in pair.Value)
-            {
-                destination.Add(new WorldAbilitySaveEntry
-                {
-                    world = pair.Key.ToString(),
-                    abilityId = abilityId,
-                });
-            }
-        }
-    }
+        => model.WriteAbilities(destination);
 
     public void LoadAbilities(List<WorldAbilitySaveEntry> savedAbilities)
-    {
-        unlockedAbilities.Clear();
-        if (savedAbilities == null) return;
-
-        for (int i = 0; i < savedAbilities.Count; i++)
-        {
-            WorldAbilitySaveEntry entry = savedAbilities[i];
-            if (entry != null && Enum.TryParse(entry.world, out WorldLayer world))
-                AddAbility(world, entry.abilityId, notify: false);
-        }
-    }
+        => model.LoadAbilities(savedAbilities);
 
     public void CaptureSharedPlayerState(Transform traveler)
     {
@@ -323,13 +257,12 @@ public sealed class WorldTravelState : MonoBehaviour
             : traveler.GetComponent<Wallet>();
         if (stats == null) return;
 
-        sharedWallet = wallet != null ? wallet.GetSaveData() : null;
-        sharedPlayerStateInitialized = true;
+        model.CaptureSharedWallet(wallet != null ? wallet.GetSaveData() : null);
     }
 
     public void ApplySharedPlayerState(Transform traveler)
     {
-        if (!sharedPlayerStateInitialized || traveler == null ||
+        if (!model.HasSharedPlayerState || traveler == null ||
             !traveler.TryGetComponent(out PlayerControllerBase controller))
             return;
 
@@ -341,46 +274,33 @@ public sealed class WorldTravelState : MonoBehaviour
             : traveler.GetComponent<Wallet>();
         if (stats == null) return;
 
+        WalletSaveData sharedWallet = model.SharedWallet;
         if (wallet != null && sharedWallet != null)
             wallet.LoadSaveData(sharedWallet);
     }
 
     public void LoadSharedPlayerState(WalletSaveData wallet)
-    {
-        sharedWallet = wallet;
-        sharedPlayerStateInitialized = true;
-    }
+        => model.LoadSharedWallet(wallet);
 
     public void LoadState(string activeWorld, List<WorldPositionSaveEntry> savedPositions)
     {
-        positions.Clear();
+        model.ClearPositions();
         if (savedPositions != null)
         {
             for (int i = 0; i < savedPositions.Count; i++)
             {
                 WorldPositionSaveEntry entry = savedPositions[i];
-                if (entry != null && Enum.TryParse(entry.world, out WorldLayer world))
+                if (entry == null || !Enum.TryParse(entry.world, out WorldLayer world))
+                    continue;
+
+                if (entry.hasCell)
                 {
-                    if (entry.hasCell)
-                    {
-                        positions[world] = new RememberedPosition
-                        {
-                            scene = entry.scene,
-                            hasCell = true,
-                            cellX = entry.cellX,
-                            cellY = entry.cellY,
-                            offsetX = entry.offsetX,
-                            offsetY = entry.offsetY,
-                            legacyX = entry.x,
-                            legacyY = entry.y,
-                            legacyZ = entry.z,
-                        };
-                    }
-                    else
-                    {
-                        // Legacy save: convert the stored world floats through the scene Grid.
-                        RememberPosition(world, entry.scene, new Vector3(entry.x, entry.y, entry.z));
-                    }
+                    model.SetPosition(world, RememberedWorldPosition.FromSave(entry));
+                }
+                else
+                {
+                    // Legacy save: convert the stored world floats through the scene Grid.
+                    RememberPosition(world, entry.scene, new Vector3(entry.x, entry.y, entry.z));
                 }
             }
         }
@@ -421,28 +341,5 @@ public sealed class WorldTravelState : MonoBehaviour
         }
 
         return null;
-    }
-
-    private bool AddAbility(WorldLayer world, string abilityId, bool notify)
-    {
-        string normalizedId = NormalizeAbilityId(abilityId);
-        if (normalizedId.Length == 0) return false;
-
-        if (!unlockedAbilities.TryGetValue(world, out HashSet<string> abilities))
-        {
-            abilities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            unlockedAbilities[world] = abilities;
-        }
-
-        if (!abilities.Add(normalizedId)) return false;
-        if (notify) OnAbilityUnlocked?.Invoke(world, normalizedId);
-        return true;
-    }
-
-    private static string NormalizeAbilityId(string abilityId)
-    {
-        return string.IsNullOrWhiteSpace(abilityId)
-            ? string.Empty
-            : abilityId.Trim().ToLowerInvariant();
     }
 }

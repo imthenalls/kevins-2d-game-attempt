@@ -35,6 +35,10 @@ public class WorldObject : MonoBehaviour, IInteractable
     [Header("Identity")]
     [SerializeField] private string displayName = "Object";
 
+    [Tooltip("Stable id used to remember one-time completion across scene reloads and saves. " +
+             "Leave blank to derive a stable id from the scene, name, and position.")]
+    [SerializeField] private string objectId;
+
     [Header("Text")]
     [Tooltip("Each element is one page of text shown in the dialogue box. Player presses Space to advance.")]
     [SerializeField, TextArea(2, 5)] private string[] lines = { "..." };
@@ -47,6 +51,38 @@ public class WorldObject : MonoBehaviour, IInteractable
 
     private int  _currentLine;
     private bool _used;
+    private string _resolvedId;
+    private WorldObjectInteractionModel _interaction;
+
+    // ── Unity lifecycle ───────────────────────────────────────────────────────
+
+    private void Start()
+    {
+        // A one-time object completed before this scene (re)loaded must not offer its reward again.
+        _resolvedId ??= ResolveStableId();
+        WorldObjectInteractionModel interaction = Interaction;
+        if (config.OneTimeOnly && interaction != null && interaction.IsCompleted(_resolvedId))
+        {
+            _used = true;
+            gameObject.SetActive(false);
+        }
+    }
+
+    private WorldObjectInteractionModel Interaction =>
+        _interaction ??= WorldStateManager.Instance != null
+            ? new WorldObjectInteractionModel(WorldStateManager.Instance.Facts)
+            : null;
+
+    // Stable identity for the completed fact: the explicit id, or a deterministic scene/name/position key.
+    private string ResolveStableId()
+    {
+        if (!string.IsNullOrWhiteSpace(objectId))
+            return objectId.Trim();
+
+        Vector3 p = transform.position;
+        string sceneName = gameObject.scene.IsValid() ? gameObject.scene.name : "Unknown";
+        return $"{sceneName}:{displayName}:{p.x:0.##}_{p.y:0.##}_{p.z:0.##}";
+    }
 
     // ── IInteractable ─────────────────────────────────────────────────────────
 
@@ -73,20 +109,68 @@ public class WorldObject : MonoBehaviour, IInteractable
     {
         // Give reward on a completed read (all lines shown), not on cancel
         bool completed = _currentLine >= (lines != null ? lines.Length : 0);
-
-        if (completed && rewardItem != null)
-            InventoryHelper.GiveItem(rewardItem, config.RewardQuantity, interactor);
-
-        if (completed)
-            QuestEventBus.Raise("ObjectInteracted", displayName);
-
-        // Reset for next use, or disable if one-time
         _currentLine = 0;
-        if (config.OneTimeOnly && completed)
+
+        if (!completed)
+            return;
+
+        _resolvedId ??= ResolveStableId();
+        WorldObjectInteractionModel interaction = Interaction;
+
+        // A one-time object that already completed (e.g. a reload raced the disable) must not pay out again.
+        if (interaction != null && !interaction.CanComplete(_resolvedId, config.OneTimeOnly))
+            return;
+
+        // Deliver the reward first and retain any undelivered remainder as pending, so completion is
+        // only committed once every unit of the reward is accounted for. Otherwise a full inventory
+        // would permanently consume a one-time object and lose its reward.
+        if (!TryDeliverReward(interactor))
+            return;
+
+        // The reward is delivered or safely pending: only now is it safe to record completion.
+        // Committing after this point means a scene reload cannot hand out the one-time reward twice.
+        interaction?.CommitCompletion(_resolvedId, config.OneTimeOnly);
+
+        QuestEventBus.Raise("ObjectInteracted", displayName);
+
+        if (config.OneTimeOnly)
         {
             _used = true;
             gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// Gives the configured reward and returns true when the whole quantity was either delivered or
+    /// retained as a pending reward. Returns false only when a remainder exists and no pending
+    /// ledger is available, so the caller can leave the object unconsumed and let the player retry.
+    /// </summary>
+    private bool TryDeliverReward(GameObject interactor)
+    {
+        if (rewardItem == null || config.RewardQuantity <= 0)
+            return true;
+
+        int taken = InventoryHelper.GiveItem(rewardItem, config.RewardQuantity, interactor);
+        int leftover = config.RewardQuantity - taken;
+        if (leftover <= 0)
+            return true;
+
+        if (PendingRewardManager.Instance != null &&
+            PendingRewardManager.Instance.RecordLeftover(_resolvedId, rewardItem.itemId, leftover))
+        {
+            return true;
+        }
+
+        if (GameSessionHost.Session != null)
+        {
+            GameSessionHost.Session.PendingRewards.Record(_resolvedId, rewardItem.itemId, leftover);
+            return true;
+        }
+
+        Debug.LogWarning(
+            $"[WorldObject] Reward '{rewardItem.itemId}' x{leftover} could not be delivered or " +
+            "retained; completion deferred so the reward is not lost.");
+        return false;
     }
 
     // ── Editor ────────────────────────────────────────────────────────────────

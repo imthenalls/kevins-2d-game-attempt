@@ -1,3 +1,4 @@
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
@@ -27,7 +28,17 @@ public sealed class WorldCharacter : MonoBehaviour
 
     private void Awake()
     {
+        EnsureStatistics();
         ApplyProfile();
+    }
+
+    // Cumulative player stats are owned by GameSession keyed "player"; this component samples combat
+    // events and is what SaveManager reads. Add it when an avatar was authored without one so stats
+    // are never silently dropped. ResolveCharacterId() maps a PlayerControllerBase to "player".
+    private void EnsureStatistics()
+    {
+        if (TryGetComponent(out PlayerControllerBase _) && !TryGetComponent(out CharacterStatistics _))
+            gameObject.AddComponent<CharacterStatistics>();
     }
 
     private void Start()

@@ -5,7 +5,9 @@ using UnityEngine;
 /// <summary>
 /// Steers an enemy around obstacles toward a moving target. Wraps <see cref="NpcPathfinder3D"/>
 /// with a repath cadence and waypoint following so chase AIs do not press straight into walls.
-/// Falls back to a direct step when no path is found (or the target is in line of sight).
+/// The engine-free <see cref="NpcChaseNavigationPolicy"/> owns the decision to drive direct, repath,
+/// follow the committed route, or wait; the adapter only raycasts, generates paths, and converts
+/// vectors.
 ///
 /// Unity setup:
 ///   1. Add to an enemy root that already has NpcPathfinder3D (obstacleLayers set to Walls).
@@ -17,20 +19,17 @@ using UnityEngine;
 [RequireComponent(typeof(NpcPathfinder3D))]
 public sealed class NpcChaseNavigator : MonoBehaviour
 {
-    private const float WaypointReached = 0.35f;
-    private const float RepathTargetMoved = 1.5f;
-
-    [Tooltip("Skip pathfinding beyond this distance and step directly; chase should be local.")]
-    [SerializeField, Min(1f)] private float maxPathDistance = 25f;
+    [Header("Config (Game.Data)")]
+    [SerializeField] private NpcChaseNavigationConfig config = new NpcChaseNavigationConfig();
 
     private NpcPathfinder3D pathfinder;
+    private NpcChaseNavigationPolicy policy;
     private readonly RouteFollower route = new RouteFollower();
-    private float nextRepathAt;
-    private Vector3 lastPathGoal;
 
     private void Awake()
     {
         pathfinder = GetComponent<NpcPathfinder3D>();
+        policy = new NpcChaseNavigationPolicy(config);
     }
 
     /// <summary>
@@ -45,26 +44,34 @@ public sealed class NpcChaseNavigator : MonoBehaviour
         if (distance <= 0.001f)
             return Vector3.zero;
 
-        // Drive straight only when the way is actually clear, or as a last resort beyond the
-        // pathable range. A wall within directRange must still be routed around, not jammed into.
-        if (HasClearLine(self, target) || distance > maxPathDistance)
+        // The Core policy decides direct-vs-repath from the line-of-sight result and its cadence.
+        NpcChaseNavigationDecision decision = policy.Evaluate(
+            Time.time, self.x, self.z, target.x, target.z, HasClearLine(self, target), repathInterval);
+
+        if (decision.DriveDirect)
         {
             route.Clear();
             return flat / distance;
         }
 
-        if (Time.time >= nextRepathAt || (target - lastPathGoal).sqrMagnitude > RepathTargetMoved * RepathTargetMoved)
+        if (decision.Repath)
         {
-            nextRepathAt = Time.time + Mathf.Max(0.05f, repathInterval);
-            lastPathGoal = target;
             route.Clear();
 
+            // Path generation and Unity vector conversion stay in the adapter; the decision of what
+            // to do with the result is reported back to Core.
             List<Vector3> found = pathfinder.FindPath(self, target);
-            if (found != null && found.Count > 0)
+            bool hasPath = found != null && found.Count > 0;
+            if (hasPath)
                 route.SetRoute(NpcRoute.FromXZ(found));
+
+            decision = policy.ReportPathResult(hasPath);
         }
 
-        route.Advance(self.x, self.z, WaypointReached);
+        if (decision.Wait)
+            return Vector3.zero;
+
+        route.Advance(self.x, self.z, config.WaypointReached);
         if (route.TryCurrent(out float waypointX, out float waypointZ))
         {
             Vector3 toWaypoint = new Vector3(waypointX - self.x, 0f, waypointZ - self.z);
@@ -72,8 +79,10 @@ public sealed class NpcChaseNavigator : MonoBehaviour
                 return toWaypoint.normalized;
         }
 
-        // No usable path: fall back to a direct step so the enemy at least tries.
-        return flat / distance;
+        // The route was consumed while the target is still blocked. Report it so Core repaths at the
+        // next cadence; never invent a direct step that walks straight into the obstacle.
+        policy.ReportRouteExhausted();
+        return Vector3.zero;
     }
 
     private bool HasClearLine(Vector3 self, Vector3 target)

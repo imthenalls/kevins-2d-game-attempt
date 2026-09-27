@@ -4,9 +4,10 @@ using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Holds quest rewards that could not be delivered because the inventory was full, and lets the
-/// player claim them once space is available. Delivery reuses <see cref="InventoryHelper.GiveItem"/>
-/// so keyring routing and item world restrictions are respected. Pending rewards survive save/load.
+/// Unity adapter for pending quest rewards. The reward identities, merging, remaining quantities,
+/// and save snapshot live in the engine-free <see cref="PendingRewardLedger"/> owned by
+/// <see cref="GameSession"/>; this component only resolves <see cref="ItemData"/> and bridges to
+/// <see cref="InventoryHelper.GiveItem"/>. Delivery respects keyring routing and world restrictions.
 ///
 /// Unity setup: none. A persistent instance is created on first use; SaveManager restores its state.
 ///
@@ -20,10 +21,10 @@ public sealed class PendingRewardManager : MonoBehaviour
 {
     public static PendingRewardManager Instance { get; private set; }
 
-    private readonly List<PendingRewardEntry> _pending = new();
+    private PendingRewardLedger ledger;
 
-    public IReadOnlyList<PendingRewardEntry> Pending => _pending;
-    public bool HasPendingRewards => _pending.Count > 0;
+    public IReadOnlyList<PendingRewardEntry> Pending => ledger.Pending;
+    public bool HasPendingRewards => ledger.HasPendingRewards;
 
     public event Action OnChanged;
 
@@ -46,13 +47,21 @@ public sealed class PendingRewardManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        GameSessionHost.EnsureExists();
+        ledger = GameSessionHost.Session.PendingRewards;
+        ledger.Changed += HandleChanged;
     }
 
     private void OnDestroy()
     {
-        if (Instance == this)
-            Instance = null;
+        if (Instance != this) return;
+        if (ledger != null)
+            ledger.Changed -= HandleChanged;
+        Instance = null;
     }
+
+    private void HandleChanged() => OnChanged?.Invoke();
 
     /// <summary>
     /// Delivers a quest reward now, retaining any undelivered quantity as a pending reward.
@@ -75,48 +84,45 @@ public sealed class PendingRewardManager : MonoBehaviour
         if (leftover <= 0)
             return;
 
-        PendingRewardEntry entry = _pending.Find(p => p.questId == questId && p.itemId == itemId);
-        if (entry == null)
-        {
-            entry = new PendingRewardEntry
-            {
-                rewardId = string.IsNullOrWhiteSpace(questId) ? itemId : questId + ":" + itemId,
-                questId = questId,
-                itemId = itemId,
-                remaining = 0,
-            };
-            _pending.Add(entry);
-        }
-        entry.remaining += leftover;
+        ledger.Record(questId, itemId, leftover);
         Debug.Log($"[PendingRewardManager] {leftover}x '{itemId}' pending (inventory full).");
-        OnChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Records an already-undelivered remainder as a pending reward. Callers that deliver what they
+    /// can (e.g. WorldObject) use this so a full inventory cannot lose the rest of a reward.
+    /// Returns true when the remainder is accounted for (including a non-positive quantity), or
+    /// false when there is nothing to record it with.
+    /// </summary>
+    public bool RecordLeftover(string rewardId, string itemId, int quantity)
+    {
+        if (quantity <= 0)
+            return true;
+        if (ledger == null || string.IsNullOrWhiteSpace(itemId))
+            return false;
+
+        ledger.Record(rewardId, itemId, quantity);
+        Debug.Log($"[PendingRewardManager] {quantity}x '{itemId}' pending (inventory full).");
+        return true;
     }
 
     /// <summary>Retries delivery of every pending reward and returns the total delivered.</summary>
     public int ClaimPending()
     {
-        int delivered = 0;
-        for (int i = _pending.Count - 1; i >= 0; i--)
-        {
-            PendingRewardEntry entry = _pending[i];
-            ItemData item = Resolve(entry.itemId);
-            if (item == null)
-            {
-                Debug.LogWarning($"[PendingRewardManager] Unknown pending item '{entry.itemId}'; dropping.");
-                _pending.RemoveAt(i);
-                continue;
-            }
+        PendingRewardClaimResult result = ledger.Claim(Deliver);
+        return result.Delivered;
+    }
 
-            int taken = InventoryHelper.GiveItem(item, entry.remaining);
-            entry.remaining -= taken;
-            delivered += taken;
-            if (entry.remaining <= 0)
-                _pending.RemoveAt(i);
+    private static PendingRewardDelivery Deliver(string itemId, int requested)
+    {
+        ItemData item = Resolve(itemId);
+        if (item == null)
+        {
+            Debug.LogWarning($"[PendingRewardManager] Unknown pending item '{itemId}'; dropping.");
+            return PendingRewardDelivery.Unknown();
         }
 
-        if (delivered > 0)
-            OnChanged?.Invoke();
-        return delivered;
+        return PendingRewardDelivery.Accepted(InventoryHelper.GiveItem(item, requested));
     }
 
     private static ItemData Resolve(string itemId)
@@ -129,39 +135,7 @@ public sealed class PendingRewardManager : MonoBehaviour
 
     // ── Save / load ──────────────────────────────────────────────────────────
 
-    public List<PendingRewardEntry> GetSaveData()
-    {
-        var result = new List<PendingRewardEntry>(_pending.Count);
-        foreach (PendingRewardEntry entry in _pending)
-        {
-            result.Add(new PendingRewardEntry
-            {
-                rewardId = entry.rewardId,
-                questId = entry.questId,
-                itemId = entry.itemId,
-                remaining = entry.remaining,
-            });
-        }
-        return result;
-    }
+    public List<PendingRewardEntry> GetSaveData() => ledger.Snapshot();
 
-    public void LoadSaveData(List<PendingRewardEntry> entries)
-    {
-        _pending.Clear();
-        if (entries == null)
-            return;
-        foreach (PendingRewardEntry entry in entries)
-        {
-            if (entry == null || entry.remaining <= 0 || string.IsNullOrWhiteSpace(entry.itemId))
-                continue;
-            _pending.Add(new PendingRewardEntry
-            {
-                rewardId = entry.rewardId,
-                questId = entry.questId,
-                itemId = entry.itemId,
-                remaining = entry.remaining,
-            });
-        }
-        OnChanged?.Invoke();
-    }
+    public void LoadSaveData(List<PendingRewardEntry> entries) => ledger.Load(entries);
 }

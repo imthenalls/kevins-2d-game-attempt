@@ -15,48 +15,11 @@ namespace Game.Tests
     /// created by GameBootstrap at play start, so no scene load is required (and no scene state
     /// leaks into sibling tests).
     ///
-    /// The test backs up and restores the real save file so it never touches the player's save.
+    /// The save runs against a disposable sandbox directory (see <see cref="PlayModeSaveFileTestBase"/>),
+    /// so it never touches the player's real save.
     /// </summary>
-    public class CompleteSequencePlayModeTests : PlayModeTestBase
+    public class CompleteSequencePlayModeTests : PlayModeSaveFileTestBase
     {
-        private string savePath;
-        private string backupPath;
-        private string tempPath;
-        private bool hadSave;
-
-        [UnitySetUp]
-        public IEnumerator SetUp()
-        {
-            savePath = Path.Combine(Application.persistentDataPath, "save.json");
-            backupPath = savePath + ".bak";
-            tempPath = savePath + ".tmp";
-            hadSave = File.Exists(savePath);
-
-            if (hadSave)
-            {
-                File.Copy(savePath, savePath + ".testbak", overwrite: true);
-                File.Delete(savePath);
-            }
-            if (File.Exists(backupPath)) File.Delete(backupPath);
-            if (File.Exists(tempPath)) File.Delete(tempPath);
-
-            yield return null;
-        }
-
-        [UnityTearDown]
-        public IEnumerator TearDown()
-        {
-            if (File.Exists(savePath)) File.Delete(savePath);
-            if (File.Exists(backupPath)) File.Delete(backupPath);
-            if (File.Exists(tempPath)) File.Delete(tempPath);
-            if (hadSave && File.Exists(savePath + ".testbak"))
-            {
-                File.Copy(savePath + ".testbak", savePath, overwrite: true);
-                File.Delete(savePath + ".testbak");
-            }
-            yield return null;
-        }
-
         [UnityTest]
         public IEnumerator Quest_Completion_Rewards_And_World_Changes_Survive_Save()
         {
@@ -84,10 +47,10 @@ namespace Game.Tests
             Assert.IsTrue(state.HasFact("sheriffsGratitudeComplete"), "the follow-up writes its completion fact");
 
             saveManager.Save();
-            Assert.IsTrue(File.Exists(savePath), "Save must write the save file");
+            Assert.IsTrue(File.Exists(SavePath), "Save must write the save file");
 
-            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(savePath));
-            Assert.AreEqual(10, data.saveVersion);
+            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
+            Assert.AreEqual(SaveData.CurrentVersion, data.saveVersion);
 
             Assert.IsTrue(data.activeQuests.Exists(q => q.questId == "bandit_king"), "bandit_king must persist");
             Assert.IsTrue(data.activeQuests.Exists(q => q.questId == "sheriffs_gratitude"), "the follow-up must persist");

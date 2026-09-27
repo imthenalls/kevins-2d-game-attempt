@@ -1,13 +1,20 @@
 using System;
+using Game.Core;
 using UnityEngine;
 
 /// <summary>
-/// Tracks cumulative gameplay statistics for a character (player or NPC).
-/// Subscribes to CombatAttacker events on the same GameObject — no polling required.
+/// Tracks cumulative gameplay statistics for a character (player or NPC). Subscribes to
+/// CombatAttacker events on the same GameObject — no polling required.
+///
+/// The authoritative totals live in the engine-free <see cref="CharacterStatisticsModel"/>, owned
+/// per character by <see cref="GameSession"/> (via <see cref="CharacterStatisticsRepository"/>), so
+/// they survive component destruction and scene loads and can be saved. This component only samples
+/// combat events and re-raises convenience events.
 ///
 /// Unity setup:
 ///   1. Add to any GameObject that already has a CombatAttacker.
-///   2. No Inspector fields to configure — wiring is automatic.
+///   2. Set Character Id to a stable value to persist/share stats; leave blank to use "player" for a
+///      PlayerControllerBase or the GameObject name otherwise.
 ///   3. For stats that originate outside CombatAttacker (e.g. crits from a spell system),
 ///      call RecordCriticalHit() or RecordKill() directly on this component.
 ///
@@ -16,63 +23,58 @@ using UnityEngine;
 ///     stats.OnAttacksChanged     += count => achievementSystem.Check("attacks", count);
 ///     stats.OnDamageDealtChanged += total => questTracker.Update("damage_quest", total);
 ///     stats.OnKillsChanged       += count => SaveManager.Instance.MarkDirty();
-///   Adding a brand-new statistic (e.g. TotalDodges) only requires adding a property +
-///   event here and a call site wherever the dodge logic lives — no other files change.
 /// </summary>
 [DisallowMultipleComponent]
 public class CharacterStatistics : MonoBehaviour
 {
-    // ── Read-only stat properties ─────────────────────────────────────────────
+    [Tooltip("Stable id for this character's persisted statistics. Blank = \"player\" for a " +
+             "PlayerControllerBase, otherwise the GameObject name.")]
+    [SerializeField] private string characterId;
 
-    /// <summary>Number of successful attacks landed (one per TryAttack swing that connects).</summary>
-    public int TotalAttacks { get; private set; }
+    // ── Read-only stat properties (delegate to the session-owned model) ───────
 
-    /// <summary>Raw damage dealt to targets (sum of attackDamage per swing; recoil excluded).</summary>
-    public int TotalDamageDealt { get; private set; }
-
-    /// <summary>Number of killing blows dealt by this character.</summary>
-    public int TotalKills { get; private set; }
-
-    /// <summary>Number of critical hits landed. Incremented by RecordCriticalHit().</summary>
-    public int CriticalHits { get; private set; }
-
-    /// <summary>Total number of items picked up. Incremented by RecordItemGathered().</summary>
-    public int TotalItemsGathered { get; private set; }
-
-    /// <summary>Total currency earned. Incremented by RecordMoneyGained().</summary>
-    public int TotalMoneyGained { get; private set; }
+    public int TotalAttacks => Model.TotalAttacks;
+    public int TotalDamageDealt => Model.TotalDamageDealt;
+    public int TotalKills => Model.TotalKills;
+    public int CriticalHits => Model.CriticalHits;
+    public int TotalItemsGathered => Model.TotalItemsGathered;
+    public int TotalMoneyGained => Model.TotalMoneyGained;
 
     // ── Per-stat change events ────────────────────────────────────────────────
-    // External systems (achievements, quests, analytics, UI, save/load) subscribe
-    // to exactly the events they need — zero coupling to this class's internals.
 
-    /// <summary>Fired whenever TotalAttacks increments. Argument is the new total.</summary>
     public event Action<int> OnAttacksChanged;
-
-    /// <summary>Fired whenever TotalDamageDealt increases. Argument is the new total.</summary>
     public event Action<int> OnDamageDealtChanged;
-
-    /// <summary>Fired whenever TotalKills increments. Argument is the new total.</summary>
     public event Action<int> OnKillsChanged;
-
-    /// <summary>Fired whenever CriticalHits increments. Argument is the new total.</summary>
     public event Action<int> OnCriticalHitsChanged;
-
-    /// <summary>Fired whenever TotalItemsGathered increments. Argument is the new total.</summary>
     public event Action<int> OnItemsGatheredChanged;
-
-    /// <summary>Fired whenever TotalMoneyGained increases. Argument is the new total.</summary>
     public event Action<int> OnMoneyGainedChanged;
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
     private CombatAttacker _attacker;
+    private CharacterStatisticsModel _model;
+
+    private CharacterStatisticsModel Model
+    {
+        get
+        {
+            if (_model != null)
+                return _model;
+
+            GameSessionHost.EnsureExists();
+            _model = GameSessionHost.Session.Statistics.GetOrCreate(ResolveCharacterId());
+            return _model;
+        }
+    }
 
     private void Awake()
     {
         _attacker = GetComponent<CombatAttacker>();
 
-        if (_attacker == null)
+        // A player avatar may legitimately have no CombatAttacker in a non-combat world; its stats
+        // still need to exist so item/money gains and saves are tracked. Only warn for other actors,
+        // where a missing attacker is an authoring mistake.
+        if (_attacker == null && !CompareTag("Player"))
             Debug.LogWarning($"[CharacterStatistics] No CombatAttacker found on '{gameObject.name}'. " +
                              "Attack/kill stats will not be tracked automatically.");
     }
@@ -91,6 +93,13 @@ public class CharacterStatistics : MonoBehaviour
         _attacker.OnKillLanded   -= HandleKillLanded;
     }
 
+    private string ResolveCharacterId()
+    {
+        if (!string.IsNullOrWhiteSpace(characterId))
+            return characterId.Trim();
+        return GetComponent<PlayerControllerBase>() != null ? "player" : gameObject.name;
+    }
+
     // ── Public API for stats sourced outside CombatAttacker ──────────────────
 
     /// <summary>
@@ -100,8 +109,8 @@ public class CharacterStatistics : MonoBehaviour
     /// </summary>
     public void RecordCriticalHit()
     {
-        CriticalHits++;
-        OnCriticalHitsChanged?.Invoke(CriticalHits);
+        Model.RecordCriticalHit();
+        OnCriticalHitsChanged?.Invoke(Model.CriticalHits);
     }
 
     /// <summary>
@@ -110,8 +119,8 @@ public class CharacterStatistics : MonoBehaviour
     /// </summary>
     public void RecordKill()
     {
-        TotalKills++;
-        OnKillsChanged?.Invoke(TotalKills);
+        Model.RecordKill();
+        OnKillsChanged?.Invoke(Model.TotalKills);
     }
 
     /// <summary>
@@ -120,8 +129,10 @@ public class CharacterStatistics : MonoBehaviour
     /// </summary>
     public void RecordItemGathered(int count = 1)
     {
-        TotalItemsGathered += count;
-        OnItemsGatheredChanged?.Invoke(TotalItemsGathered);
+        if (count <= 0)
+            return;
+        Model.RecordItemGathered(count);
+        OnItemsGatheredChanged?.Invoke(Model.TotalItemsGathered);
     }
 
     /// <summary>
@@ -129,24 +140,32 @@ public class CharacterStatistics : MonoBehaviour
     /// </summary>
     public void RecordMoneyGained(int amount)
     {
-        TotalMoneyGained += amount;
-        OnMoneyGainedChanged?.Invoke(TotalMoneyGained);
+        if (amount <= 0)
+            return;
+        Model.RecordMoneyGained(amount);
+        OnMoneyGainedChanged?.Invoke(Model.TotalMoneyGained);
     }
+
+    // ── Save / load ───────────────────────────────────────────────────────────
+
+    /// <summary>Returns the persisted statistics snapshot (used by SaveManager for the player).</summary>
+    public CharacterStatisticsSnapshot GetSnapshot() => Model.GetSnapshot();
+
+    /// <summary>Restores statistics from a save file (bulk restore; raises no events).</summary>
+    public void Load(CharacterStatisticsSnapshot snapshot) => Model.Load(snapshot);
 
     // ── Private event handlers ────────────────────────────────────────────────
 
     private void HandleAttackLanded(int damage)
     {
-        TotalAttacks++;
-        OnAttacksChanged?.Invoke(TotalAttacks);
-
-        TotalDamageDealt += damage;
-        OnDamageDealtChanged?.Invoke(TotalDamageDealt);
+        Model.RecordAttack(damage);
+        OnAttacksChanged?.Invoke(Model.TotalAttacks);
+        OnDamageDealtChanged?.Invoke(Model.TotalDamageDealt);
     }
 
     private void HandleKillLanded()
     {
-        TotalKills++;
-        OnKillsChanged?.Invoke(TotalKills);
+        Model.RecordKill();
+        OnKillsChanged?.Invoke(Model.TotalKills);
     }
 }

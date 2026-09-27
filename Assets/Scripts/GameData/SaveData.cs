@@ -39,7 +39,15 @@ namespace Game.Core
         // Version 8 separates base max HP/MP from equipment bonuses (playerBaseMaxHp/Mp).
         // Version 9 adds per-NPC remembered locked gates (NpcMemory).
         // Version 10 adds the per-NPC starting-inventory initialization flag (NpcInventoryDatabase).
+        // Version 11 adds cumulative player gameplay statistics (CharacterStatisticsModel).
         // Missing fields deserialize as 0, so pre-unification saves are version 0.
+
+        /// <summary>
+        /// The save format version this build writes and the newest it can load. Bump it here and
+        /// update the history comment above; SaveManager reads it so the two never drift apart.
+        /// </summary>
+        public const int CurrentVersion = 11;
+
         public int saveVersion;
 
         // ── Scene ────────────────────────────────────────────────────────────────
@@ -74,6 +82,9 @@ namespace Game.Core
         public int playerBaseMaxMp;
 
         public WalletSaveData wallet = new();
+
+        // Cumulative player gameplay statistics (v11), owned by GameSession.CharacterStatisticsModel.
+        public CharacterStatisticsSnapshot playerStatistics = new();
 
         // Completed item-for-mana market exchanges retained by TradeService.
         public List<MarketTransaction> marketTransactions = new();

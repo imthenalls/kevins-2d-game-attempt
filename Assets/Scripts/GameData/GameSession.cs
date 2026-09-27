@@ -23,6 +23,25 @@ namespace Game.Core
         public NpcInventoryInitializationService NpcInventories { get; }
 
         /// <summary>
+        /// Authoritative world-travel state: active world, per-world remembered positions,
+        /// world-scoped ability unlocks, and the shared player wallet snapshot. Lives for the whole
+        /// session so it survives scene loads and avatar changes.
+        /// </summary>
+        public WorldTravelModel WorldTravel { get; }
+
+        /// <summary>
+        /// Authoritative ledger of quest rewards that could not be delivered (full inventory) and
+        /// remain claimable. Lives for the whole session and is saved via SaveData.pendingRewards.
+        /// </summary>
+        public PendingRewardLedger PendingRewards { get; }
+
+        /// <summary>
+        /// Per-character cumulative gameplay statistics (attacks, damage, kills, crits, items,
+        /// money), keyed by a stable character id so they outlive the component.
+        /// </summary>
+        public CharacterStatisticsRepository Statistics { get; }
+
+        /// <summary>
         /// Authoritative player health, shared across avatars and scene loads. Null until the first
         /// player binds; call <see cref="GetOrCreatePlayerHealth"/> to seed and retrieve it.
         /// </summary>
@@ -44,6 +63,9 @@ namespace Game.Core
             NpcMemoryRepo = new NpcMemoryRepository();
             NpcMemories = new NpcMemoryService(NpcMemoryRepo);
             NpcInventories = new NpcInventoryInitializationService();
+            WorldTravel = new WorldTravelModel();
+            PendingRewards = new PendingRewardLedger();
+            Statistics = new CharacterStatisticsRepository();
         }
 
         /// <summary>

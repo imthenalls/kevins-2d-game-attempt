@@ -30,6 +30,9 @@ public class WorldStateManager : MonoBehaviour
 
     private readonly WorldFacts facts = new WorldFacts();
 
+    /// <summary>The engine-free fact store behind this facade (used by Core interaction models).</summary>
+    internal WorldFacts Facts => facts;
+
     /// <summary>
     /// Fired whenever any fact is set, cleared, or toggled. Passes the key that changed.
     /// Not fired during LoadSnapshot (bulk restore).

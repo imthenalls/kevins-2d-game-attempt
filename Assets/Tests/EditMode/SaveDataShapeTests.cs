@@ -24,6 +24,24 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Current_Save_Version_Is_Eleven()
+        {
+            // Version 11 adds cumulative player gameplay statistics. New saves are written with this
+            // version and the loader accepts anything at or below it.
+            Assert.AreEqual(11, SaveData.CurrentVersion);
+        }
+
+        [Test]
+        public void Statistics_Snapshot_Defaults_To_Empty_For_Saves_From_Version_Ten_Or_Earlier()
+        {
+            var data = new SaveData();
+
+            Assert.IsNotNull(data.playerStatistics, "pre-v11 saves must default to an empty snapshot");
+            Assert.AreEqual(0, data.playerStatistics.totalAttacks);
+            Assert.AreEqual(0, data.playerStatistics.totalKills);
+        }
+
+        [Test]
         public void Every_Collection_Is_Initialized()
         {
             var data = new SaveData();

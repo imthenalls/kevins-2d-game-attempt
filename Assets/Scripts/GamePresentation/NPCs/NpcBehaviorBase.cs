@@ -38,10 +38,9 @@ public abstract class NpcBehaviorBase : MonoBehaviour, INpcBehavior
     protected IKeyHolder KeyHolder { get; private set; }
     protected bool IsDone { get; private set; }
 
-    private Vector2 lastProgressPosition;
-    private float stalledTime;
-
-    private const float ProgressDistance = 0.01f;
+    // Shared stall detector: with a zero repath budget, the first stall reports Abandon so OnStalled
+    // fires exactly like the old per-behavior timer, but the rule now lives in Core.
+    private TravelRecoveryModel recovery;
 
     public float Weight => config.Weight;
 
@@ -55,6 +54,7 @@ public abstract class NpcBehaviorBase : MonoBehaviour, INpcBehavior
         KeyHolder = GetComponentInParent<IKeyHolder>();
         if (spriteRenderer == null)
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        recovery = new TravelRecoveryModel(config.StallTimeout, 0);
     }
 
     /// <summary>Ensures an NpcMemory exists on this NPC and returns it.</summary>
@@ -68,8 +68,9 @@ public abstract class NpcBehaviorBase : MonoBehaviour, INpcBehavior
     public void OnEnter()
     {
         IsDone = false;
-        stalledTime = 0f;
-        lastProgressPosition = Body != null ? Body.position : (Vector2)transform.position;
+        recovery ??= new TravelRecoveryModel(config.StallTimeout, 0);
+        Vector2 position = Body != null ? Body.position : (Vector2)transform.position;
+        recovery.Reset(position.x, position.y);
         Enter();
     }
 
@@ -80,7 +81,9 @@ public abstract class NpcBehaviorBase : MonoBehaviour, INpcBehavior
 
         TickBehavior();
 
-        if (!IsDone && Body != null && UpdateStall(Body.position))
+        if (!IsDone && Body != null &&
+            recovery.Evaluate(Body.position.x, Body.position.y, Time.deltaTime, atWaypoint: false)
+                == TravelRecoveryDecision.Abandon)
             OnStalled();
     }
 
@@ -144,18 +147,5 @@ public abstract class NpcBehaviorBase : MonoBehaviour, INpcBehavior
     {
         if (spriteRenderer != null)
             spriteRenderer.flipX = direction.x < 0f;
-    }
-
-    private bool UpdateStall(Vector2 position)
-    {
-        if ((position - lastProgressPosition).sqrMagnitude >= ProgressDistance * ProgressDistance)
-        {
-            lastProgressPosition = position;
-            stalledTime = 0f;
-            return false;
-        }
-
-        stalledTime += Time.deltaTime;
-        return stalledTime >= config.StallTimeout;
     }
 }

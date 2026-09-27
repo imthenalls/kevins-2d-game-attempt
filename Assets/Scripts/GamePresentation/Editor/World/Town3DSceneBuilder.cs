@@ -525,6 +525,8 @@ public static class Town3DSceneBuilder
 
         SetObjectField(controller, "visualTransform", visual.transform);
 
+        SetStringField(player.AddComponent<CharacterStatistics>(), "characterId", "player");
+
         var interaction = player.AddComponent<PlayerInteractionController>();
         int npcMask = 1 << Mathf.Max(0, LayerMask.NameToLayer("Npc"));
         int interactableLayer = LayerMask.NameToLayer("Interactable");

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Game.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -132,6 +133,8 @@ public static class WorldBSceneBuilder
 
         PlayerController2D controller = player.AddComponent<PlayerController2D>();
         player.AddComponent<PlayerInteractionController>();
+        CharacterStatistics statistics = player.AddComponent<CharacterStatistics>();
+        Set(statistics, "characterId", "player");
         WorldCharacter character = player.AddComponent<WorldCharacter>();
         Set(character, "world", WorldLayer.WorldB);
         PlayerAvatarProfile profile = AssetDatabase.LoadAssetAtPath<PlayerAvatarProfile>(

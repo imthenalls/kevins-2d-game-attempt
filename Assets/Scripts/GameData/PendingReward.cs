@@ -6,8 +6,8 @@ namespace Game.Core
     /// Serializable record of a quest reward that could not be fully delivered (inventory full).
     /// The player can claim the remaining quantity later. Plain C#, lives in Game.Data.
     ///
-    /// Unity setup: none. Owned by the presentation-side PendingRewardManager and serialized into
-    /// the save file.
+    /// Unity setup: none. Owned by <see cref="PendingRewardLedger"/> (in turn owned by
+    /// GameSession) and serialized into the save file.
     /// </summary>
     [Serializable]
     public class PendingRewardEntry

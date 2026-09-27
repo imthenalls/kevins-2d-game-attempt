@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Game.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -100,6 +101,15 @@ public static class PlayerAvatarPrefabCreator
                 serializedCharacter.FindProperty("world").enumValueIndex = (int)world;
                 serializedCharacter.FindProperty("profile").objectReferenceValue = profile;
                 serializedCharacter.ApplyModifiedPropertiesWithoutUndo();
+
+                // Every avatar shares the one "player" statistics bucket owned by GameSession.
+                CharacterStatistics statistics = clone.GetComponent<CharacterStatistics>();
+                if (statistics == null)
+                    statistics = clone.AddComponent<CharacterStatistics>();
+                SerializedObject serializedStatistics = new SerializedObject(statistics);
+                serializedStatistics.FindProperty("characterId").stringValue = "player";
+                serializedStatistics.ApplyModifiedPropertiesWithoutUndo();
+
                 PrefabUtility.SaveAsPrefabAsset(clone, prefabPath);
             }
             finally
