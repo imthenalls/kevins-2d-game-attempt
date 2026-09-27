@@ -5,6 +5,8 @@
 > camera, 3D portals, one interior room per building, and NPCs that commute home. See
 > [ISOMETRIC_3D.md](ISOMETRIC_3D.md) for the current system. The 2D description below is kept as
 > the historical design of the old `TownSceneBuilder` and no longer describes the shipped scene.
+> To keep hand edits across a rebuild, use the rebuild point
+> ([TOWN_REBUILD_POINT.md](TOWN_REBUILD_POINT.md)).
 
 A placeholder town map built with **no art assets**: coloured ground tiles plus building
 **GameObjects with real colliders** (like NPCs or the training spawn box) — not building tiles.

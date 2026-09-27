@@ -122,6 +122,10 @@ public static class Town3DSceneBuilder
         BuildTownExitPortal();
         BuildHiddenKey();
 
+        // Re-apply any saved hand edits (Tools > Worlds > Town 3D > Set Rebuild Point) on top of the
+        // freshly built defaults so a rebuild preserves the designer's moves and tweaks.
+        Town3DRebuildPointTool.Apply(scene);
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();

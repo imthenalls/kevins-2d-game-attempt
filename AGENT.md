@@ -56,6 +56,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/PROJECT_ASSETS.md](Documents/PROJECT_ASSETS.md) | Third-party Store packages in the project (NaughtyAttributes, PathGrid): what they are, their APIs, and how to use them in the Shell |
 | [Documents/NPC_STRESS_TEST.md](Documents/NPC_STRESS_TEST.md) | Disposable 25/50/100-NPC wandering + pathfinding performance harness (Tools > Stress) and its results |
 | [Documents/TOWN_SCENE.md](Documents/TOWN_SCENE.md) | Placeholder town scene built from coloured tiles: roads, solid buildings with a single passable entrance, park, and the tilemap-build gotcha |
+| [Documents/TOWN_REBUILD_POINT.md](Documents/TOWN_REBUILD_POINT.md) | Persist hand edits to the generated Town scene across rebuilds: snapshot with "Set Rebuild Point" and re-apply after the builder regenerates |
 | [Documents/GAME_BOOTSTRAP.md](Documents/GAME_BOOTSTRAP.md) | Persistent `Game Systems` layer (session, save, portals, quests, world state) created before any scene; what a scene still needs |
 | [Documents/SCENE_CHECKLIST.md](Documents/SCENE_CHECKLIST.md) | Every scene's required content, what the boot layer supplies (follow camera, EventSystem, shared inventory canvas), and the guards that enforce it |
 
