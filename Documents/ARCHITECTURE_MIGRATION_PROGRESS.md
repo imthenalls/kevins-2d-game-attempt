@@ -29,24 +29,14 @@ safe to commit. Engine-free tests live in `Assets/Tests/EditMode/` and are mirro
 | NPC memory | `1854e76` | `Game.Core.NpcMemoryModel` + repo/service/snapshot, owned by `GameSession`, saved via `NpcSaveEntry.lockedGates` (v9). Fixed the `Clear()` bug. Tests: `NpcMemoryModelTests`. |
 | NPC home-schedule state machine | `5bc58d1` | `Game.Core.NpcScheduleState` is now a state machine: events in (`NpcScheduleEvent`) / commands out (`NpcScheduleCommand`). All schedule tuning in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. `NpcSchedule3D` is a facade. Tests: `NpcScheduleStateTests`. |
 | NPC starting-inventory seeding | `9400249` | Parsed definitions → `Game.Core.NpcStartingInventory`/`NpcStartingItem`; seed-once state → `Game.Core.NpcInventoryInitializationModel`/`NpcInventoryInitializationService` owned by `GameSession` (saved via `NpcSaveEntry.inventoryInitialized`, v10). `InventoryModel.IsInitialized` replaces the old "has ≥1 item" check, so an emptied inventory is not reseeded. `NpcInventoryDatabase` is a facade. Tests: `NpcInventoryInitializationTests`. |
+| NPC perception tuning + target ranking | (this handoff commit) | Scan radius → `Game.Core.NpcPerceptionConfig`; nearest-target/gate ranking (open/invalid filtered) → `Game.Core.NpcTargetSelection` (+`NpcTargetCandidate`). `NpcPerception` only samples `Physics2D`, resolves components, and finds the player through `PlayerControllerBase` (works in 2D and 3D). Tests: `NpcTargetSelectionTests`. |
 
 ## Remaining migrations (in order)
 
 Follow the same pattern: add Core type(s) + a config, make the MonoBehaviour a facade, add engine-free
 tests, run `verify-all`, update the two docs above, commit.
 
-### 1. `NpcPerception` — tuning + target ranking → Core
-
-- **Violation:** `Assets/Scripts/GamePresentation/NPCs/NpcPerception.cs`. `scanRadius` is a
-  MonoBehaviour field; "nearest target" and "nearest gate (open doors are invalid)" are decided in the
-  component; player discovery is hardwired to `PlayerController2D` (breaks 3D Town).
-- **Target:** add `Game.Core.NpcPerceptionConfig` (scan radius etc.). Keep the `Physics`/`Physics2D`
-  overlap sampling + component resolution in the Shell; move target/gate ranking into an engine-free
-  policy operating on candidate distance/state data. Use `PlayerControllerBase` (or 2D/3D adapters) so
-  it works in both dimensions.
-- **Tests:** ranking policy (nearest wins, open doors filtered, dead/irrelevant filtered).
-
-### 2. `NpcProximityMelee3D` — remaining engagement decisions → Core
+### 1. `NpcProximityMelee3D` — remaining engagement decisions → Core
 
 - **Violation:** `Assets/Scripts/GamePresentation/NPCs/NpcProximityMelee3D.cs` (and its 2D sibling
   `NpcProximityMeleeController.cs`). It uses `MeleeEngagementPolicy`, but `chaseSpeed`,

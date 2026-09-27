@@ -37,10 +37,15 @@ Derived behaviors override `Enter`, `TickBehavior`, and `Exit`. `NpcWanderBehavi
 One shared scan per NPC instead of every behavior running its own physics query. On a fixed
 cadence it collects nearby colliders and exposes:
 
-- `Player` — nearest `PlayerController2D` transform.
+- `Player` — nearest `PlayerControllerBase` transform (works in 2D and 3D).
 - `Gates` — distinct `SlidingDoor`s in range.
 - `Contacts` — all colliders seen.
 - `FindNearestGate(origin, maxDistance)` and `FindNearest&lt;T&gt;(origin, maxDistance)`.
+
+The scan radius lives in `Game.Core.NpcPerceptionConfig` (set **Scan Radius** / **Detection Layers**
+on the component), and the "nearest eligible candidate within range" decision — open gates and
+invalid components filtered — lives in `Game.Core.NpcTargetSelection`; the component only samples
+`Physics2D` and resolves components.
 
 `NpcUseDoorBehavior` uses `FindNearestGate`; when no `NpcPerception` is present it falls back to
 a direct search.

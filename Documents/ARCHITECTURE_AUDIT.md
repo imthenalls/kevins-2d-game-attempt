@@ -11,12 +11,11 @@ by convention. Most authoritative state — NPC state, inventory contents, tunin
 facts, quests, equipment, hotbar, keys, player health, and the save shape — lives in the Core, and
 the player's continuous physics position is a documented transitional compromise.
 
-**However, the migration is not complete.** A re-audit of the NPC folder found remaining
-Shell-owned rules and persistent state: `NpcPerception` target ranking and residual
-`NpcProximityMelee3D` engagement decisions. These are tracked in **Deviations** below and must not be
-described as migrated. (`NpcMemory`, the `NpcSchedule3D` state machine, and
-`NpcInventoryDatabase` starting-inventory seeding were migrated — see **Migrated since the first
-audit**.)
+**However, the migration is not complete.** A re-audit of the NPC folder found one remaining
+Shell-owned rule: residual `NpcProximityMelee3D` engagement decisions. It is tracked in **Deviations**
+below and must not be described as migrated. (`NpcMemory`, the `NpcSchedule3D` state machine,
+`NpcInventoryDatabase` starting-inventory seeding, and `NpcPerception` target ranking were migrated —
+see **Migrated since the first audit**.)
 
 This is also the project's named architecture: **Engine-Free Core**.
 
@@ -107,27 +106,31 @@ This is also the project's named architecture: **Engine-Free Core**.
   on a scene reload; the flag is saved via `NpcSaveEntry.inventoryInitialized` (v10). `NpcInventoryDatabase`
   is now a facade that only parses JSON, resolves `ItemData`, and applies the seed. Engine-free tests:
   `Assets/Tests/EditMode/NpcInventoryInitializationTests.cs`.
+- **NPC perception tuning + target ranking** — the scan radius moved into `Game.Core.NpcPerceptionConfig`
+  and the "nearest eligible target/gate within range" rule (open gates and invalid components filtered)
+  moved into `Game.Core.NpcTargetSelection` (+ `NpcTargetCandidate`). `NpcPerception` now only samples
+  `Physics2D`, resolves components, and discovers the player through `PlayerControllerBase` instead of
+  `PlayerController2D`, so the same component works in 2D and 3D. Engine-free tests:
+  `Assets/Tests/EditMode/NpcTargetSelectionTests.cs`.
 
 ## Deviations — authoritative state / rules still in Presentation
 
 | # | State / rule | Location | Impact | Note |
 |---|---|---|---|---|
-| 1 | Scan tuning + nearest target/gate ranking | `NPCs/NpcPerception.cs` | Gameplay tuning and selection rules in the MonoBehaviour; player discovery hardwired to `PlayerController2D`. | `NpcPerceptionConfig` + a target-selection policy; use `PlayerControllerBase`/dimension adapters. |
-| 2 | Residual engagement decisions | `NPCs/NpcProximityMelee3D.cs` | Uses `MeleeEngagementPolicy`, but tuning fields and target-validity/behavior-blocked transitions remain in the MonoBehaviour. | Extend the Core policy to take alive/behavior inputs and return an intent. |
+| 1 | Residual engagement decisions | `NPCs/NpcProximityMelee3D.cs` | Uses `MeleeEngagementPolicy`, but tuning fields and target-validity/behavior-blocked transitions remain in the MonoBehaviour. | Extend the Core policy to take alive/behavior inputs and return an intent. |
 | — | Player continuous physics position | `PlayerController2D/3D` | Grid-anchored via `PositionModel`; the raw physics transform is still Shell-owned. | Documented transitional compromise. |
 
 ## Practical consequence
 
 The migration is **in progress**, not complete. Most authoritative state lives in the Engine-Free
-Core with fast engine-free tests, but the two deviations above still place gameplay rules or
-persistent state in `Game.Presentation`.
+Core with fast engine-free tests, but the one deviation above still places gameplay rules in
+`Game.Presentation`.
 
 ## Recommended migration order
 
 Work top-down; each step must keep `Tools/verify-all.ps1` green and add engine-free tests.
 
-1. **`NpcPerception`** → `NpcPerceptionConfig` + a target-selection policy.
-2. **`NpcProximityMelee3D`** → extend `MeleeEngagementPolicy` to return an intent (Idle / Blocked /
+1. **`NpcProximityMelee3D`** → extend `MeleeEngagementPolicy` to return an intent (Idle / Blocked /
    Chase / Attack / Disengage) from tuning + alive/behavior inputs.
 
 Each step should keep `Tools/verify-all.ps1` green and move the affected tests into
