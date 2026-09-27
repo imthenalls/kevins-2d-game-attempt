@@ -68,9 +68,9 @@ Migrate top-down. Update this table as items land.
 | ✅ | `NPCs/NpcDashMelee3D.cs`, `NpcDashMeleeController.cs` | Approach/Warning/Dash/Swing/Recovery → `Game.Core.NpcDashMeleeModel` (both facades done) |
 | ✅ | `NPCs/NpcWander3D.cs`, `NpcWanderBehavior.cs` | Wander target/idle/stall/arrival + dead-end memory → `Game.Core.WanderModel` (both facades done; stall/repath recovery shared via `TravelRecoveryModel`) |
 | ✅ | `NPCs/NpcWander3D.cs`, `NpcSchedule3D.cs`, `NpcWanderBehavior.cs`, `NpcChaseNavigator.cs`, `NpcUseDoorBehavior.cs` | Route/waypoint following → `Game.Core.RouteFollower`; local-avoidance math → `Game.Core.LocalAvoidance` (the facades only sample physics and apply motion) |
-| ✅ | `NPCs/NpcSchedule3D.cs` | Home-trip stall/repath/abandon policy → `Game.Core.TravelRecoveryModel`; route following → `Game.Core.RouteFollower`; the **schedule state machine** (Away→ToHome→Home, portal success/failure, retry timing, randomized initial time) → `Game.Core.NpcScheduleState` with events in / commands out. Tuning (entry radius, waypoint threshold, retry, initial fraction) in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. |
+| ✅ | `NPCs/NpcSchedule3D.cs` | Home-trip stall/repath/abandon policy → `Game.Core.TravelRecoveryModel`; route following → `Game.Core.RouteFollower`; the **schedule state machine** (Away→ToHome→Home, portal success/failure, retry timing, randomized initial time) → `Game.Core.NpcScheduleState` with events in / commands out. The pause rule (a non-Idle behavior state — talking/combat/disabled — suspends the timer and returns `NpcScheduleCommand.Pause`) is Core-owned via `NpcScheduleState.Tick(delta, config, behaviorState)`. Tuning (entry radius, waypoint threshold, retry, initial fraction) in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. |
 | ✅ | `NPCs/NpcMemory.cs` | Persistent gate knowledge + remember/skip/forget rules → `Game.Core.NpcMemoryModel`, owned by `GameSession` (saved via `NpcSaveEntry.lockedGates`); the facade resolves `SlidingDoor` + key holder into ids/booleans. |
-| ✅ | `NPCs/NpcPerception.cs` | Scan radius config → `Game.Core.NpcPerceptionConfig`; nearest-target/gate ranking (open/invalid filtered) → `Game.Core.NpcTargetSelection` (+`NpcTargetCandidate`). The `Physics2D` overlap sampling and component resolution stay in the adapter, and player discovery uses `PlayerControllerBase`. |
+| ✅ | `NPCs/NpcPerception.cs` | Scan radius config → `Game.Core.NpcPerceptionConfig`; nearest-target/gate ranking → `Game.Core.NpcTargetSelection` (+`NpcTargetCandidate`); gate eligibility (a gate is a target only when it exists and is closed) → `NpcTargetSelection.IsGateEligible`. The adapter only reports candidates (`Vector3`/candidate position + existence/open flag); the `Physics2D` overlap sampling and component resolution stay in the adapter, and player discovery uses `PlayerControllerBase` (note: the sensor itself is still a 2D `Physics2D` scan). |
 | ✅ | `NPCs/NpcProximityMelee3D.cs`, `NpcProximityMeleeController.cs` | Chase/disengage/repath tuning → `Game.Core.NpcMeleeEngagementConfig`; the policy takes alive + behavior-state inputs and returns `Idle` / `Blocked` / `Disengage` / `Chase` / `Attack`. Both components only apply the intent. |
 | ✅ | `NPCs/NpcInventoryDatabase.cs` | Starting-inventory seeding policy + "has this NPC been initialized?" → `Game.Core.NpcStartingInventory` DTOs + `Game.Core.NpcInventoryInitializationService` (owned by `GameSession`), using `InventoryModel.IsInitialized` (not "has an item"), saved via `NpcSaveEntry.inventoryInitialized` (v10). The facade only parses JSON, resolves `ItemData`, and applies the seed. |
 | ✅ | `NPCs/NpcBehaviorManager.cs` | Weighted behavior selection → `Game.Core.NpcBehaviorScheduler` |
@@ -133,8 +133,10 @@ position (`PositionModel` transitional compromise, not a rule).
 (position only), and all `*Config` tuning. Pure rendering, input reading, sprite/billboard, physics
 application, and editor tooling are correctly in the Shell.
 
-`NpcSchedule3D` is **not** known-good: its phase/timer state lives in Core, but the schedule state
-machine still runs in the MonoBehaviour (see its Tier 1 row). Treat it as in-progress.
+`NpcSchedule3D` is known-good: its phase/timer state, transitions, and behavior-state pause rule all
+live in `Game.Core.NpcScheduleState`; the MonoBehaviour only performs the returned Unity operations
+and reports outcomes back. `SyncWanderer`/`SyncDoor` are acceptable reconciliation code that applies
+the authoritative Core phase to Unity components.
 
 ## Definition of done for a migration item
 

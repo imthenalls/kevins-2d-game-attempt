@@ -25,8 +25,8 @@ This is also the project's named architecture: **Engine-Free Core**.
 | Mechanism | Evidence |
 |---|---|
 | Assembly isolation | `Assets/Scripts/GameData/Game.Data.asmdef` — `noEngineReferences: true`, empty `references` |
-| No Unity types in data | 37 types in `GameData/`; no `MonoBehaviour` / `ScriptableObject`; engine identifiers appear only in doc comments |
-| Engine-free build | `Tools/ModelHarness.Tests` compiles and runs `GameData` under plain .NET (no Unity) — 62 tests |
+| No Unity types in data | 133 top-level types in `GameData/`; no `MonoBehaviour` / `ScriptableObject`; engine identifiers appear only in doc comments |
+| Engine-free build | `Tools/ModelHarness.Tests` compiles and runs `GameData` under plain .NET (no Unity) — 245 tests |
 | One-way dependency | `Game.Presentation` and `Game.Presentation.Editor` reference `Game.Data`; nothing references back |
 | Runtime checks | `Tools/verify-all.ps1` (compile, Edit Mode + Play Mode tests, `dotnet test`, scene smoke) |
 
@@ -95,10 +95,12 @@ This is also the project's named architecture: **Engine-Free Core**.
   `Assets/Tests/EditMode/NpcMemoryModelTests.cs`.
 - **NPC home-schedule state machine** — the Away→ToHome→Home transitions, portal success/failure
   handling, retry timing, and the randomized initial Away leg moved into `Game.Core.NpcScheduleState`
-  (events in / commands out: `NpcScheduleEvent` / `NpcScheduleCommand`). All schedule tuning
-  (entry radius, waypoint threshold, retry, initial fraction) is in `NpcScheduleConfig` and the
-  local-avoidance tuning is in `NpcLocalAvoidanceConfig`; `NpcSchedule3D` is now a facade that only
-  performs the returned Unity operations. Engine-free tests:
+  (events in / commands out: `NpcScheduleEvent` / `NpcScheduleCommand`). The behavior-state pause
+  rule (a non-Idle NPC — talking/combat/disabled — suspends the timer and returns
+  `NpcScheduleCommand.Pause`) is also Core-owned via `Tick(delta, config, behaviorState)`. All
+  schedule tuning (entry radius, waypoint threshold, retry, initial fraction) is in
+  `NpcScheduleConfig` and the local-avoidance tuning is in `NpcLocalAvoidanceConfig`; `NpcSchedule3D`
+  is now a facade that only performs the returned Unity operations. Engine-free tests:
   `Assets/Tests/EditMode/NpcScheduleStateTests.cs`.
 - **NPC starting-inventory seeding** — parsed definitions are plain `Game.Core.NpcStartingInventory`
   / `NpcStartingItem` DTOs, and the seed-once decision plus the "already initialized" state moved into
@@ -107,17 +109,20 @@ This is also the project's named architecture: **Engine-Free Core**.
   on a scene reload; the flag is saved via `NpcSaveEntry.inventoryInitialized` (v10). `NpcInventoryDatabase`
   is now a facade that only parses JSON, resolves `ItemData`, and applies the seed. Engine-free tests:
   `Assets/Tests/EditMode/NpcInventoryInitializationTests.cs`.
-- **NPC perception tuning + target ranking** — the scan radius moved into `Game.Core.NpcPerceptionConfig`
-  and the "nearest eligible target/gate within range" rule (open gates and invalid components filtered)
-  moved into `Game.Core.NpcTargetSelection` (+ `NpcTargetCandidate`). `NpcPerception` now only samples
-  `Physics2D`, resolves components, and discovers the player through `PlayerControllerBase` instead of
-  `PlayerController2D`, so the same component works in 2D and 3D. Engine-free tests:
+- **NPC perception tuning + target ranking** — the scan radius moved into `Game.Core.NpcPerceptionConfig`,
+  the "nearest eligible target/gate within range" rule into `Game.Core.NpcTargetSelection`
+  (+ `NpcTargetCandidate`), and gate eligibility (a gate is a target only when it exists and is
+  closed) into `NpcTargetSelection.IsGateEligible`. `NpcPerception` only samples `Physics2D`, resolves
+  components, and discovers the player through `PlayerControllerBase`; note the sensor itself is
+  still a 2D `Physics2D` scan (only player discovery is dimension-agnostic). Engine-free tests:
   `Assets/Tests/EditMode/NpcTargetSelectionTests.cs`.
 - **NPC melee engagement decisions** — chase/disengage/repath tuning moved into
   `Game.Core.NpcMeleeEngagementConfig`, and `Game.Core.MeleeEngagementPolicy` now takes target-alive
   and behavior-state inputs and returns `Idle` / `Blocked` / `Disengage` / `Chase` / `Attack`.
-  `NpcProximityMelee3D` and `NpcProximityMeleeController` are now facades that only apply the returned
-  intent (player lookup, pathing, velocity, and attack execution stay in the Shell). Engine-free tests:
+  `NpcProximityMelee3D` and `NpcProximityMeleeController` are now facades: they sample `targetAlive`
+  (present and living) and the behavior state, pass both to the policy, and apply the returned intent
+  — including Core's `Idle` for an absent/dead target. Player lookup, pathing, velocity, and attack
+  execution stay in the Shell. Engine-free tests:
   `Assets/Tests/EditMode/MeleeEngagementPolicyTests.cs`.
 
 ## Deviations — authoritative state / rules still in Presentation

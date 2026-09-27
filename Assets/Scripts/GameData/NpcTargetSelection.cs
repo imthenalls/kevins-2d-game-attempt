@@ -32,6 +32,13 @@ namespace Game.Core
     public static class NpcTargetSelection
     {
         /// <summary>
+        /// Whether a gate is a valid target: it must exist and be closed. The Unity adapter reports
+        /// the two facts; this rule (an open gate is not worth walking to) lives here so it can be
+        /// unit-tested without a scene.
+        /// </summary>
+        public static bool IsGateEligible(bool gateExists, bool gateOpen) => gateExists && !gateOpen;
+
+        /// <summary>
         /// Index of the nearest eligible candidate within <paramref name="maxDistance"/> of
         /// (<paramref name="originX"/>, <paramref name="originY"/>), or -1 when none qualifies.
         /// </summary>

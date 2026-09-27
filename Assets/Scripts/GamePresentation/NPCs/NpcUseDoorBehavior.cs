@@ -210,7 +210,8 @@ public class NpcUseDoorBehavior : NpcBehaviorBase
 
         foreach (SlidingDoor candidate in UnityEngine.Object.FindObjectsByType<SlidingDoor>())
         {
-            if (candidate == null || candidate.IsOpen)
+            bool exists = candidate != null;
+            if (!NpcTargetSelection.IsGateEligible(exists, exists && candidate.IsOpen))
                 continue;
 
             float sqr = ((Vector2)candidate.transform.position - origin).sqrMagnitude;

@@ -28,5 +28,11 @@ namespace Game.Core
 
         /// <summary>Close (relock) the owner's home door.</summary>
         CloseHomeDoor = 1 << 4,
+
+        /// <summary>
+        /// The schedule is suspended because the NPC's behavior state is not Idle (talking, combat,
+        /// disabled). No timer advanced this tick; the facade should hold position.
+        /// </summary>
+        Pause = 1 << 5,
     }
 }

@@ -17,6 +17,15 @@ namespace Game.Tests
             new List<NpcTargetCandidate>(items);
 
         [Test]
+        public void Gate_Is_Eligible_Only_When_It_Exists_And_Is_Closed()
+        {
+            Assert.IsTrue(NpcTargetSelection.IsGateEligible(gateExists: true, gateOpen: false));
+            Assert.IsFalse(NpcTargetSelection.IsGateEligible(gateExists: true, gateOpen: true));
+            Assert.IsFalse(NpcTargetSelection.IsGateEligible(gateExists: false, gateOpen: false));
+            Assert.IsFalse(NpcTargetSelection.IsGateEligible(gateExists: false, gateOpen: true));
+        }
+
+        [Test]
         public void NearestIndex_Picks_The_Nearest_Eligible_Candidate()
         {
             var candidates = Candidates(

@@ -66,6 +66,24 @@ namespace Game.Core
             }
         }
 
+        /// <summary>
+        /// Advances the phase timer only while the NPC is free to follow its schedule. A non-Idle
+        /// behavior state (talking, combat, disabled) pauses it: the timer does not advance and the
+        /// returned command is <see cref="NpcScheduleCommand.Pause"/>. The pause rule is a gameplay
+        /// decision, so it lives here rather than in the facade.
+        /// </summary>
+        public NpcScheduleCommand Tick(
+            float deltaSeconds, NpcScheduleConfig config, NpcBehaviorState behaviorState)
+        {
+            if (config == null)
+                throw new ArgumentNullException(nameof(config));
+
+            if (behaviorState != NpcBehaviorState.Idle)
+                return NpcScheduleCommand.Pause;
+
+            return Tick(deltaSeconds, config);
+        }
+
         /// <summary>Applies a facade-reported event and returns the resulting command.</summary>
         public NpcScheduleCommand Handle(NpcScheduleEvent scheduleEvent, NpcScheduleConfig config)
         {

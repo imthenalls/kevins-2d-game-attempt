@@ -57,22 +57,30 @@ public class NpcProximityMelee3D : MonoBehaviour
         if (player == null)
             player = FindAnyObjectByType<PlayerControllerBase>();
 
-        bool hasTarget = player != null && player.Stats != null && player.Stats.IsAlive;
-        if (!hasTarget || npcController == null || attacker == null || !attacker.isActiveAndEnabled)
+        // Missing Unity dependencies are a facade concern; whether an absent or dead target means
+        // "idle" is a gameplay decision the policy makes.
+        if (npcController == null || attacker == null || !attacker.isActiveAndEnabled)
         {
             LeaveCombatState();
             return;
         }
 
-        Vector3 toPlayer = player.transform.position - transform.position;
-        toPlayer.y = 0f;
-        float distance = toPlayer.magnitude;
+        bool targetAlive = player != null && player.Stats != null && player.Stats.IsAlive;
+
+        Vector3 toPlayer = Vector3.zero;
+        float distance = 0f;
+        if (targetAlive)
+        {
+            toPlayer = player.transform.position - transform.position;
+            toPlayer.y = 0f;
+            distance = toPlayer.magnitude;
+        }
 
         // The engage/blocked/chase/attack/disengage decision lives in Game.Core (engine-free, shared
-        // with 2D); this component only applies the returned intent.
+        // with 2D); this component only samples inputs and applies the returned intent.
         MeleeEngagement decision = MeleeEngagementPolicy.Evaluate(
             distance, attacker.AttackRange, config.DisengageRangeMultiplier,
-            targetAlive: true, npcController.BehaviorState);
+            targetAlive, npcController.BehaviorState);
 
         switch (decision)
         {

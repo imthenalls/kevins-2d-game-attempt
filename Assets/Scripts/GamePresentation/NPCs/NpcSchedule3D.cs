@@ -114,18 +114,20 @@ public class NpcSchedule3D : MonoBehaviour
     {
         EnsureInitialized();
 
-        // Hold still while talking (dialogue, cutscene) or otherwise not idle; timers pause too.
-        if (controller != null && controller.BehaviorState != NpcBehaviorState.Idle)
+        if (model == null)
+            return;
+
+        // The Core state machine decides, including whether the NPC's behavior state (talking,
+        // combat, disabled) pauses the schedule timer; this component only executes the result.
+        NpcBehaviorState behavior = controller != null ? controller.BehaviorState : NpcBehaviorState.Idle;
+        NpcScheduleCommand command = model.Tick(Time.deltaTime, scheduleConfig, behavior);
+        if ((command & NpcScheduleCommand.Pause) != 0)
         {
             HaltBody();
             return;
         }
 
-        if (model == null)
-            return;
-
-        // The Core state machine decides; this component only executes the returned operations.
-        Execute(model.Tick(Time.deltaTime, scheduleConfig));
+        Execute(command);
         SyncWanderer();
         SyncDoor();
 

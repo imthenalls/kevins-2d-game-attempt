@@ -43,9 +43,13 @@ cadence it collects nearby colliders and exposes:
 - `FindNearestGate(origin, maxDistance)` and `FindNearest&lt;T&gt;(origin, maxDistance)`.
 
 The scan radius lives in `Game.Core.NpcPerceptionConfig` (set **Scan Radius** / **Detection Layers**
-on the component), and the "nearest eligible candidate within range" decision — open gates and
-invalid components filtered — lives in `Game.Core.NpcTargetSelection`; the component only samples
-`Physics2D` and resolves components.
+on the component), and the "nearest eligible candidate within range" decision lives in
+`Game.Core.NpcTargetSelection`, with gate eligibility (exist and closed) in
+`NpcTargetSelection.IsGateEligible`; the component only samples `Physics2D`, resolves components, and
+reports each candidate's position plus its existence/open flag.
+
+> Note: the sensor scan itself is still a 2D `Physics2D.OverlapCircle` query. Only player discovery
+> is dimension-agnostic (`PlayerControllerBase`); a 3D scan would need a separate `Physics` adapter.
 
 `NpcUseDoorBehavior` uses `FindNearestGate`; when no `NpcPerception` is present it falls back to
 a direct search.

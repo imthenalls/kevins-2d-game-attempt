@@ -131,6 +131,47 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Non_Idle_Behavior_Pauses_The_Timer_And_Returns_Pause()
+        {
+            NpcScheduleConfig config = Config();
+            NpcScheduleState state = Away();
+            float before = state.SecondsRemaining;
+
+            NpcScheduleCommand command = state.Tick(1f, config, NpcBehaviorState.Combat);
+
+            Assert.AreEqual(NpcScheduleCommand.Pause, command);
+            Assert.AreEqual(before, state.SecondsRemaining, 0.0001f);
+            Assert.AreEqual(NpcSchedulePhase.Away, state.Phase);
+        }
+
+        [Test]
+        public void Talking_And_Disabled_Also_Pause()
+        {
+            NpcScheduleConfig config = Config();
+
+            NpcScheduleState talking = Away();
+            Assert.AreEqual(
+                NpcScheduleCommand.Pause, talking.Tick(1f, config, NpcBehaviorState.Talking));
+
+            NpcScheduleState disabled = Away();
+            Assert.AreEqual(
+                NpcScheduleCommand.Pause, disabled.Tick(1f, config, NpcBehaviorState.Disabled));
+        }
+
+        [Test]
+        public void Idle_Behavior_Resumes_The_Schedule()
+        {
+            NpcScheduleConfig config = Config();
+            NpcScheduleState state = Away();
+
+            state.Tick(1f, config, NpcBehaviorState.Combat);
+            NpcScheduleCommand command = state.Tick(config.AwaySeconds, config, NpcBehaviorState.Idle);
+
+            Assert.AreEqual(NpcScheduleCommand.RequestRoute, command);
+            Assert.AreEqual(NpcSchedulePhase.ToHome, state.Phase);
+        }
+
+        [Test]
         public void Initial_Away_Seconds_Stays_Within_The_Configured_Range()
         {
             var config = new NpcScheduleConfig { AwaySeconds = 40f, InitialAwayMinFraction = 0.25f };

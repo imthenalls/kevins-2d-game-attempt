@@ -95,8 +95,10 @@ public class NpcPerception : MonoBehaviour
         for (int i = 0; i < gates.Count; i++)
         {
             SlidingDoor gate = gates[i];
-            bool valid = gate != null && !gate.IsOpen;
-            Vector3 position = valid ? gate.transform.position : Vector3.zero;
+            // Report existence and open state; Core decides whether that makes the gate eligible.
+            bool exists = gate != null;
+            bool valid = NpcTargetSelection.IsGateEligible(exists, exists && gate.IsOpen);
+            Vector3 position = exists ? gate.transform.position : Vector3.zero;
             candidates.Add(new NpcTargetCandidate(position.x, position.y, valid));
         }
 
