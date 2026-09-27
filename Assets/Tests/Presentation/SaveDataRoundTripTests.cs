@@ -126,6 +126,7 @@ namespace Game.Tests
                 hasModelState = true,
                 cellX = 3,
                 cellY = 4,
+                inventoryInitialized = true,
                 inventorySlots = new List<InventorySlotEntry>
                 {
                     new InventorySlotEntry { slotIndex = 0, itemId = "apple", quantity = 2 },
@@ -186,6 +187,7 @@ namespace Game.Tests
             Assert.AreEqual(a.npcStates[0].hp, b.npcStates[0].hp);
             Assert.AreEqual(a.npcStates[0].hasModelState, b.npcStates[0].hasModelState);
             Assert.AreEqual(a.npcStates[0].cellX, b.npcStates[0].cellX);
+            Assert.AreEqual(a.npcStates[0].inventoryInitialized, b.npcStates[0].inventoryInitialized);
             Assert.AreEqual(a.npcStates[0].wallet.balance, b.npcStates[0].wallet.balance);
             Assert.AreEqual(a.npcStates[0].inventorySlots[0].itemId, b.npcStates[0].inventorySlots[0].itemId);
 

@@ -25,6 +25,16 @@ namespace Game.Core
         public readonly int Columns;
         public int SlotCount => Rows * Columns;
 
+        /// <summary>
+        /// True once this inventory's starting contents have been seeded or its saved contents have
+        /// been restored. The one-time starting-inventory seed reads this flag instead of the item
+        /// count, so an inventory that was legitimately emptied is not treated as uninitialized.
+        /// </summary>
+        public bool IsInitialized { get; private set; }
+
+        /// <summary>Marks the inventory's starting/restored contents as applied.</summary>
+        public void MarkInitialized() => IsInitialized = true;
+
         private readonly InventorySlot[] slots;
         private readonly bool restrictItemScope;
         private readonly ItemScope acceptedScope;

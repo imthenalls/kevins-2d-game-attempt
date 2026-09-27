@@ -183,7 +183,7 @@ usable save.
 
 `NpcSaveEntry.wallet` stores the Wallet for inventory-enabled NPC participants. Empty saved NPC inventories are cleared correctly on load, so selling the final item remains persistent.
 
-NPC inventory JSON is starting state only. `NpcInventoryDatabase` seeds it before a saved scene is restored, and `SaveManager` then replaces it with the saved NPC slots. Therefore an NPC-owned gift that has already been transferred does not regenerate after loading.
+NPC inventory JSON is starting state only. `NpcInventoryDatabase` seeds it before a saved scene is restored, and `SaveManager` then replaces it with the saved NPC slots. `NpcSaveEntry.inventoryInitialized` (v10) records the one-time seed so an emptied inventory is not reseeded after a load. Therefore an NPC-owned gift that has already been transferred does not regenerate after loading.
 
 `SaveData.marketTransactions` stores the newest bounded market entries from `TradeService`. Loading restores the ledger without replaying Wallet changes, item movement, trade events, or quest events.
 

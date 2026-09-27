@@ -27,27 +27,15 @@ safe to commit. Engine-free tests live in `Assets/Tests/EditMode/` and are mirro
 |---|---|---|
 | NPC route following + local-avoidance math | `faf74a7` | `Game.Core.RouteFollower` (+`PathPoint`), `Game.Core.LocalAvoidance` (+`NeighborSample`). Fixed the wanderer freeze bug (missing `pathIndex` advance); ported all 5 followers (2D + 3D). Tests: `RouteFollowerTests`, `LocalAvoidanceTests`. |
 | NPC memory | `1854e76` | `Game.Core.NpcMemoryModel` + repo/service/snapshot, owned by `GameSession`, saved via `NpcSaveEntry.lockedGates` (v9). Fixed the `Clear()` bug. Tests: `NpcMemoryModelTests`. |
-| NPC home-schedule state machine | (this handoff commit) | `Game.Core.NpcScheduleState` is now a state machine: events in (`NpcScheduleEvent`) / commands out (`NpcScheduleCommand`). All schedule tuning in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. `NpcSchedule3D` is a facade. Tests: `NpcScheduleStateTests`. |
+| NPC home-schedule state machine | `5bc58d1` | `Game.Core.NpcScheduleState` is now a state machine: events in (`NpcScheduleEvent`) / commands out (`NpcScheduleCommand`). All schedule tuning in `NpcScheduleConfig`; local-avoidance tuning in `NpcLocalAvoidanceConfig`. `NpcSchedule3D` is a facade. Tests: `NpcScheduleStateTests`. |
+| NPC starting-inventory seeding | (this handoff commit) | Parsed definitions → `Game.Core.NpcStartingInventory`/`NpcStartingItem`; seed-once state → `Game.Core.NpcInventoryInitializationModel`/`NpcInventoryInitializationService` owned by `GameSession` (saved via `NpcSaveEntry.inventoryInitialized`, v10). `InventoryModel.IsInitialized` replaces the old "has ≥1 item" check, so an emptied inventory is not reseeded. `NpcInventoryDatabase` is a facade. Tests: `NpcInventoryInitializationTests`. |
 
 ## Remaining migrations (in order)
 
 Follow the same pattern: add Core type(s) + a config, make the MonoBehaviour a facade, add engine-free
 tests, run `verify-all`, update the two docs above, commit.
 
-### 1. `NpcInventoryDatabase` — starting-inventory seeding policy → Core
-
-- **Violation:** `Assets/Scripts/GamePresentation/NPCs/NpcInventoryDatabase.cs`. It decides whether an
-  NPC should receive starting items, treats "inventory has ≥1 item" as "already initialized" (so a
-  legitimately emptied NPC is reseeded on scene reload), and keeps `initializedNpcIds` but never
-  consults it. Initialization state lives in the persistent MonoBehaviour, not the session.
-- **Target:** keep JSON loading + `ItemData` resolution + scene-NPC lookup in the Shell. Move parsed
-  starting-inventory definitions into plain Core DTOs, put "has this NPC been initialized?" in
-  `GameSession` (mirror `NpcMemoryRepository`/`NpcMemoryService`), and have a Core initialization
-  service decide *whether and what* to seed using the inventory's **initialized flag** (add one to
-  `InventoryModel` if needed), not item count. Save/restore the initialized flag (bump `SaveData`).
-- **Tests:** seed-once, do-not-reseed-emptied, per-NPC isolation, save round trip.
-
-### 2. `NpcPerception` — tuning + target ranking → Core
+### 1. `NpcPerception` — tuning + target ranking → Core
 
 - **Violation:** `Assets/Scripts/GamePresentation/NPCs/NpcPerception.cs`. `scanRadius` is a
   MonoBehaviour field; "nearest target" and "nearest gate (open doors are invalid)" are decided in the
@@ -58,7 +46,7 @@ tests, run `verify-all`, update the two docs above, commit.
   it works in both dimensions.
 - **Tests:** ranking policy (nearest wins, open doors filtered, dead/irrelevant filtered).
 
-### 3. `NpcProximityMelee3D` — remaining engagement decisions → Core
+### 2. `NpcProximityMelee3D` — remaining engagement decisions → Core
 
 - **Violation:** `Assets/Scripts/GamePresentation/NPCs/NpcProximityMelee3D.cs` (and its 2D sibling
   `NpcProximityMeleeController.cs`). It uses `MeleeEngagementPolicy`, but `chaseSpeed`,

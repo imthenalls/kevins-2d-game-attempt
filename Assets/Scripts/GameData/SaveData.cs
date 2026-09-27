@@ -36,9 +36,10 @@ namespace Game.Core
         // Version 5 adds two-world travel state and separate world inventories.
     // Version 6 adds per-world avatar ability unlocks.
     // Version 7 adds the player's logical grid position (cell + local offset) via hasPlayerCell.
-    // Version 8 separates base max HP/MP from equipment bonuses (playerBaseMaxHp/Mp).
-    // Version 9 adds per-NPC remembered locked gates (NpcMemory).
-    // Missing fields deserialize as 0, so pre-unification saves are version 0.
+        // Version 8 separates base max HP/MP from equipment bonuses (playerBaseMaxHp/Mp).
+        // Version 9 adds per-NPC remembered locked gates (NpcMemory).
+        // Version 10 adds the per-NPC starting-inventory initialization flag (NpcInventoryDatabase).
+        // Missing fields deserialize as 0, so pre-unification saves are version 0.
         public int saveVersion;
 
         // ── Scene ────────────────────────────────────────────────────────────────
@@ -205,6 +206,11 @@ public class WorldPositionSaveEntry
         // Remembered locked gates (NpcMemory): stable gateId + required key id. The skip/forget
         // rules live in Game.Core.NpcMemoryModel; this is only the persisted form.
         public List<NpcGateMemory> lockedGates = new();
+
+        // Starting-inventory initialization (NpcInventoryDatabase). The seed-once rule lives in
+        // Game.Core.NpcInventoryInitializationService; this is only the persisted flag so an emptied
+        // NPC inventory is not reseeded after a load.
+        public bool inventoryInitialized;
 
         // Inventory (populated only when the NPC has an InventoryModel)
         public List<InventorySlotEntry> inventorySlots = new();

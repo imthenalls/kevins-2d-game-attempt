@@ -87,7 +87,7 @@ namespace Game.Tests
             Assert.IsTrue(File.Exists(savePath), "Save must write the save file");
 
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(savePath));
-            Assert.AreEqual(8, data.saveVersion);
+            Assert.AreEqual(10, data.saveVersion);
 
             Assert.IsTrue(data.activeQuests.Exists(q => q.questId == "bandit_king"), "bandit_king must persist");
             Assert.IsTrue(data.activeQuests.Exists(q => q.questId == "sheriffs_gratitude"), "the follow-up must persist");

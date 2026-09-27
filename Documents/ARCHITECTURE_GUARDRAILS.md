@@ -72,7 +72,7 @@ Migrate top-down. Update this table as items land.
 | ✅ | `NPCs/NpcMemory.cs` | Persistent gate knowledge + remember/skip/forget rules → `Game.Core.NpcMemoryModel`, owned by `GameSession` (saved via `NpcSaveEntry.lockedGates`); the facade resolves `SlidingDoor` + key holder into ids/booleans. |
 | ⬜ | `NPCs/NpcPerception.cs` | Scan radius config + nearest-target/gate ranking → `Game.Core.NpcPerceptionConfig` + a target-selection policy; Unity overlap sampling stays in the adapter. |
 | ⬜ | `NPCs/NpcProximityMelee3D.cs`, `NpcProximityMeleeController.cs` | Chase/disengage tuning + target-validity and behavior-blocked transitions → extend `Game.Core.MeleeEngagementPolicy` to take alive/behavior inputs and return an intent. |
-| ⬜ | `NPCs/NpcInventoryDatabase.cs` | Starting-inventory seeding policy + "has this NPC been initialized?" → Core DTOs + a Core initialization service using the inventory's initialized flag (not "has an item"). |
+| ✅ | `NPCs/NpcInventoryDatabase.cs` | Starting-inventory seeding policy + "has this NPC been initialized?" → `Game.Core.NpcStartingInventory` DTOs + `Game.Core.NpcInventoryInitializationService` (owned by `GameSession`), using `InventoryModel.IsInitialized` (not "has an item"), saved via `NpcSaveEntry.inventoryInitialized` (v10). The facade only parses JSON, resolves `ItemData`, and applies the seed. |
 | ✅ | `NPCs/NpcBehaviorManager.cs` | Weighted behavior selection → `Game.Core.NpcBehaviorScheduler` |
 | ✅ | `NPCs/NpcIdleBehavior.cs` | Idle-timer rule → `Game.Core.IdleTimer` |
 
@@ -113,9 +113,19 @@ Legend: ⬜ todo, 🟨 in progress, ✅ done.
 receiver are now thin facades over them. Engine-free tests:
 `Assets/Tests/EditMode/{GridPathfinderTests,MeleeEngagementPolicyTests,NpcDashMeleeModelTests,AttackModelTests,WanderModelTests,TravelRecoveryModelTests,RouteFollowerTests,LocalAvoidanceTests,NpcBehaviorSchedulerTests,IdleTimerTests,DamagePolicyTests}.cs`.
 
-Also in Core: `NpcBehaviorState` / `NpcType` enums, `TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw `Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`, `DoorLockPolicy`, `PortalAccessPolicy`, and `WeaponSwingPolicy`. `NpcKeyring` is now a facade over `Game.Core.Keyring`.
+Also in Core: `NpcBehaviorState` / `NpcType` enums, `NpcMemoryModel` (+ repo/service/snapshot),
+`NpcScheduleState` (+ event/command/config), `NpcStartingInventory`/`NpcStartingItem`,
+`NpcInventoryInitializationModel`/`NpcInventoryInitializationService` (+ snapshot),
+`TradeService` (+ `TradeRequest`/`TradeResult`/`TradeFailure`/`ITradeParticipant`), the raw
+`Keyring.AddKey(id)` seed path, `StatBonuses`, `PlayerDeathBehavior`/`PlayerDeathPolicy`, `LootTable`,
+`DoorLockPolicy`, `PortalAccessPolicy`, and `WeaponSwingPolicy`. `NpcKeyring` is now a facade over
+`Game.Core.Keyring`.
 
-**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. **This is not yet true of every file.** The following still own gameplay rules or persistent state and are tracked as debt in the tables above: `NpcInventoryDatabase` seeding policy, `NpcPerception` target ranking, and the residual `NpcProximityMelee3D` engagement decisions.
+**Remaining non-Core entries are orchestration or serialization adapters** — one-line conditions and
+Unity instantiation/animation, which the guardrail intentionally leaves in the Shell. **This is not yet
+true of every file.** The following still own gameplay rules or persistent state and are tracked as
+debt in the tables above: `NpcPerception` target ranking and the residual `NpcProximityMelee3D`
+engagement decisions.
 
 ## Known-good (do not "fix")
 

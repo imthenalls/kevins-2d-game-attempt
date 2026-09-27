@@ -30,7 +30,7 @@ public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
 
-    private const int CurrentSaveVersion = 8;
+    private const int CurrentSaveVersion = 10;
     private const int ManaUnifiedSaveVersion = 2;
     private const string FileName = "save.json";
     private string SavePath => Path.Combine(Application.persistentDataPath, FileName);
@@ -265,6 +265,14 @@ public class SaveManager : MonoBehaviour
                 GameSessionHost.Session.NpcMemories.TryCapture(npc.NpcId, out NpcMemorySnapshot memory))
             {
                 entry.lockedGates = memory.Gates;
+            }
+
+            // Starting-inventory initialization (NpcInventoryDatabase) is saved from the model too.
+            if (GameSessionHost.Session != null &&
+                GameSessionHost.Session.NpcInventories.TryCapture(
+                    npc.NpcId, out NpcInventoryInitializationSnapshot initialization))
+            {
+                entry.inventoryInitialized = initialization.Initialized;
             }
 
             if (npc.Inventory != null)
@@ -623,6 +631,14 @@ public class SaveManager : MonoBehaviour
                         new NpcMemorySnapshot(entry.npcId, entry.lockedGates));
                 }
 
+                // Starting-inventory initialization is model-only too; restore it even when the NPC is
+                // absent so a later scene load does not reseed an already-initialized inventory.
+                if (entry.inventoryInitialized && GameSessionHost.Session != null)
+                {
+                    GameSessionHost.Session.NpcInventories.Apply(
+                        new NpcInventoryInitializationSnapshot(entry.npcId, true));
+                }
+
                 if (!npcLookup.TryGetValue(entry.npcId, out var npc))
                 {
                     Debug.LogWarning($"[SaveManager] NPC not found in scene: '{entry.npcId}'");
@@ -659,6 +675,13 @@ public class SaveManager : MonoBehaviour
 
                 RestoreNpcInventory(npc, entry);
                 RestoreNpcWallet(npc, entry);
+
+                // A restored inventory is authoritative: never seed starting items into it again.
+                if (npc.Inventory != null)
+                {
+                    npc.Inventory.MarkInitialized();
+                    GameSessionHost.Session?.NpcInventories.MarkInitialized(npc.NpcId, npc.Inventory);
+                }
             }
         }
 

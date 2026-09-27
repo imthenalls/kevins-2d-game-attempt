@@ -6,8 +6,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Loads starting NPC item ownership from StreamingAssets/npc_inventories.json and
-/// seeds each matching NpcController inventory once per runtime session.
+/// Loads starting NPC item ownership from StreamingAssets/npc_inventories.json and seeds each
+/// matching NpcController inventory. The one-time "seed or not" decision and the "already
+/// initialized" state live in Game.Core (NpcInventoryInitializationService, owned by GameSession);
+/// this component only parses the JSON, resolves ItemData, finds the scene NPCs, and applies the seed.
 ///
 /// Unity setup: none. A persistent instance is created automatically before scene load.
 /// NPCs must have unique NpcController.NpcId values matching the JSON entries. Inventory
@@ -23,10 +25,8 @@ public class NpcInventoryDatabase : MonoBehaviour
 {
     public static NpcInventoryDatabase Instance { get; private set; }
 
-    private readonly Dictionary<string, NpcInventoryEntry> entries =
-        new Dictionary<string, NpcInventoryEntry>(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> initializedNpcIds =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, NpcStartingInventory> entries =
+        new Dictionary<string, NpcStartingInventory>(StringComparer.OrdinalIgnoreCase);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void EnsureRuntimeInstance()
@@ -73,6 +73,9 @@ public class NpcInventoryDatabase : MonoBehaviour
         if (entries.Count == 0 || ItemDatabase.Instance == null)
             return;
 
+        GameSessionHost.EnsureExists();
+        NpcInventoryInitializationService initialization = GameSessionHost.Session?.NpcInventories;
+
         NpcController[] sceneNpcs = FindObjectsByType<NpcController>(FindObjectsInactive.Exclude);
         var matches = new Dictionary<string, List<NpcController>>(StringComparer.OrdinalIgnoreCase);
 
@@ -101,53 +104,42 @@ public class NpcInventoryDatabase : MonoBehaviour
 
             NpcController npc = pair.Value[0];
 
-            // Skip NPCs that already hold items (a save restore or an earlier seed). Freshly
-            // (re)loaded scene instances start empty, so this also re-seeds them after a scene
-            // reload or a domain reload that restored the scene without raising sceneLoaded.
-            if (HasAnyItems(npc.Inventory))
+            // The seed-once rule lives in Core and consults the inventory's initialized flag, not the
+            // item count, so a legitimately emptied NPC is never reseeded on a scene reload.
+            if (initialization != null && !initialization.TryClaimSeed(pair.Key, npc.Inventory))
                 continue;
 
-            SeedInventory(npc, entries[pair.Key]);
-            initializedNpcIds.Add(pair.Key);
+            SeedInventory(npc, entries[pair.Key], initialization);
         }
-    }
-
-    // True when the inventory holds at least one item; used to avoid double-seeding a populated NPC.
-    private static bool HasAnyItems(InventoryModel inventory)
-    {
-        if (inventory == null)
-            return false;
-
-        for (int i = 0; i < inventory.SlotCount; i++)
-        {
-            if (!inventory.GetSlot(i).IsEmpty)
-                return true;
-        }
-
-        return false;
     }
 
     /// <summary>Clears runtime initialization tracking for a new-game flow.</summary>
-    public void ResetSessionState() => initializedNpcIds.Clear();
+    public void ResetSessionState() => GameSessionHost.Session?.NpcInventories.ResetSession();
 
-    private void SeedInventory(NpcController npc, NpcInventoryEntry entry)
+    private void SeedInventory(
+        NpcController npc,
+        NpcStartingInventory definition,
+        NpcInventoryInitializationService initialization)
     {
         InventoryModel inventory = npc.EnsureInventory();
-        if (entry.items == null)
+        inventory.MarkInitialized();
+        initialization?.MarkInitialized(npc.NpcId, inventory);
+
+        if (definition.items == null)
             return;
 
-        foreach (NpcInventoryItemEntry ownedItem in entry.items)
+        foreach (NpcStartingItem ownedItem in definition.items)
         {
             if (ownedItem == null || string.IsNullOrWhiteSpace(ownedItem.itemId) || ownedItem.quantity <= 0)
             {
-                Debug.LogWarning($"[NpcInventoryDatabase] NPC '{entry.npcId}' has an invalid item entry.");
+                Debug.LogWarning($"[NpcInventoryDatabase] NPC '{definition.npcId}' has an invalid item entry.");
                 continue;
             }
 
             if (!ItemDatabase.Instance.TryGet(ownedItem.itemId, out ItemData item))
             {
                 Debug.LogWarning(
-                    $"[NpcInventoryDatabase] NPC '{entry.npcId}' references unknown item " +
+                    $"[NpcInventoryDatabase] NPC '{definition.npcId}' references unknown item " +
                     $"'{ownedItem.itemId}'.");
                 continue;
             }
@@ -156,7 +148,7 @@ public class NpcInventoryDatabase : MonoBehaviour
             if (leftover > 0)
             {
                 Debug.LogWarning(
-                    $"[NpcInventoryDatabase] NPC '{entry.npcId}' inventory could not fit " +
+                    $"[NpcInventoryDatabase] NPC '{definition.npcId}' inventory could not fit " +
                     $"{leftover}x '{ownedItem.itemId}'.");
             }
         }
@@ -186,7 +178,7 @@ public class NpcInventoryDatabase : MonoBehaviour
         if (root?.npcInventories == null)
             return;
 
-        foreach (NpcInventoryEntry entry in root.npcInventories)
+        foreach (NpcStartingInventory entry in root.npcInventories)
         {
             if (entry == null || string.IsNullOrWhiteSpace(entry.npcId))
             {
@@ -212,21 +204,5 @@ public class NpcInventoryDatabase : MonoBehaviour
 internal sealed class NpcInventoryDatabaseJson
 {
     public int version = 1;
-    public NpcInventoryEntry[] npcInventories;
-}
-
-/// <summary>Starting inventory assigned to one stable NPC id. Unity setup: none.</summary>
-[Serializable]
-internal sealed class NpcInventoryEntry
-{
-    public string npcId;
-    public NpcInventoryItemEntry[] items;
-}
-
-/// <summary>One item stack in an NPC starting inventory. Unity setup: none.</summary>
-[Serializable]
-internal sealed class NpcInventoryItemEntry
-{
-    public string itemId;
-    public int quantity = 1;
+    public NpcStartingInventory[] npcInventories;
 }
