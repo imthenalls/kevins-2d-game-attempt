@@ -13,6 +13,30 @@ The implementation prompt must be literal. Do not rely on the model to infer arc
 
 Ask which model will execute the prompt only when the user has not identified it and the choice changes the task. Otherwise infer the target from the conversation. Put `Target model: DeepSeek` or `Target model: GLM` at the top of the generated prompt.
 
+## Required Model Recommendation
+
+Every generated prompt must begin with a recommendation block before the copy-ready implementation prompt:
+
+```text
+Recommended model: [one model or capability tier]
+Recommended effort: [low, high, or maximum]
+Why: [one or two sentences tied to this task's scope, risk, and verification needs]
+Review afterward: [yes or no, followed by what must be reviewed when yes]
+```
+
+Choose one primary model. Do not give the user an undecided list. Name the exact model when the user supplied one or when its current name is known from verified provider information. Otherwise recommend `DeepSeek Flash`, `DeepSeek reasoning model`, `GLM Flash`, or `full GLM coding model` so the advice remains useful when providers rename models.
+
+Base the recommendation on the actual implementation task:
+
+- Recommend **DeepSeek Flash with low effort** for documentation, tests that mirror established patterns, and small mechanical code edits.
+- Recommend a **DeepSeek reasoning model with high effort** for a focused bug that needs root-cause analysis across a few files.
+- Recommend **GLM Flash with high effort** for small UI changes that include a screenshot or need visual inspection.
+- Recommend the **full GLM coding model with high effort** for a coherent feature spanning Core, Unity adapters, UI, and tests.
+- Recommend **maximum effort** only for tightly coupled architecture, persistence, scene-transition, lifecycle-order, or intermittent runtime problems.
+- Set `Review afterward: yes` for save/load, scene travel, Unity lifecycle, architecture boundaries, security-sensitive work, or changes across multiple gameplay systems.
+
+When the user explicitly chooses a different model, preserve their choice as the target. Still show the model you recommend, briefly state the mismatch, and tailor the prompt to the model the user will actually use.
+
 Use **DeepSeek Flash** for a small, mechanical change with clear files and acceptance checks. Use a stronger DeepSeek reasoning model for a tightly scoped bug whose cause must be traced across several files.
 
 Use **GLM Flash** for a small UI or visually checked change, especially when screenshots are available. Use the full GLM coding model for a coherent multi-file feature or longer tool-driven task.
@@ -57,15 +81,16 @@ Preserve the user’s chosen design. Do not redesign the feature, expand its sco
 
 Write each prompt in this order:
 
-1. **Target model** — DeepSeek or GLM, with the exact name if supplied.
-2. **Objective** — one concrete outcome.
-3. **Read first** — exact files or project instructions the model must inspect.
-4. **Do this** — numbered implementation steps in dependency order.
-5. **Do not do this** — explicit scope and behavior prohibitions.
-6. **Required behavior** — observable behavior and edge cases.
-7. **Verification** — exact builds, tests, visual checks, or manual checks to run.
-8. **Stop and report if** — facts or unavailable tools that must halt implementation.
-9. **Completion response** — what evidence the model must report.
+1. **Recommendation block** — recommended model, effort, reason, and review requirement.
+2. **Target model** — the model that will receive the prompt, with the exact name if supplied.
+3. **Objective** — one concrete outcome.
+4. **Read first** — exact files or project instructions the model must inspect.
+5. **Do this** — numbered implementation steps in dependency order.
+6. **Do not do this** — explicit scope and behavior prohibitions.
+7. **Required behavior** — observable behavior and edge cases.
+8. **Verification** — exact builds, tests, visual checks, or manual checks to run.
+9. **Stop and report if** — facts or unavailable tools that must halt implementation.
+10. **Completion response** — what evidence the model must report.
 
 Use the literal headings `Do this` and `Do not do this`.
 
@@ -134,8 +159,13 @@ When finished:
 ## Compact Example
 
 ```text
+Recommended model: DeepSeek reasoning model
+Recommended effort: High
+Why: The change is tightly scoped but crosses the engine-free Core and two Unity controllers.
+Review afterward: Yes. Review the architecture boundary and verify both controllers use the same Core rules.
+
 Target model
-DeepSeek Flash
+DeepSeek reasoning model
 
 Objective
 Move the player dash cooldown and charge rules into the existing engine-free Core so the 2D and 3D controllers use one implementation.
@@ -185,4 +215,4 @@ When finished:
 6. Do not commit or push unless explicitly instructed.
 ```
 
-Return the generated implementation prompt directly. Do not surround it with planning commentary unless the user asks for an explanation.
+Return the recommendation block followed immediately by the generated implementation prompt. Do not add other planning commentary unless the user asks for an explanation.
