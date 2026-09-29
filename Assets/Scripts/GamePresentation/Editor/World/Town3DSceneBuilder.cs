@@ -35,13 +35,15 @@ public static class Town3DSceneBuilder
     private const float BuildingHeight = 3f;
     private const float WallHeight = 1f;
 
-    private static readonly List<(int x, int y, int w, int d, char side)> Buildings = new()
+    // Building footprints: (x, y) is the origin cell, (w, d) the size in cells. Every Town door is
+    // mounted on the camera-facing -Z wall by BuildBuildings, so it is never hidden behind the body.
+    private static readonly List<(int x, int y, int w, int d)> Buildings = new()
     {
         // The main building (index 2) is double-size so it reads as the town landmark.
-        (4, 14, 4, 3, 'S'), (12, 14, 4, 3, 'S'), (20, 14, 8, 6, 'S'), (4, 4, 4, 3, 'S'),
-        (35, 14, 4, 3, 'S'), (43, 14, 4, 3, 'S'), (51, 14, 4, 3, 'S'), (35, 4, 4, 3, 'S'),
-        (4, 24, 4, 3, 'N'), (12, 24, 4, 3, 'N'), (4, 34, 4, 3, 'N'),
-        (35, 24, 4, 3, 'N'), (53, 24, 4, 3, 'N'), (35, 36, 4, 3, 'N'),
+        (4, 14, 4, 3), (12, 14, 4, 3), (20, 14, 8, 6), (4, 4, 4, 3),
+        (35, 14, 4, 3), (43, 14, 4, 3), (51, 14, 4, 3), (35, 4, 4, 3),
+        (4, 24, 4, 3), (12, 24, 4, 3), (4, 34, 4, 3),
+        (35, 24, 4, 3), (53, 24, 4, 3), (35, 36, 4, 3),
     };
 
     private static Scene scene;
@@ -218,9 +220,12 @@ public static class Town3DSceneBuilder
             solid.GetComponent<MeshRenderer>().sharedMaterial = body;
 
             int doorCellX = b.x + b.w / 2;
-            // 'S' buildings face the street on their +z edge; 'N' buildings on their -z edge.
+            // Town entrances mount on the -Z (camera-facing) wall. The 3D camera looks from -X/-Z
+            // toward +X/+Z, so a door on the far +Z wall is occluded by the building body; putting
+            // every Town door on the visible front wall keeps it readable. 2D scenes keep their
+            // street-facing doors (this is a Town-only presentation choice).
             float doorX = doorCellX + 0.5f;
-            float doorZ = b.side == 'S' ? b.y + b.d + 0.25f : b.y - 0.25f;
+            float doorZ = b.y - 0.25f;
             string doorId = isMainBuilding ? "main_building_door" : "door_" + b.x + "_" + b.y;
 
             var door = new GameObject("Door");
@@ -238,17 +243,18 @@ public static class Town3DSceneBuilder
             // The owner's key opens this door; the main building has its own dedicated key.
             SetStringField(portal, "requiredKeyId", isMainBuilding ? "main_building_key" : "house_key_" + b.x + "_" + b.y);
 
-            // The approach is where a traveler is placed when returning from the room (outside).
-            float approachZ = b.side == 'S' ? doorZ + 1.0f : doorZ - 1.0f;
+            // The approach is where a traveler is placed when returning from the room (outside),
+            // one unit further toward the camera on the door's -Z side.
+            float approachZ = doorZ - 1.0f;
             var approach = new GameObject("Approach");
             approach.transform.SetParent(door.transform, false);
             approach.transform.localPosition = new Vector3(0f, 0f, approachZ - doorZ);
             SetObjectField(portal, "exitPoint", approach.transform);
             DoorApproaches[(b.x, b.y)] = approach.transform;
 
-            // Lay the door flat on the wall face (no billboard), so it reads as part of the building
-            // instead of a card turning to face the camera. 0.02 proud avoids z-fighting with the wall.
-            float doorVisualZ = b.side == 'S' ? -0.23f : 0.23f;
+            // Lay the door flat on the -Z wall face (no billboard), so it reads as part of the
+            // building instead of a card turning to face the camera. 0.02 proud avoids z-fighting.
+            float doorVisualZ = 0.23f;
             var doorVisual = new GameObject("DoorVisual");
             doorVisual.transform.SetParent(door.transform, false);
             doorVisual.transform.localPosition = new Vector3(0f, 0.65f, doorVisualZ);
@@ -308,7 +314,7 @@ public static class Town3DSceneBuilder
         return cells;
     }
 
-    private static void BuildRoomDoor(Transform room, (int x, int y, int w, int d, char side) b, Rect main)
+    private static void BuildRoomDoor(Transform room, (int x, int y, int w, int d) b, Rect main)
     {
         float centerX = main.X + main.W * 0.5f;
         float northWallZ = main.Z + main.D;
