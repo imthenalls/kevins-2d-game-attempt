@@ -298,7 +298,50 @@ public static class Town3DSceneBuilder
             CreateCellMesh(roomId + "Floor", cells, 0.03f, floor, room.transform);
             BuildRoomWalls(room.transform, cells, wallsLayer, wall);
             BuildRoomDoor(room.transform, b, rects[0]);
+
+            // The World B entrance lives inside the key-locked main building, so the route is
+            // discovered by opening the main_building_door.
+            if (b.x == MainBuildingX && b.y == MainBuildingY)
+                BuildMainBuildingWorldBPortal(room.transform);
         }
+    }
+
+    // A 3D portal to WorldB nested inside the Main Building Room. Its Portal Id matches WorldB's
+    // world_b_entry return portal, and vice versa, so the two scenes form a round trip.
+    private static void BuildMainBuildingWorldBPortal(Transform room)
+    {
+        var portalObject = new GameObject("World B Portal");
+        portalObject.transform.SetParent(room, false);
+        portalObject.transform.position = CellToWorld(26, -13);
+
+        var collider = portalObject.AddComponent<BoxCollider>();
+        collider.isTrigger = true;
+        collider.size = new Vector3(1.6f, 2f, 1.6f);
+        collider.center = new Vector3(0f, 1f, 0f);
+
+        var visual = new GameObject("PortalVisual");
+        visual.transform.SetParent(portalObject.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 1f, 0f);
+        visual.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.45f, 1f, 0.55f);
+        renderer.sortingOrder = 50;
+        visual.AddComponent<BillboardSprite>();
+
+        // Arrival point for a traveler returning from WorldB: one unit toward the camera (-Z),
+        // clear of the portal's own trigger, the room walls, and the room door's arrival point.
+        var exitPoint = new GameObject("ExitPoint").transform;
+        exitPoint.SetParent(portalObject.transform, false);
+        exitPoint.localPosition = new Vector3(0f, 0f, -1f);
+
+        var portal = portalObject.AddComponent<PortalTrigger3D>();
+        SetStringField(portal, "portalId", "world_b_portal");
+        SetStringField(portal, "destinationScene", "WorldB");
+        SetStringField(portal, "destinationPortalId", "world_b_entry");
+        SetBoolField(portal, "changesWorld", true);
+        SetEnumField(portal, "destinationWorld", (int)WorldLayer.WorldB);
+        SetObjectField(portal, "exitPoint", exitPoint);
     }
 
     private static HashSet<Vector2Int> CellsFrom(Rect[] rects)

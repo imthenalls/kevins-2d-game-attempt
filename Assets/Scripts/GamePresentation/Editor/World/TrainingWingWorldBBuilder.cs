@@ -14,7 +14,7 @@ using UnityEngine.Tilemaps;
 /// Builds the isometric training wing inside the WorldB scene: an entrance room, a hallway with a
 /// locked gate, and a combat arena, plus the Arena Key Keeper, Green Training Box spawner, and
 /// challenger spawn point. The WorldB player, camera, and generated room are left untouched.
-/// It also points the WorldB arrival portal back to Overworld so the two-world round trip works.
+/// It also points the WorldB arrival portal back to the Town's Main Building Room so the round trip works.
 ///
 /// Unity setup: none. Open Assets/Scenes/WorldB.unity, then use
 /// Tools > Worlds > Build Training Wing In WorldB. The builder refuses to duplicate an existing wing.
@@ -31,7 +31,7 @@ public static class TrainingWingWorldBBuilder
     private const string GateSpritePath = "Assets/Sprites/Isometric/GateDiamond.png";
     private const string DoorPrefabPath = "Assets/Prefabs/SlidingDoor.prefab";
     private const string ChallengerPrefabPath = "Assets/Prefabs/TrainingChallenger.prefab";
-    private const string OverworldEntryPortalId = "world_b_portal";
+    private const string TownEntryPortalId = "world_b_portal";
 
     [MenuItem("Tools/Worlds/Build Training Wing In WorldB")]
     public static void Build()
@@ -137,7 +137,7 @@ public static class TrainingWingWorldBBuilder
             if (body != null) body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
 
-        // Point the WorldB arrival portal at the wing entrance and back to Overworld.
+        // Point the WorldB arrival portal at the wing entrance and back to the Town.
         ConfigureArrivalPortal(grid);
 
         EditorSceneManager.MarkSceneDirty(scene);
@@ -170,8 +170,8 @@ public static class TrainingWingWorldBBuilder
         exit.localPosition = new Vector3(-0.6f, 0.6f, 0f);
 
         Set(portal, "portalId", "world_b_entry");
-        Set(portal, "destinationScene", "Overworld");
-        Set(portal, "destinationPortalId", OverworldEntryPortalId);
+        Set(portal, "destinationScene", "Town");
+        Set(portal, "destinationPortalId", TownEntryPortalId);
         Set(portal, "changesWorld", true);
         SetEnum(portal, "destinationWorld", (int)WorldLayer.WorldA);
         Set(portal, "exitPoint", exit);

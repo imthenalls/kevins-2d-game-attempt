@@ -183,8 +183,8 @@ public static class WorldBSceneBuilder
 
         PortalTrigger2D portal = portalObject.AddComponent<PortalTrigger2D>();
         Set(portal, "portalId", "world_b_entry");
-        Set(portal, "destinationScene", "Overworld");
-        Set(portal, "destinationPortalId", "training_hub");
+        Set(portal, "destinationScene", "Town");
+        Set(portal, "destinationPortalId", "world_b_portal");
         Set(portal, "changesWorld", true);
         Set(portal, "destinationWorld", WorldLayer.WorldA);
         Set(portal, "exitPoint", exitPoint);
