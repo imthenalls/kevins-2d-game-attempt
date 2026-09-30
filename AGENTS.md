@@ -49,6 +49,7 @@ Full documentation for each system lives in the `Documents/` folder. Read the re
 | [Documents/PLAYER_AVATARS.md](Documents/PLAYER_AVATARS.md) | Separate World A/World B avatar profiles, shared stats, per-world abilities, and generated player prefabs |
 | [Documents/ISOMETRIC_CONVERSION.md](Documents/ISOMETRIC_CONVERSION.md) | MMBN-style isometric presentation: fixed camera, 2:1 diamond tilemaps, upright sprites, Y-sort, and the Overworld rename |
 | [Documents/ISOMETRIC_3D.md](Documents/ISOMETRIC_3D.md) | 3D planar-isometric migration: PlayerControllerBase/3D, IsoCameraRig, billboarded sprites, 3D portals, Town interiors, and the NPC home schedule |
+| [Documents/SCHOOL_INTERIOR.md](Documents/SCHOOL_INTERIOR.md) | School interior built inside the Town scene: same-scene foyer⇄school portals, layout, generation workflow, and verification |
 | [Documents/TILEMAP_RULES.md](Documents/TILEMAP_RULES.md) | Grid/Tilemap alignment rules: transforms must be at origin, place content via cells, and use the alignment validator |
 | [Documents/DATA_VALIDATION.md](Documents/DATA_VALIDATION.md) | Editor validator for string-id data: blank/duplicate ids, dangling item/quest/node/portal references, dialogue links, and per-scene NPC ids |
 | [Documents/ARCHITECTURE_AUDIT.md](Documents/ARCHITECTURE_AUDIT.md) | Audit of the Data/Presentation split: enforcement mechanisms, what is separated, remaining authoritative state in Presentation, and migration order |

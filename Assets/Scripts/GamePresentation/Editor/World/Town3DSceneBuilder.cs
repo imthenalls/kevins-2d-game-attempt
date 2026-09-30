@@ -53,6 +53,11 @@ public static class Town3DSceneBuilder
     private const int MainBuildingX = 20;
     private const int MainBuildingY = 14;
 
+    // The school interior shares this scene. It is generated at the origin and moved here, east of
+    // the town and its rooms, so the two interiors never overlap. The foyer's school_gate portal
+    // teleports (same scene) to the school's school_entrance portal.
+    private static readonly Vector3 SchoolOrigin = new Vector3(100f, 0f, 0f);
+
     private static readonly Dictionary<(int x, int y), Transform> DoorApproaches = new();
 
     /// <summary>An axis-aligned rectangle of room cells: origin (X, Z), size (W, D).</summary>
@@ -83,6 +88,72 @@ public static class Town3DSceneBuilder
         new[] { new Rect(42, -46, 10, 8) },
         new[] { new Rect(58, -44, 8, 6), new Rect(58, -38, 3, 3) },
     };
+
+    // Re-creates the two foyer portals (World B + School) inside the open Town scene without a full
+    // rebuild. Use this to refresh the saved foyer when only the portal wiring changed.
+    [MenuItem("Tools/Worlds/Town 3D/Refresh Foyer Portals", priority = 22)]
+    public static void RefreshFoyerPortals()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new System.InvalidOperationException("Exit Play Mode first.");
+
+        Scene scene = EditorSceneManager.GetActiveScene();
+        if (scene.path != ScenePath)
+            throw new System.InvalidOperationException("Open " + ScenePath + " before refreshing the foyer.");
+
+        squareSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+        if (squareSprite == null)
+            throw new System.InvalidOperationException("Square sprite not found: " + SpritePath);
+
+        var room = GameObject.Find("Main Building Room");
+        if (room == null)
+            throw new System.InvalidOperationException("Town scene has no 'Main Building Room'.");
+
+        foreach (string name in new[] { "World B Portal", "School Portal" })
+        {
+            Transform existing = room.transform.Find(name);
+            if (existing != null)
+                Object.DestroyImmediate(existing.gameObject);
+        }
+
+        BuildMainBuildingWorldBPortal(room.transform);
+        BuildMainBuildingSchoolPortal(room.transform);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Town3D] Foyer portals refreshed (world_b_portal + school_gate).");
+    }
+
+    // Adds the school interior to the open Town scene (or replaces an existing copy) without
+    // rebuilding the town. Use this to update the saved scene when the school layout changes.
+    [MenuItem("Tools/Worlds/Town 3D/Refresh School Interior", priority = 23)]
+    public static void RefreshSchoolInterior()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new System.InvalidOperationException("Exit Play Mode first.");
+
+        Scene scene = EditorSceneManager.GetActiveScene();
+        if (scene.path != ScenePath)
+            throw new System.InvalidOperationException("Open " + ScenePath + " before refreshing the school.");
+
+        var existing = GameObject.Find(SchoolInteriorBuilder.RootName);
+        if (existing != null)
+            Object.DestroyImmediate(existing);
+
+        BuildSchoolInterior();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Town3D] School interior refreshed.");
+    }
+
+    private static void BuildSchoolInterior()
+    {
+        GameObject root = SchoolInteriorBuilder.BuildInto();
+        root.transform.position = SchoolOrigin;
+    }
 
     [MenuItem("Tools/Worlds/Rebuild Town Scene (3D)")]
     public static void Build()
@@ -123,6 +194,7 @@ public static class Town3DSceneBuilder
         BuildPlayer(spawn.transform.position);
         BuildTownExitPortal();
         BuildHiddenKey();
+        BuildSchoolInterior();
 
         // Re-apply any saved hand edits (Tools > Worlds > Town 3D > Set Rebuild Point) on top of the
         // freshly built defaults so a rebuild preserves the designer's moves and tweaks.
@@ -299,10 +371,13 @@ public static class Town3DSceneBuilder
             BuildRoomWalls(room.transform, cells, wallsLayer, wall);
             BuildRoomDoor(room.transform, b, rects[0]);
 
-            // The World B entrance lives inside the key-locked main building, so the route is
-            // discovered by opening the main_building_door.
+            // The World B and school entrances live inside the key-locked main building foyer, so
+            // both routes are discovered by opening the main_building_door.
             if (b.x == MainBuildingX && b.y == MainBuildingY)
+            {
                 BuildMainBuildingWorldBPortal(room.transform);
+                BuildMainBuildingSchoolPortal(room.transform);
+            }
         }
     }
 
@@ -342,6 +417,62 @@ public static class Town3DSceneBuilder
         SetBoolField(portal, "changesWorld", true);
         SetEnumField(portal, "destinationWorld", (int)WorldLayer.WorldB);
         SetObjectField(portal, "exitPoint", exitPoint);
+
+        // PortalTrigger3D tints its sprite green/pink by key state, so a coloured floor pad keeps
+        // the two foyer portals distinguishable at runtime.
+        BuildPortalFloorPad(portalObject.transform, "PortalPadWorldB", new Color(0.45f, 1f, 0.55f));
+    }
+
+    // A same-world 3D portal in the foyer that leads to the school's south entrance, on the opposite
+    // side of the room from the World B portal. Its ID matches SchoolInterior's school_entrance.
+    private static void BuildMainBuildingSchoolPortal(Transform room)
+    {
+        var portalObject = new GameObject("School Portal");
+        portalObject.transform.SetParent(room, false);
+        portalObject.transform.position = CellToWorld(30, -13);
+
+        var collider = portalObject.AddComponent<BoxCollider>();
+        collider.isTrigger = true;
+        collider.size = new Vector3(1.6f, 2f, 1.6f);
+        collider.center = new Vector3(0f, 1f, 0f);
+
+        var visual = new GameObject("PortalVisual");
+        visual.transform.SetParent(portalObject.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 1f, 0f);
+        visual.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.35f, 0.65f, 1f);
+        renderer.sortingOrder = 50;
+        visual.AddComponent<BillboardSprite>();
+
+        // Arrival point one unit toward the camera (-Z), clear of the trigger, the room walls, and
+        // the World B portal's arrival point.
+        var exitPoint = new GameObject("ExitPoint").transform;
+        exitPoint.SetParent(portalObject.transform, false);
+        exitPoint.localPosition = new Vector3(0f, 0f, -1f);
+
+        // Same-scene route: the school is content inside this scene, so Destination Scene is blank
+        // and the portal teleports without loading or reloading anything.
+        var portal = portalObject.AddComponent<PortalTrigger3D>();
+        SetStringField(portal, "portalId", "school_gate");
+        SetStringField(portal, "destinationPortalId", "school_entrance");
+        SetObjectField(portal, "exitPoint", exitPoint);
+
+        BuildPortalFloorPad(portalObject.transform, "PortalPadSchool", new Color(0.35f, 0.65f, 1f));
+    }
+
+    // A flat coloured pad under a 3D portal, just above the room floor, so co-located foyer portals
+    // read as distinct destinations even though PortalTrigger3D owns and recolours the sprite.
+    private static void BuildPortalFloorPad(Transform portal, string materialName, Color color)
+    {
+        var pad = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        pad.name = "PortalPad";
+        pad.transform.SetParent(portal, false);
+        pad.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+        pad.transform.localScale = new Vector3(2.2f, 0.04f, 2.2f);
+        pad.GetComponent<MeshRenderer>().sharedMaterial = EnsureMaterial(materialName, color, unlit: true);
+        Object.DestroyImmediate(pad.GetComponent<BoxCollider>());
     }
 
     private static HashSet<Vector2Int> CellsFrom(Rect[] rects)

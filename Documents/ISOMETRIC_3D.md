@@ -64,6 +64,9 @@ Menu: **Tools > Worlds > Rebuild Town Scene (3D)** (rebuilds `Assets/Scenes/Town
 - **Doors:** the pink door visual lies flat on the building's wall face (not a billboard), so it
   reads as part of the building; a separate non-rotating trigger child carries the `BoxCollider` +
   `PortalTrigger3D` and an `Approach` exit; each door is parented under its building.
+- **School interior:** a large school interior is generated into the **same Town scene** (east of the
+  town, under a `School Interior` root) and connected to the main-building foyer by a same-scene
+  portal pair, so no scene is loaded. See [SCHOOL_INTERIOR.md](SCHOOL_INTERIOR.md).
 
 ## NPC schedule
 

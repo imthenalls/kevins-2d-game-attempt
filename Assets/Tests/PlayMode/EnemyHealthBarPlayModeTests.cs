@@ -23,6 +23,12 @@ namespace Game.Tests
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            // Play Mode tests share one session, and a previously loaded scene (e.g. Town) can still
+            // be active with its own enemies. Clear their bars so FindAnyObjectByType only ever finds
+            // the subject's bar, keeping this fixture independent of execution order.
+            DestroyBars();
+            yield return null;
+
             cameraObject = new GameObject("Test Camera", typeof(Camera));
             cameraObject.tag = "MainCamera";
             cameraObject.transform.position = new Vector3(0f, 0f, -10f);
