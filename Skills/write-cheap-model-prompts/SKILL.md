@@ -77,6 +77,35 @@ Do not turn unresolved assumptions into implementation instructions. If a requir
 
 Preserve the user’s chosen design. Do not redesign the feature, expand its scope, add dependencies, or introduce unrelated cleanup.
 
+## Verification Selection
+
+Every generated implementation prompt must contain one explicit final verification plan. Tell the implementing model to run it after the implementation and final diff review are complete.
+
+Choose the smallest plan that proves the requested change:
+
+- Use the full project pipeline for gameplay integration, scenes, prefabs, portals, save/load, travel, Unity lifecycle, or changes spanning Core and Presentation:
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1
+  ```
+
+- Use `dotnet test` for an engine-free Core-only change when the affected tests are mirrored by the .NET test project and Unity runtime behavior is outside the task.
+- Use the Unity EditMode suite for editor behavior, serialization, reflection guards, or Unity-bound EditMode tests that `dotnet test` cannot execute.
+- Use a named focused test command only when the project exposes a reliable way to run that test and the change does not warrant the full pipeline.
+- Use no test command for a documentation-only prompt. Require `git diff --check` or an equivalent document check only when it adds value.
+
+Do not list `verify-all.ps1` together with `dotnet test`, EditMode, PlayMode, compilation, or scene smoke as separate required commands. `verify-all.ps1` already contains those stages. Repeating them wastes model time and tokens.
+
+The generated prompt must say:
+
+- run only the verification commands listed in the prompt;
+- do not add unrelated test suites or repeat a suite already covered by the selected command;
+- report the command, exit result, and failing stage when a check fails;
+- do not claim unavailable or unexecuted checks passed;
+- if the selected verification cannot run, report why and stop unless the prompt explicitly provides a fallback command.
+
+Do not write open-ended instructions such as “run any relevant tests,” “test as needed,” or “run additional checks.” Name the exact verification command or suite.
+
 ## Prompt Structure
 
 Write each prompt in this order:
@@ -108,6 +137,7 @@ Use the literal headings `Do this` and `Do not do this`.
 - Require the smallest coherent change that completes the objective.
 - Require tests for new rules or state transitions when the project’s plan calls for them.
 - Require the model to report tests it actually ran. It must not claim unavailable checks passed.
+- Require the model to run only the verification plan named in the prompt and avoid duplicate suite runs.
 - Require the model to inspect the final diff and remove accidental edits before reporting completion.
 - Tell the model not to commit, push, publish, or modify generated files unless the user requested it.
 
@@ -197,9 +227,10 @@ Required behavior
 - A disabled dash cannot start.
 
 Verification
-- Run the engine-free test suite.
-- Build Game.Data and Game.Presentation.
-- Run the relevant Unity tests if the Unity test service is available. Otherwise report that they were not run.
+- After implementation and final diff review, run only:
+  powershell -ExecutionPolicy Bypass -File Tools/verify-all.ps1
+- Do not run dotnet, EditMode, PlayMode, compilation, or scene-smoke checks separately because verify-all already includes them.
+- If verify-all cannot run, report the reason and do not claim verification passed.
 
 Stop and report if
 - A named file or symbol does not exist.
