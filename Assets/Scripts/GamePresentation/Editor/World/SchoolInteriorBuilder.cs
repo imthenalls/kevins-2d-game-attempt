@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Game.Core;
 using UnityEditor;
 using UnityEngine;
 
@@ -42,88 +43,13 @@ public static class SchoolInteriorBuilder
     private const float WallHeight = 1f;
     private const float WallThickness = 0.3f;
 
-    // ── Layout data ──────────────────────────────────────────────────────────
+    // Opaque zone covers sit above the walls (and the lowered props) yet below the player's head, so
+    // a covered zone hides its interior while the active player remains visible.
+    private const float CoverHeight = 1.3f;
 
-    private enum RoomKind
-    {
-        Classroom, Science, Art, Auditorium, Admin, Dining, Kitchen,
-        Gym, Lockers, Music, Wrestling, Workshop, Library, Study
-    }
-
-    private sealed class RoomDef
-    {
-        public string Id;
-        public string Name;
-        public Color Color;
-        public RoomKind Kind;
-        public Rect[] Rects;
-
-        public RoomDef(string id, string name, Color color, RoomKind kind, params Rect[] rects)
-        {
-            Id = id; Name = name; Color = color; Kind = kind; Rects = rects;
-        }
-    }
-
-    // Orientation: +X east, +Z north, entrance at the south (-Z) edge. Cell coordinates.
-    private static readonly Rect[] Corridors =
-    {
-        new Rect(44, 2, 12, 8),    // entrance lobby (south)
-        new Rect(44, 10, 12, 29),  // commons (central)
-        new Rect(44, 39, 12, 13),  // cafeteria / dining (central-north)
-        new Rect(6, 22, 38, 4),    // west corridor
-        new Rect(56, 22, 37, 4),   // east corridor
-        new Rect(6, 56, 87, 4),    // north corridor
-        new Rect(6, 2, 4, 69),     // west vertical corridor
-        new Rect(28, 2, 4, 69),    // mid-west vertical corridor
-        new Rect(56, 16, 37, 6),   // south-east corridor
-        new Rect(56, 2, 4, 20),    // south-east vertical corridor
-        new Rect(66, 26, 4, 30),   // east vertical corridor
-    };
-
-    private static readonly RoomDef[] Rooms =
-    {
-        // Southwest: middle school.
-        new RoomDef("ms_classroom_1", "Middle School Classroom 1", new Color(0.55f, 0.72f, 0.86f), RoomKind.Classroom, new Rect(10, 3, 9, 10)),
-        new RoomDef("ms_classroom_2", "Middle School Classroom 2", new Color(0.55f, 0.72f, 0.86f), RoomKind.Classroom, new Rect(19, 3, 9, 10)),
-        new RoomDef("ms_classroom_3", "Middle School Classroom 3", new Color(0.55f, 0.72f, 0.86f), RoomKind.Classroom, new Rect(10, 13, 9, 9)),
-        new RoomDef("ms_classroom_4", "Middle School Classroom 4", new Color(0.55f, 0.72f, 0.86f), RoomKind.Classroom, new Rect(19, 13, 9, 9)),
-
-        // Far west: science.
-        new RoomDef("chem_physics", "Chemistry & Physics Lab", new Color(0.45f, 0.78f, 0.68f), RoomKind.Science, new Rect(32, 3, 12, 10)),
-        new RoomDef("biology", "Biology Lab", new Color(0.45f, 0.78f, 0.68f), RoomKind.Science, new Rect(32, 13, 12, 9)),
-
-        // Northwest: high school + practical teaching.
-        new RoomDef("hs_classroom_1", "High School Classroom 1", new Color(0.58f, 0.70f, 0.88f), RoomKind.Classroom, new Rect(10, 26, 9, 10)),
-        new RoomDef("hs_classroom_2", "High School Classroom 2", new Color(0.58f, 0.70f, 0.88f), RoomKind.Classroom, new Rect(19, 26, 9, 10)),
-        new RoomDef("sewing", "Sewing Room", new Color(0.86f, 0.74f, 0.62f), RoomKind.Workshop, new Rect(10, 36, 9, 9)),
-        new RoomDef("cooking", "Cooking Room", new Color(0.90f, 0.80f, 0.55f), RoomKind.Kitchen, new Rect(19, 36, 9, 9)),
-        new RoomDef("living_learning", "Living & Learning Center", new Color(0.72f, 0.78f, 0.66f), RoomKind.Study, new Rect(10, 45, 9, 11)),
-        new RoomDef("hs_lab", "High School Lab", new Color(0.50f, 0.76f, 0.72f), RoomKind.Science, new Rect(19, 45, 9, 11)),
-
-        // Central-west: auditorium + administration.
-        new RoomDef("auditorium", "Auditorium", new Color(0.62f, 0.55f, 0.85f), RoomKind.Auditorium, new Rect(32, 26, 12, 19)),
-        new RoomDef("admin_office", "Administrative Office", new Color(0.80f, 0.75f, 0.62f), RoomKind.Admin, new Rect(32, 45, 6, 11)),
-        new RoomDef("nurse", "Nurse's Office", new Color(0.86f, 0.80f, 0.80f), RoomKind.Admin, new Rect(38, 45, 6, 11)),
-
-        // North: art, library, study, workshops.
-        new RoomDef("art", "Art Room", new Color(0.88f, 0.62f, 0.72f), RoomKind.Art, new Rect(10, 60, 18, 11)),
-        new RoomDef("library", "Library", new Color(0.55f, 0.75f, 0.55f), RoomKind.Library, new Rect(32, 60, 12, 11)),
-        new RoomDef("study_hall", "Study Hall", new Color(0.74f, 0.76f, 0.70f), RoomKind.Study, new Rect(44, 60, 12, 11)),
-        new RoomDef("wood_shop", "Industrial Arts Shop", new Color(0.70f, 0.58f, 0.45f), RoomKind.Workshop, new Rect(56, 60, 17, 11)),
-        new RoomDef("auto_shop", "Vocational Agriculture Shop", new Color(0.64f, 0.56f, 0.44f), RoomKind.Workshop, new Rect(73, 60, 20, 11)),
-
-        // Southeast: music + wrestling.
-        new RoomDef("vocal_music", "Vocal Music", new Color(0.90f, 0.66f, 0.42f), RoomKind.Music, new Rect(60, 2, 13, 14)),
-        new RoomDef("instrumental_music", "Instrumental Music", new Color(0.90f, 0.62f, 0.36f), RoomKind.Music, new Rect(73, 2, 12, 14)),
-        new RoomDef("wrestling", "Wrestling / Apparatus", new Color(0.80f, 0.55f, 0.48f), RoomKind.Wrestling, new Rect(85, 2, 8, 14)),
-
-        // East-central: gym + lockers, kitchen.
-        new RoomDef("staff_room", "Staff Room", new Color(0.78f, 0.78f, 0.68f), RoomKind.Admin, new Rect(56, 26, 10, 13)),
-        new RoomDef("kitchen", "Kitchen", new Color(0.90f, 0.85f, 0.55f), RoomKind.Kitchen, new Rect(56, 39, 10, 17)),
-        new RoomDef("gym", "Gymnasium", new Color(0.85f, 0.72f, 0.45f), RoomKind.Gym, new Rect(70, 26, 19, 30)),
-        new RoomDef("boys_lockers", "Boys' Locker Room", new Color(0.66f, 0.68f, 0.72f), RoomKind.Lockers, new Rect(89, 26, 4, 15)),
-        new RoomDef("girls_lockers", "Girls' Locker Room", new Color(0.72f, 0.68f, 0.74f), RoomKind.Lockers, new Rect(89, 41, 4, 15)),
-    };
+    // Visibility zone layout (rooms + hallway) lives in Engine-Free Core so the selection rules and
+    // the generated geometry share one source of truth: Game.Core.SchoolZoneLayout.
+    private static SchoolZoneLayout Layout => SchoolZoneLayout.Default;
 
     // ── Build state ──────────────────────────────────────────────────────────
 
@@ -161,9 +87,15 @@ public static class SchoolInteriorBuilder
         BuildRoomMarkers(roomRoot.transform);
         BuildEntrancePortal(root.transform);
         BuildNpcs(root.transform);
+        BuildVisibility(root.transform);
 
-        Debug.Log("[SchoolInterior] Built " + RootName + ": " + Rooms.Length + " rooms, " +
-                  Corridors.Length + " corridor segments, " + regions.Count + " walkable cells.");
+        int roomCount = 0;
+        foreach (SchoolZone zone in Layout.Zones)
+            if (!zone.IsHallway)
+                roomCount++;
+
+        Debug.Log("[SchoolInterior] Built " + RootName + ": " + roomCount + " rooms, " +
+                  Layout.Zones.Count + " zones, " + regions.Count + " walkable cells.");
         return root;
     }
 
@@ -174,22 +106,19 @@ public static class SchoolInteriorBuilder
         regions.Clear();
         RoomColors.Clear();
 
-        foreach (Rect c in Corridors)
-            FillRegion(c, "hall");
-
-        foreach (RoomDef room in Rooms)
+        foreach (SchoolZone zone in Layout.Zones)
         {
-            RoomColors[room.Id] = room.Color;
-            foreach (Rect r in room.Rects)
-                FillRegion(r, room.Id);
+            RoomColors[zone.Id] = new Color(zone.ColorR, zone.ColorG, zone.ColorB);
+            foreach (GridRect r in zone.Rects)
+                FillRegion(r, zone.Id);
         }
     }
 
-    private static void FillRegion(Rect rect, string region)
+    private static void FillRegion(GridRect rect, string region)
     {
-        for (int x = Mathf.RoundToInt(rect.x); x < Mathf.RoundToInt(rect.x + rect.width); x++)
+        for (int x = rect.X; x < rect.MaxX; x++)
         {
-            for (int z = Mathf.RoundToInt(rect.y); z < Mathf.RoundToInt(rect.y + rect.height); z++)
+            for (int z = rect.Z; z < rect.MaxZ; z++)
             {
                 var cell = new Vector2Int(x, z);
                 if (regions.TryGetValue(cell, out string existing) && existing != region)
@@ -294,14 +223,17 @@ public static class SchoolInteriorBuilder
 
         var reached = FloodWalkable(new Vector2Int(50, 7));
 
-        foreach (RoomDef room in Rooms)
+        foreach (SchoolZone room in Layout.Zones)
         {
+            if (room.IsHallway)
+                continue;
+
             bool any = false;
-            foreach (Rect r in room.Rects)
+            foreach (GridRect r in room.Rects)
             {
-                for (int x = Mathf.RoundToInt(r.x); x < Mathf.RoundToInt(r.x + r.width) && !any; x++)
+                for (int x = r.X; x < r.MaxX && !any; x++)
                 {
-                    for (int z = Mathf.RoundToInt(r.y); z < Mathf.RoundToInt(r.y + r.height); z++)
+                    for (int z = r.Z; z < r.MaxZ; z++)
                     {
                         if (reached.Contains(new Vector2Int(x, z))) { any = true; break; }
                     }
@@ -376,8 +308,8 @@ public static class SchoolInteriorBuilder
 
         foreach (KeyValuePair<string, HashSet<Vector2Int>> region in byRegion)
         {
-            string label = region.Key == "hall" ? "Corridor" : RegionName(region.Key);
-            Color color = region.Key == "hall" ? new Color(0.72f, 0.71f, 0.68f) : RoomColors[region.Key];
+            string label = RegionName(region.Key);
+            Color color = RoomColors[region.Key];
             CreateCellMesh(label + " Floor", region.Value, 0.03f, EnsureMaterial("Floor_" + region.Key, color, unlit: true), parent);
         }
     }
@@ -449,8 +381,11 @@ public static class SchoolInteriorBuilder
     {
         var placed = new HashSet<Vector2Int>();
 
-        foreach (RoomDef room in Rooms)
+        foreach (SchoolZone room in Layout.Zones)
         {
+            if (room.IsHallway)
+                continue;
+
             Vector2Int anchor = FindDoorwayCell(room, placed);
             if (anchor.x < 0)
                 throw new InvalidOperationException("School room '" + room.Id + "' has no doorway cell.");
@@ -463,15 +398,15 @@ public static class SchoolInteriorBuilder
         }
     }
 
-    private static Vector2Int FindDoorwayCell(RoomDef room, HashSet<Vector2Int> used)
+    private static Vector2Int FindDoorwayCell(SchoolZone room, HashSet<Vector2Int> used)
     {
         Vector2Int best = new Vector2Int(-1, -1);
 
-        foreach (Rect r in room.Rects)
+        foreach (GridRect r in room.Rects)
         {
-            for (int x = Mathf.RoundToInt(r.x); x < Mathf.RoundToInt(r.x + r.width); x++)
+            for (int x = r.X; x < r.MaxX; x++)
             {
-                for (int z = Mathf.RoundToInt(r.y); z < Mathf.RoundToInt(r.y + r.height); z++)
+                for (int z = r.Z; z < r.MaxZ; z++)
                 {
                     Vector2Int cell = new Vector2Int(x, z);
                     if (used.Contains(cell))
@@ -511,28 +446,33 @@ public static class SchoolInteriorBuilder
         Material court = EnsureMaterial("CourtLine", new Color(0.95f, 0.95f, 0.98f), unlit: true);
         Material mat = EnsureMaterial("WrestlingMat", new Color(0.78f, 0.30f, 0.30f), unlit: true);
 
-        foreach (RoomDef room in Rooms)
+        foreach (SchoolZone room in Layout.Zones)
         {
-            Rect r = room.Rects[0];
+            if (room.IsHallway)
+                continue;
+
+            Rect r = ToRect(room.Rects[0]);
             switch (room.Kind)
             {
-                case RoomKind.Classroom: FurnishClassroom(root.transform, r, desk, shelf); break;
-                case RoomKind.Science: FurnishRows(root.transform, r, desk, gear, 2); break;
-                case RoomKind.Art: FurnishRows(root.transform, r, desk, gear, 2); break;
-                case RoomKind.Study: FurnishRows(root.transform, r, desk, bench, 2); break;
-                case RoomKind.Library: FurnishLibrary(root.transform, r, shelf, desk); break;
-                case RoomKind.Admin: FurnishAdmin(root.transform, r, desk, shelf); break;
-                case RoomKind.Dining: FurnishDining(root.transform, r, desk); break;
-                case RoomKind.Kitchen: FurnishKitchen(root.transform, r, counter, gear); break;
-                case RoomKind.Auditorium: FurnishAuditorium(root.transform, r, bench, shelf); break;
-                case RoomKind.Gym: FurnishGym(root.transform, r, court, gear, bench); break;
-                case RoomKind.Lockers: FurnishLockers(root.transform, r, gear); break;
-                case RoomKind.Music: FurnishMusic(root.transform, r, gear, desk); break;
-                case RoomKind.Wrestling: FurnishWrestling(root.transform, r, mat, gear); break;
-                case RoomKind.Workshop: FurnishWorkshop(root.transform, r, desk, gear, shelf); break;
+                case SchoolZoneKind.Classroom: FurnishClassroom(root.transform, r, desk, shelf); break;
+                case SchoolZoneKind.Science: FurnishRows(root.transform, r, desk, gear, 2); break;
+                case SchoolZoneKind.Art: FurnishRows(root.transform, r, desk, gear, 2); break;
+                case SchoolZoneKind.Study: FurnishRows(root.transform, r, desk, bench, 2); break;
+                case SchoolZoneKind.Library: FurnishLibrary(root.transform, r, shelf, desk); break;
+                case SchoolZoneKind.Admin: FurnishAdmin(root.transform, r, desk, shelf); break;
+                case SchoolZoneKind.Dining: FurnishDining(root.transform, r, desk); break;
+                case SchoolZoneKind.Kitchen: FurnishKitchen(root.transform, r, counter, gear); break;
+                case SchoolZoneKind.Auditorium: FurnishAuditorium(root.transform, r, bench, shelf); break;
+                case SchoolZoneKind.Gym: FurnishGym(root.transform, r, court, gear, bench); break;
+                case SchoolZoneKind.Lockers: FurnishLockers(root.transform, r, gear); break;
+                case SchoolZoneKind.Music: FurnishMusic(root.transform, r, gear, desk); break;
+                case SchoolZoneKind.Wrestling: FurnishWrestling(root.transform, r, mat, gear); break;
+                case SchoolZoneKind.Workshop: FurnishWorkshop(root.transform, r, desk, gear, shelf); break;
             }
         }
     }
+
+    private static Rect ToRect(GridRect r) => new Rect(r.X, r.Z, r.W, r.D);
 
     private static void FurnishClassroom(Transform parent, Rect r, Material desk, Material shelf)
     {
@@ -588,7 +528,7 @@ public static class SchoolInteriorBuilder
     {
         float stageZ = r.yMax - 2.5f;
         Prop(parent, new Vector3(r.x + r.width * 0.5f, 0.25f, stageZ), new Vector3(r.width - 2f, 0.5f, 3f), shelf, true, 0f);
-        Prop(parent, new Vector3(r.x + r.width * 0.5f, 1.1f, r.yMax - 1f), new Vector3(r.width - 2f, 1.4f, 0.4f), shelf, true, 0f);
+        Prop(parent, new Vector3(r.x + r.width * 0.5f, 0f, r.yMax - 1f), new Vector3(r.width - 2f, 1.1f, 0.4f), shelf, true, 0f);
 
         for (int z = (int)r.y + 2; z <= r.y + 9; z += 2)
             Prop(parent, new Vector3(r.x + r.width * 0.5f, 0.3f, z + 0.5f), new Vector3(r.width - 4f, 0.5f, 0.8f), bench, true, 0f);
@@ -606,9 +546,10 @@ public static class SchoolInteriorBuilder
         Prop(parent, new Vector3(cx, 0.9f, r.y + 2f), new Vector3(1.8f, 0.25f, 0.25f), gear, true, 0f);
         Prop(parent, new Vector3(cx, 0.9f, r.yMax - 2f), new Vector3(1.8f, 0.25f, 0.25f), gear, true, 0f);
 
-        for (int step = 0; step < 3; step++)
-            Prop(parent, new Vector3(r.xMax - 2f - step * 0.8f, 0.3f + step * 0.35f, cz),
-                new Vector3(0.8f, 0.7f + step * 0.7f, r.height - 8f), bench, true, 0f);
+        // Two low steps so the bleachers stay under the visibility cover height.
+        for (int step = 0; step < 2; step++)
+            Prop(parent, new Vector3(r.xMax - 2f - step * 0.8f, 0f, cz),
+                new Vector3(0.8f, 0.5f + step * 0.5f, r.height - 8f), bench, true, 0f);
     }
 
     private static void FurnishLockers(Transform parent, Rect r, Material gear)
@@ -756,6 +697,52 @@ public static class SchoolInteriorBuilder
         }
     }
 
+    // ── Visibility zones ─────────────────────────────────────────────────────
+
+    // One opaque roof cover per zone plus the runtime/editor controller on the school root. The cover
+    // uses the zone's exact cells (never a bounding box) and is tinted from the zone colour so the
+    // covered layout still reads.
+    private static void BuildVisibility(Transform root)
+    {
+        var coversRoot = new GameObject("Visibility Covers");
+        coversRoot.transform.SetParent(root, false);
+
+        foreach (SchoolZone zone in Layout.Zones)
+        {
+            HashSet<Vector2Int> cells = CellsOf(zone);
+            if (cells.Count == 0)
+                continue;
+
+            Color baseColor = new Color(zone.ColorR, zone.ColorG, zone.ColorB);
+            Color coverColor = new Color(baseColor.r * 0.5f, baseColor.g * 0.5f, baseColor.b * 0.5f, 1f);
+            Material coverMaterial = EnsureMaterial("Cover_" + zone.Id, coverColor, unlit: true);
+
+            GameObject cover = CreateCellMesh(zone.Id + " Cover", cells, CoverHeight, coverMaterial, coversRoot.transform);
+            cover.AddComponent<SchoolZoneCover>().Configure(zone.Id);
+        }
+
+        root.gameObject.AddComponent<SchoolVisibilityController>();
+    }
+
+    private static HashSet<Vector2Int> CellsOf(SchoolZone zone)
+    {
+        var cells = new HashSet<Vector2Int>();
+        foreach (GridRect r in zone.Rects)
+        {
+            for (int x = r.X; x < r.MaxX; x++)
+            {
+                for (int z = r.Z; z < r.MaxZ; z++)
+                {
+                    var cell = new Vector2Int(x, z);
+                    if (regions.TryGetValue(cell, out string id) && id == zone.Id)
+                        cells.Add(cell);
+                }
+            }
+        }
+
+        return cells;
+    }
+
     // ── Mesh / material helpers ──────────────────────────────────────────────
 
     private static readonly Vector2Int[] Directions =
@@ -768,10 +755,8 @@ public static class SchoolInteriorBuilder
 
     private static string RegionName(string id)
     {
-        foreach (RoomDef room in Rooms)
-            if (room.Id == id)
-                return room.Name;
-        return id;
+        SchoolZone zone = Layout.FindById(id);
+        return zone != null ? zone.Name : id;
     }
 
     private static List<(int a, int b)> MergeRuns(List<int> values)
@@ -794,7 +779,7 @@ public static class SchoolInteriorBuilder
         return runs;
     }
 
-    private static void CreateCellMesh(string name, HashSet<Vector2Int> cells, float height, Material material, Transform parent)
+    private static GameObject CreateCellMesh(string name, HashSet<Vector2Int> cells, float height, Material material, Transform parent)
     {
         var vertices = new List<Vector3>(cells.Count * 4);
         var triangles = new List<int>(cells.Count * 6);
@@ -828,6 +813,7 @@ public static class SchoolInteriorBuilder
         if (AssetDatabase.LoadAssetAtPath<Mesh>(meshPath) != null)
             AssetDatabase.DeleteAsset(meshPath);
         AssetDatabase.CreateAsset(mesh, meshPath);
+        return go;
     }
 
     private static string Sanitize(string name)

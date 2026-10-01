@@ -63,6 +63,39 @@ Matches the Town interior:
 - Entering the foyer's `School Portal` teleports on contact (same-scene, same-world); entering the
   school's `School Entrance Portal` teleports back to the foyer.
 
+## Room visibility (zones + covers)
+
+Only the zone the player occupies is revealed; every other zone is hidden under an opaque, roof-like
+cover so furniture, NPCs, and floor detail are concealed from the isometric camera.
+
+- **Zones** are authoritative layout data in Engine-Free Core:
+  `Game.Core.SchoolZoneLayout` (`SchoolZone` + `GridRect`). There is one hallway/common zone
+  (`hall`) built from the corridor rectangles, and one zone per room. Zones are disjoint, so a cell
+  belongs to exactly one zone.
+- **Selection rule** is Core too: `Game.Core.SchoolVisibilityModel` maps the player's school-local
+  cell (`floor(position)`) to a zone and reports a change only when the zone actually changes, so
+  doorway ownership is deterministic and transitions fire once.
+- **Adapter**: `SchoolVisibilityController` (on the `School Interior` root) reads the active player's
+  position, applies the Core model, and — only on a zone change — hides the occupied zone's cover and
+  shows the rest. Only the active player drives it; NPCs never do. It uses the root transform as the
+  school-local origin (the school is offset inside the Town scene).
+- **Covers**: `SchoolZoneCover` marks one generated cover mesh per zone, built from the zone's exact
+  cells (never a bounding box) at height `1.3` and tinted from the zone colour so the covered layout
+  still reads. Covers are visual only: they have no collider, and hidden rooms keep running — only the
+  cover renderer is toggled, never gameplay objects, collisions, NPC logic, or saved state.
+- **Player visibility**: covers sit above the walls and the lowered props but below the player's head,
+  so the active player stays visible and no cover overlaps the occupied zone.
+- **Initialization**: visibility is computed from the player position on scene entry, after a save
+  load, and after a portal teleport (same-scene, so the controller simply re-reads the position on the
+  next update / a forced refresh).
+
+### Editor inspection
+
+Covers are ordinary scene objects and are visible (all on) in the Editor without Play Mode, so the
+covered layout is inspectable. Select the **Preview Zone** dropdown on the `SchoolVisibilityController`
+(the `School Interior` root) to reveal one zone, or **Show Complete Covered Layout** to cover
+everything again.
+
 ## Generation workflow
 
 `SchoolInteriorBuilder` (editor-only) generates the school under a new `School Interior` root at the
@@ -88,3 +121,8 @@ Hand edits survive a rebuild through the Town rebuild point
   room marker is physically reachable from the school entrance.
 - `Tools/verify-smoke.ps1` and `SceneUiCameraPlayModeTests` cover Town's camera/UI invariants, which
   now include the school content.
+- `SchoolVisibilityPlayModeTests` checks hall → room → hall and room-to-room transitions, doorway
+  thresholds, the initial spawn (everything covered), and a portal arrival (the entrance hall is
+  revealed), asserting exactly one zone is revealed at a time.
+- `SchoolVisibilityModelTests` (Edit Mode, mirrored by `dotnet test`) covers zone selection,
+  disjointness, and transition change reporting.
