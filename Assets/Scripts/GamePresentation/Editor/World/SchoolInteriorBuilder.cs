@@ -43,10 +43,20 @@ public static class SchoolInteriorBuilder
     private const float WallHeight = 1f;
     private const float WallThickness = 0.3f;
 
-    // Opaque zone covers seat just above the wall tops so a covered zone reads as a solid flat roof
-    // flush with its walls (no floating gap), yet below the player's head so the active player stays
-    // visible. Props and NPC visuals are kept under this height.
-    private const float CoverHeight = 1.05f;
+    // Opaque zone covers. Each covers its zone's exact cells plus the full thickness of every
+    // boundary wall, so the roof edge meets the revealed room's wall face instead of stopping at the
+    // interior floor edge and leaving a protruding wall lip. Props/NPC visuals stay under this height.
+
+    // How far past the zone cells a cover reaches across a boundary wall: half the wall thickness
+    // covers the full wall (out to its outer face), and the small overlap removes hairline seams.
+    private const float CoverWallOverlap = 0.02f;
+    private const float CoverEdgeExtension = WallThickness * 0.5f + CoverWallOverlap;
+
+    // Cover height sits a hair above the wall tops: flush to the eye but not coplanar, so a cover
+    // never z-fights the wall tops. Adjacent covers overlap across shared walls, so every zone gets a
+    // tiny unique lift; neighbours are then never coplanar and cannot flicker against each other.
+    private const float CoverHeight = WallHeight + 0.02f;
+    private const float CoverHeightStagger = 0.001f;
 
     // Visibility zone layout (rooms + hallway) lives in Engine-Free Core so the selection rules and
     // the generated geometry share one source of truth: Game.Core.SchoolZoneLayout.
@@ -715,6 +725,7 @@ public static class SchoolInteriorBuilder
         var coversRoot = new GameObject("Visibility Covers");
         coversRoot.transform.SetParent(root, false);
 
+        int zoneIndex = 0;
         foreach (SchoolZone zone in Layout.Zones)
         {
             HashSet<Vector2Int> cells = CellsOf(zone);
@@ -725,8 +736,11 @@ public static class SchoolInteriorBuilder
             Color coverColor = new Color(baseColor.r * 0.68f, baseColor.g * 0.68f, baseColor.b * 0.68f, 1f);
             Material coverMaterial = EnsureMaterial("Cover_" + zone.Id, coverColor, unlit: true);
 
-            GameObject cover = CreateCellMesh(zone.Id + " Cover", cells, CoverHeight, coverMaterial, coversRoot.transform);
+            float height = CoverHeight + zoneIndex * CoverHeightStagger;
+            GameObject cover = CreateZoneCoverMesh(
+                zone.Id + " Cover", cells, zone.Id, height, coverMaterial, coversRoot.transform);
             cover.AddComponent<SchoolZoneCover>().Configure(zone.Id);
+            zoneIndex++;
         }
 
         root.gameObject.AddComponent<SchoolVisibilityController>();
@@ -753,10 +767,12 @@ public static class SchoolInteriorBuilder
 
     // ── Mesh / material helpers ──────────────────────────────────────────────
 
-    private static readonly Vector2Int[] Directions =
-    {
-        new Vector2Int(0, 1), new Vector2Int(0, -1), new Vector2Int(1, 0), new Vector2Int(-1, 0),
-    };
+    private static readonly Vector2Int North = new Vector2Int(0, 1);
+    private static readonly Vector2Int South = new Vector2Int(0, -1);
+    private static readonly Vector2Int East = new Vector2Int(1, 0);
+    private static readonly Vector2Int West = new Vector2Int(-1, 0);
+
+    private static readonly Vector2Int[] Directions = { North, South, East, West };
 
     private static Vector3 CellToWorld(int cx, int cz) =>
         new Vector3((cx + 0.5f) * CellSize, 0f, (cz + 0.5f) * CellSize);
@@ -787,6 +803,54 @@ public static class SchoolInteriorBuilder
         return runs;
     }
 
+    // Builds a zone cover from the zone's exact cells, expanding each cell across every boundary wall
+    // by CoverEdgeExtension so the cover spans the wall's full thickness. Interior edges (same zone)
+    // and doorways (open edges) are never expanded, so the cover follows the room shape, keeps the
+    // doorway clear, and never grows past a wall into the neighbouring room's walkable floor.
+    private static GameObject CreateZoneCoverMesh(
+        string name, HashSet<Vector2Int> cells, string regionId, float height, Material material, Transform parent)
+    {
+        var vertices = new List<Vector3>(cells.Count * 4);
+        var triangles = new List<int>(cells.Count * 6);
+
+        foreach (Vector2Int cell in cells)
+        {
+            float x0 = cell.x;
+            float x1 = cell.x + CellSize;
+            float z0 = cell.y;
+            float z1 = cell.y + CellSize;
+
+            if (IsCoverBoundaryWall(cell, regionId, West)) x0 -= CoverEdgeExtension;
+            if (IsCoverBoundaryWall(cell, regionId, East)) x1 += CoverEdgeExtension;
+            if (IsCoverBoundaryWall(cell, regionId, South)) z0 -= CoverEdgeExtension;
+            if (IsCoverBoundaryWall(cell, regionId, North)) z1 += CoverEdgeExtension;
+
+            int b = vertices.Count;
+            vertices.Add(new Vector3(x0, height, z0));
+            vertices.Add(new Vector3(x1, height, z0));
+            vertices.Add(new Vector3(x1, height, z1));
+            vertices.Add(new Vector3(x0, height, z1));
+            triangles.Add(b + 0); triangles.Add(b + 3); triangles.Add(b + 2);
+            triangles.Add(b + 0); triangles.Add(b + 2); triangles.Add(b + 1);
+        }
+
+        return BuildMeshObject(name, vertices, triangles, material, parent);
+    }
+
+    // A cell side is a boundary wall when the neighbour is outside the layout, or a different zone
+    // with no doorway opening cut between them. Same-zone sides and doorway openings are not walls.
+    private static bool IsCoverBoundaryWall(Vector2Int cell, string regionId, Vector2Int dir)
+    {
+        Vector2Int neighbor = cell + dir;
+        if (!regions.TryGetValue(neighbor, out string neighborRegion))
+            return true;
+
+        if (neighborRegion == regionId)
+            return false;
+
+        return !openEdges.Contains(Canonical(cell, neighbor));
+    }
+
     private static GameObject CreateCellMesh(string name, HashSet<Vector2Int> cells, float height, Material material, Transform parent)
     {
         var vertices = new List<Vector3>(cells.Count * 4);
@@ -806,6 +870,12 @@ public static class SchoolInteriorBuilder
             triangles.Add(b + 0); triangles.Add(b + 2); triangles.Add(b + 1);
         }
 
+        return BuildMeshObject(name, vertices, triangles, material, parent);
+    }
+
+    private static GameObject BuildMeshObject(
+        string name, List<Vector3> vertices, List<int> triangles, Material material, Transform parent)
+    {
         var mesh = new Mesh { name = name };
         mesh.SetVertices(vertices);
         mesh.SetTriangles(triangles, 0);

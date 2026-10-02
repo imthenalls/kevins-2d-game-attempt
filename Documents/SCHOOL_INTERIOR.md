@@ -80,11 +80,19 @@ cover so furniture, NPCs, and floor detail are concealed from the isometric came
   shows the rest. Only the active player drives it; NPCs never do. It uses the root transform as the
   school-local origin (the school is offset inside the Town scene).
 - **Covers**: `SchoolZoneCover` marks one generated cover mesh per zone, built from the zone's exact
-  cells (never a bounding box) at height `1.3` and tinted from the zone colour so the covered layout
-  still reads. Covers are visual only: they have no collider, and hidden rooms keep running — only the
-  cover renderer is toggled, never gameplay objects, collisions, NPC logic, or saved state.
-- **Player visibility**: covers sit above the walls and the lowered props but below the player's head,
-  so the active player stays visible and no cover overlaps the occupied zone.
+  cells (never a bounding box) and tinted from the zone colour so the covered layout still reads.
+  Each cover expands outward across every boundary **wall** by half the wall thickness plus a small
+  configurable overlap, so the roof edge meets the revealed room's wall face instead of stopping at
+  the interior floor edge and leaving a protruding wall lip. Interior edges and **doorways** (open
+  edges) are never expanded, so the cover follows the true room shape, keeps doorways clear, and
+  never reaches into a neighbour's walkable floor. **Corners** are filled because a cell expands on
+  every wall side at once. Covers are visual only: they have no collider, and hidden rooms keep
+  running — only the cover renderer is toggled, never gameplay objects, collisions, NPC logic, or
+  saved state.
+- **Height and flicker**: a cover sits just above the wall tops — flush to the eye but never coplanar
+  with them — and every zone gets a tiny unique lift, so adjacent covers that overlap across a shared
+  wall are never coplanar and cannot z-fight. Covers stay above the lowered props and NPC visuals,
+  and the occupied zone's cover is hidden, so the active player always stays visible.
 - **Initialization**: visibility is computed from the player position on scene entry, after a save
   load, and after a portal teleport (same-scene, so the controller simply re-reads the position on the
   next update / a forced refresh).
