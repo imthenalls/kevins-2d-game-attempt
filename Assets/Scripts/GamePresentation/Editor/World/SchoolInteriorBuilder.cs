@@ -43,9 +43,10 @@ public static class SchoolInteriorBuilder
     private const float WallHeight = 1f;
     private const float WallThickness = 0.3f;
 
-    // Opaque zone covers sit above the walls (and the lowered props) yet below the player's head, so
-    // a covered zone hides its interior while the active player remains visible.
-    private const float CoverHeight = 1.3f;
+    // Opaque zone covers seat just above the wall tops so a covered zone reads as a solid flat roof
+    // flush with its walls (no floating gap), yet below the player's head so the active player stays
+    // visible. Props and NPC visuals are kept under this height.
+    private const float CoverHeight = 1.05f;
 
     // Visibility zone layout (rooms + hallway) lives in Engine-Free Core so the selection rules and
     // the generated geometry share one source of truth: Game.Core.SchoolZoneLayout.
@@ -581,13 +582,19 @@ public static class SchoolInteriorBuilder
         Prop(parent, CellToWorld((int)r.x + (int)r.width - 2, (int)r.yMax - 2), new Vector3(1.2f, 0.9f, 1.2f), gear, true, 0.45f);
     }
 
+    // Every prop is clamped to this height so it stays under the zone covers.
+    private const float MaxPropTop = 0.95f;
+
     private static void Prop(Transform parent, Vector3 position, Vector3 size, Material material, bool collider, float yOffset)
     {
         GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         go.name = "Prop";
         go.transform.SetParent(parent, false);
-        go.transform.position = new Vector3(position.x, yOffset + size.y * 0.5f, position.z);
-        go.transform.localScale = size;
+
+        float height = Mathf.Min(size.y, MaxPropTop);
+        float bottom = Mathf.Min(yOffset, MaxPropTop - height);
+        go.transform.position = new Vector3(position.x, bottom + height * 0.5f, position.z);
+        go.transform.localScale = new Vector3(size.x, height, size.z);
         go.GetComponent<MeshRenderer>().sharedMaterial = material;
 
         if (!collider)
@@ -687,8 +694,9 @@ public static class SchoolInteriorBuilder
 
             var visual = new GameObject("NpcVisual");
             visual.transform.SetParent(npc.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 0.7f, 0f);
-            visual.transform.localScale = Vector3.one * 0.8f;
+            // Kept short so the visual stays under the zone covers (CoverHeight).
+            visual.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            visual.transform.localScale = Vector3.one * 0.7f;
             var renderer = visual.AddComponent<SpriteRenderer>();
             renderer.sprite = squareSprite;
             renderer.color = new Color(0.95f, 0.62f, 0.20f);
@@ -714,7 +722,7 @@ public static class SchoolInteriorBuilder
                 continue;
 
             Color baseColor = new Color(zone.ColorR, zone.ColorG, zone.ColorB);
-            Color coverColor = new Color(baseColor.r * 0.5f, baseColor.g * 0.5f, baseColor.b * 0.5f, 1f);
+            Color coverColor = new Color(baseColor.r * 0.68f, baseColor.g * 0.68f, baseColor.b * 0.68f, 1f);
             Material coverMaterial = EnsureMaterial("Cover_" + zone.Id, coverColor, unlit: true);
 
             GameObject cover = CreateCellMesh(zone.Id + " Cover", cells, CoverHeight, coverMaterial, coversRoot.transform);
