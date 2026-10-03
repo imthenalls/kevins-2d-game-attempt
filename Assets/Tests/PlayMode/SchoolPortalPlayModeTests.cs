@@ -92,7 +92,7 @@ namespace Game.Tests
         }
 
         [UnityTest]
-        public IEnumerator Every_School_Room_Doorway_Is_Reachable()
+        public IEnumerator Every_School_Room_Doorway_Is_Reachable_Except_The_Locked_Workshop()
         {
             yield return LoadScene(TownScene);
 
@@ -104,19 +104,56 @@ namespace Game.Tests
             Assert.Greater(markers.Length, 20, "expected a room marker for every principal room.");
 
             int wallMask = 1 << Mathf.Max(0, LayerMask.NameToLayer("Walls"));
-            HashSet<Vector2Int> reached = FloodWalkable(WorldToCell(schoolEntrance.ArrivalPosition), wallMask);
+            Vector2Int start = WorldToCell(schoolEntrance.ArrivalPosition);
 
+            // The Industrial Arts Shop is intentionally sealed by the physical locked door. Every
+            // other room must remain reachable, so a genuinely blocked doorway still fails the test.
+            HashSet<Vector2Int> locked = FloodWalkable(start, wallMask);
             foreach (SchoolRoomMarker marker in markers)
             {
                 Vector2Int cell = WorldToCell(marker.transform.position);
-                Assert.IsTrue(reached.Contains(cell),
-                    "room '" + marker.RoomId + "' is not reachable from the school entrance (cell " + cell + ").");
+                if (marker.RoomId == "wood_shop")
+                {
+                    Assert.IsFalse(locked.Contains(cell),
+                        "the locked workshop must not be reachable without the key.");
+                }
+                else
+                {
+                    Assert.IsTrue(locked.Contains(cell),
+                        "room '" + marker.RoomId + "' is not reachable from the school entrance (cell " + cell + ").");
+                }
             }
+
+            // With the key the door opens, so the workshop becomes reachable: the only thing
+            // blocking it is the lock, not a sealed geometry error.
+            LockedDoor3D door = Object.FindAnyObjectByType<LockedDoor3D>();
+            Assert.IsNotNull(door, "the workshop must have a physical locked door.");
+            PlayerKeyring.GetOrCreate().AddKey(GetItem("wood_shop_key"), 1);
+
+            PlayerController3D player = Object.FindAnyObjectByType<PlayerController3D>();
+            Assert.IsNotNull(player);
+            Assert.AreEqual(GateUseResult.Opened, door.TryUse(player.gameObject), "the key must open the door.");
+            yield return new WaitForSeconds(0.5f);
+            Physics.SyncTransforms();
+
+            HashSet<Vector2Int> unlocked = FloodWalkable(start, wallMask);
+            SchoolRoomMarker workshop = System.Array.Find(markers, m => m.RoomId == "wood_shop");
+            Assert.IsNotNull(workshop, "the workshop must have a room marker.");
+            Assert.IsTrue(unlocked.Contains(WorldToCell(workshop.transform.position)),
+                "with the door unlocked the workshop must be reachable.");
         }
 
-        // Flood fill on a 1-unit grid; a cell is blocked when a Walls-layer collider overlaps its
-        // centre. Wall boxes sit 0.15 into a cell edge, so a 0.3 half-extent probe stays clear of them
-        // while still catching props and sealed doorways.
+        private static ItemData GetItem(string itemId)
+        {
+            Assert.IsTrue(ItemDatabase.Instance.TryGet(itemId, out ItemData item), "missing item '" + itemId + "'.");
+            return item;
+        }
+
+        // Flood fill on a 1-unit grid. A step is blocked when a Walls-layer collider sits on the
+        // edge between the two cells (real walls and the closed door) or when the destination cell
+        // centre is occupied (props and sealed doorways). The original centre-only probe ignored the
+        // thin boundary walls, so it could slip around a locked door; the edge probe makes the test
+        // actually respect walls so the intentional lock is meaningful rather than an artifact.
         private static HashSet<Vector2Int> FloodWalkable(Vector2Int start, int wallMask)
         {
             var reached = new HashSet<Vector2Int> { start };
@@ -138,6 +175,9 @@ namespace Game.Tests
                     if (reached.Contains(next) || next.x < 90 || next.x > 300 || next.y < -4 || next.y > 80)
                         continue;
 
+                    if (!EdgeClear(cell, next, wallMask))
+                        continue;
+
                     Vector3 center = new Vector3(next.x + 0.5f, 0.5f, next.y + 0.5f);
                     if (Physics.CheckBox(center, new Vector3(0.3f, 0.5f, 0.3f), Quaternion.identity, wallMask))
                         continue;
@@ -148,6 +188,13 @@ namespace Game.Tests
             }
 
             return reached;
+        }
+
+        // True when no Walls-layer collider sits on the shared edge between two adjacent cells.
+        private static bool EdgeClear(Vector2Int a, Vector2Int b, int wallMask)
+        {
+            var mid = new Vector3((a.x + b.x) * 0.5f + 0.5f, 0.5f, (a.y + b.y) * 0.5f + 0.5f);
+            return !Physics.CheckBox(mid, new Vector3(0.12f, 0.5f, 0.12f), Quaternion.identity, wallMask);
         }
 
         private static Vector2Int WorldToCell(Vector3 position) =>

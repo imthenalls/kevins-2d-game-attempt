@@ -439,6 +439,15 @@ public static class GameDataValidator
                         portalRefs.Add(new IdIntegrity.IdReference("portal '" + portal.PortalId + "'", portal.DestinationPortalId));
                 }
 
+                // Arrival-only destinations are valid receiving targets. They are registered as known
+                // portal ids so a source's Destination Portal Id resolves, but they have no outgoing
+                // destination of their own and are deliberately not treated as a route.
+                foreach (PortalArrival3D arrival in UnityEngine.Object.FindObjectsByType<PortalArrival3D>(FindObjectsInactive.Include))
+                {
+                    if (!string.IsNullOrWhiteSpace(arrival.PortalId))
+                        portalIds.Add(arrival.PortalId);
+                }
+
                 issues.AddRange(IdIntegrity.FindDuplicateOrBlankIds(npcIds, "scene '" + sceneName + "' npc"));
 
                 int worldCharacters = UnityEngine.Object.FindObjectsByType<WorldCharacter>(FindObjectsInactive.Include).Length;

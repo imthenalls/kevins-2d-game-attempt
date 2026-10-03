@@ -219,6 +219,11 @@ public class PlayerInteractionController : MonoBehaviour
             if (!string.IsNullOrWhiteSpace(selectedChoice.startQuestId) && QuestManager.Instance != null)
                 QuestManager.Instance.StartQuest(selectedChoice.startQuestId);
 
+            // A choice can mark the branch it opened (e.g. the correct answer) so a gated NPC gift
+            // only fires on that branch.
+            if (!string.IsNullOrWhiteSpace(selectedChoice.setWorldFlag))
+                WorldStateManager.Instance?.SetFlag(selectedChoice.setWorldFlag);
+
             if (!string.IsNullOrWhiteSpace(selectedChoice.teleportPortalId))
             {
                 string portalId = selectedChoice.teleportPortalId;

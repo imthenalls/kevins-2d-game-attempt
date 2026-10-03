@@ -19,6 +19,12 @@
         { "itemId": "golden_key", "quantity": 1 }
       ]
     },
+    {
+      "npcId": "school_workshop_keeper",
+      "items": [
+        { "itemId": "wood_shop_key", "quantity": 1 }
+      ]
+    },
     { "npcId": "town_npc_1", "items": [ { "itemId": "house_key_4_14", "quantity": 1 } ] },
     { "npcId": "town_npc_2", "items": [ { "itemId": "house_key_12_14", "quantity": 1 } ] },
     { "npcId": "town_npc_3", "items": [ { "itemId": "house_key_20_14", "quantity": 1 } ] },

@@ -195,6 +195,7 @@ public static class Town3DSceneBuilder
         BuildTownExitPortal();
         BuildHiddenKey();
         BuildSchoolInterior();
+        UndergroundHallwayBuilder.BuildInto();
 
         // Re-apply any saved hand edits (Tools > Worlds > Town 3D > Set Rebuild Point) on top of the
         // freshly built defaults so a rebuild preserves the designer's moves and tweaks.

@@ -70,6 +70,11 @@ public class DialogueChoiceDefinition
     public string startQuestId;
     public string teleportPortalId;
     public string teleportScene;
+    /// <summary>
+    /// Optional WorldStateManager flag set when this choice is confirmed. Lets a branch mark success
+    /// (for example, a correct answer) so a gated NPC gift can fire only on that branch.
+    /// </summary>
+    public string setWorldFlag;
     /// <summary>Quest that must be active for this choice to be shown (optional).</summary>
     public string requireQuestId;
     /// <summary>Quest node that must be active for this choice to be shown (optional).</summary>

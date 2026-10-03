@@ -376,6 +376,11 @@ public class PlayerController3D : PlayerControllerBase
         if (!movementEnabled)
         {
             moveInput = Vector2.zero;
+            // A world-character player can be told to stop before its Awake has initialized the
+            // dash/physics body (for example while its scene is being swapped during a world
+            // change). There is nothing to clean up on an uninitialized body.
+            if (dash == null)
+                return;
             dash.CancelDash();
             StopAndClearDashTrail();
             rb.linearVelocity = Vector3.zero;

@@ -33,6 +33,13 @@ public static class SchoolInteriorBuilder
     public const string EntrancePortalId = "school_entrance";
     public const string FoyerPortalId = "school_gate";
 
+    // Locked Industrial Arts Shop route into the underground hallway.
+    public const string WorkshopPortalId = "school_workshop_portal";
+    public const string WorkshopKeyId = "wood_shop_key";
+    public const string WorkshopKeeperNpcId = "school_workshop_keeper";
+    public const string WorkshopAccessFlag = "school_workshop_access";
+    private const string WorkshopDialogueId = "school_workshop_keeper";
+
     private const string MaterialsDir = "Assets/Materials/School3D";
     private const string SpritePath =
         "Packages/com.unity.2d.sprite/Editor/ObjectMenuCreation/DefaultAssets/Textures/Square.png";
@@ -86,6 +93,7 @@ public static class SchoolInteriorBuilder
         BuildRegionMap();
         ComputeDoorways();
         VerifyConnectivity();
+        VerifyWorkshopEntrance();
 
         var root = new GameObject(RootName);
 
@@ -97,6 +105,9 @@ public static class SchoolInteriorBuilder
         BuildProps(roomRoot.transform);
         BuildRoomMarkers(roomRoot.transform);
         BuildEntrancePortal(root.transform);
+        BuildWorkshopDoor(roomRoot.transform);
+        BuildWorkshopPortal(roomRoot.transform);
+        BuildWorkshopKeeper(root.transform);
         BuildNpcs(root.transform);
         BuildVisibility(root.transform);
 
@@ -656,6 +667,165 @@ public static class SchoolInteriorBuilder
         UnityEngine.Object.DestroyImmediate(pad.GetComponent<BoxCollider>());
     }
 
+    // Confirms the Industrial Arts Shop has exactly one entrance (its two-cell doorway to the north
+    // corridor), so a single physical door can block every way in.
+    private static void VerifyWorkshopEntrance()
+    {
+        SchoolZone room = Layout.FindById("wood_shop");
+        if (room == null)
+            throw new InvalidOperationException("School layout has no 'wood_shop' room.");
+
+        int edges = 0;
+        foreach (GridRect r in room.Rects)
+        {
+            for (int x = r.X; x < r.MaxX; x++)
+            {
+                for (int z = r.Z; z < r.MaxZ; z++)
+                {
+                    var cell = new Vector2Int(x, z);
+                    foreach (Vector2Int dir in Directions)
+                    {
+                        Vector2Int neighbor = cell + dir;
+                        if (regions.TryGetValue(neighbor, out string neighborRegion) &&
+                            neighborRegion == "hall" &&
+                            openEdges.Contains(Canonical(cell, neighbor)))
+                        {
+                            edges++;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (edges != 2)
+            throw new InvalidOperationException(
+                "Industrial Arts Shop ('wood_shop') must have exactly one two-cell doorway; found " + edges + " open edge(s).");
+    }
+
+    // A physical locked 3D door across the workshop's only entrance. It blocks the doorway on the
+    // Walls layer and requires the reusable workshop key.
+    private static void BuildWorkshopDoor(Transform parent)
+    {
+        int npcLayer = Mathf.Max(0, LayerMask.NameToLayer("Npc"));
+
+        var doorObject = new GameObject("Workshop Door");
+        doorObject.layer = npcLayer;
+        doorObject.transform.SetParent(parent, false);
+        doorObject.transform.position = new Vector3(64f, 0f, 60f);
+
+        var door = doorObject.AddComponent<LockedDoor3D>();
+        SetNestedString(door, "config", "RequiredKeyId", WorkshopKeyId);
+        SetNestedString(door, "config", "DisplayName", "Industrial Arts Shop Door");
+        SetNestedBool(door, "config", "RemainUnlocked", true);
+        SetNestedBool(door, "config", "ConsumeKeyOnUnlock", false);
+        SetNestedBool(door, "config", "CanClose", false);
+        SetFloatField(door, "openingWidth", 2f);
+        SetFloatField(door, "panelHeight", 0.92f);
+        door.RebuildPreview();
+    }
+
+    // The same-scene portal inside the Industrial Arts Shop that drops the player into the
+    // underground hallway. Destination Scene is blank (same scene) and Changes World is off.
+    private static void BuildWorkshopPortal(Transform parent)
+    {
+        var portalObject = new GameObject("Workshop Portal");
+        portalObject.transform.SetParent(parent, false);
+        portalObject.transform.position = CellToWorld(60, 61);
+
+        var collider = portalObject.AddComponent<BoxCollider>();
+        collider.isTrigger = true;
+        collider.size = new Vector3(1.6f, 2f, 1.6f);
+        collider.center = new Vector3(0f, 1f, 0f);
+
+        var visual = new GameObject("PortalVisual");
+        visual.transform.SetParent(portalObject.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 1f, 0f);
+        visual.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.9f, 0.22f, 0.21f);
+        renderer.sortingOrder = 50;
+        visual.AddComponent<BillboardSprite>();
+
+        // Arrival point on the clear room cell in front of the portal trigger (never inside it).
+        var exitPoint = new GameObject("ExitPoint").transform;
+        exitPoint.SetParent(portalObject.transform, false);
+        exitPoint.localPosition = new Vector3(0f, 0f, -1f);
+
+        var portal = portalObject.AddComponent<PortalTrigger3D>();
+        SetStringField(portal, "portalId", WorkshopPortalId);
+        SetStringField(portal, "destinationPortalId", UndergroundHallwayBuilder.HallEntrancePortalId);
+        SetObjectField(portal, "exitPoint", exitPoint);
+
+        BuildPortalPad(portalObject.transform, "WorkshopPortalPad");
+    }
+
+    // Shared portal-pad visual: a light-green surrounding pad with a red centre.
+    internal static void BuildPortalPad(Transform portal, string materialPrefix)
+    {
+        var pad = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        pad.name = "PortalPad";
+        pad.transform.SetParent(portal, false);
+        pad.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+        pad.transform.localScale = new Vector3(2.4f, 0.04f, 2.4f);
+        pad.GetComponent<MeshRenderer>().sharedMaterial =
+            EnsureMaterial(materialPrefix + "Green", new Color(0.62f, 0.95f, 0.55f), unlit: true);
+        UnityEngine.Object.DestroyImmediate(pad.GetComponent<BoxCollider>());
+
+        var center = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        center.name = "PortalPadCenter";
+        center.transform.SetParent(portal, false);
+        center.transform.localPosition = new Vector3(0f, 0.10f, 0f);
+        center.transform.localScale = new Vector3(1.1f, 0.04f, 1.1f);
+        center.GetComponent<MeshRenderer>().sharedMaterial =
+            EnsureMaterial(materialPrefix + "Red", new Color(0.90f, 0.22f, 0.21f), unlit: true);
+        UnityEngine.Object.DestroyImmediate(center.GetComponent<BoxCollider>());
+    }
+
+    // A stationary key holder in the north corridor beside the locked workshop. It owns exactly one
+    // reusable workshop key (seeded from npc_inventories.json) and gives it only on the successful
+    // dialogue branch.
+    private static void BuildWorkshopKeeper(Transform parent)
+    {
+        int npcLayer = Mathf.Max(0, LayerMask.NameToLayer("Npc"));
+
+        var npc = new GameObject("Workshop Keeper");
+        npc.layer = npcLayer;
+        npc.transform.SetParent(parent, false);
+        npc.transform.position = CellToWorld(67, 58);
+
+        var body = npc.AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        body.useGravity = false;
+
+        var collider = npc.AddComponent<CapsuleCollider>();
+        collider.height = 1.4f;
+        collider.radius = 0.35f;
+        collider.center = new Vector3(0f, 0.7f, 0f);
+
+        var controller = npc.AddComponent<NpcController>();
+        SetStringField(controller, "npcId", WorkshopKeeperNpcId);
+        SetStringField(controller, "displayName", "Workshop Keeper");
+        SetNestedFloat(controller, "config", "InteractionRange", 2.5f);
+
+        var dialogue = npc.AddComponent<NpcDialogue>();
+        SetStringField(dialogue, "dialogueId", WorkshopDialogueId);
+        SetStringField(dialogue, "giftItemId", WorkshopKeyId);
+        SetStringField(dialogue, "giftRequiredFlag", WorkshopAccessFlag);
+
+        npc.AddComponent<NpcStateView>();
+
+        var visual = new GameObject("NpcVisual");
+        visual.transform.SetParent(npc.transform, false);
+        visual.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+        visual.transform.localScale = Vector3.one * 0.7f;
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = squareSprite;
+        renderer.color = new Color(0.35f, 0.80f, 0.95f);
+        renderer.sortingOrder = 50;
+        visual.AddComponent<BillboardSprite>();
+    }
+
     private static void BuildNpcs(Transform parent)
     {
         int npcLayer = Mathf.Max(0, LayerMask.NameToLayer("Npc"));
@@ -973,5 +1143,30 @@ public static class SchoolInteriorBuilder
         if (p == null) return;
         SerializedProperty q = p.FindPropertyRelative(childField);
         if (q != null) { q.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedString(UnityEngine.Object target, string parentField, string childField, string value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.stringValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetNestedBool(UnityEngine.Object target, string parentField, string childField, bool value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(parentField);
+        if (p == null) return;
+        SerializedProperty q = p.FindPropertyRelative(childField);
+        if (q != null) { q.boolValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
+    }
+
+    private static void SetFloatField(UnityEngine.Object target, string field, float value)
+    {
+        var so = new SerializedObject(target);
+        SerializedProperty p = so.FindProperty(field);
+        if (p != null) { p.floatValue = value; so.ApplyModifiedPropertiesWithoutUndo(); }
     }
 }

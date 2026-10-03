@@ -62,6 +62,7 @@ public class PortalTrigger2D : MonoBehaviour, IPortalRoute
     public WorldLayer DestinationWorld => destinationWorld;
     public string RequiredUnlockFlag => requiredUnlockFlag;
     public string RequiredKeyId => requiredKeyId;
+    public bool IsArrivalOnly => false;
     public Transform ExitPoint => exitPoint;
     public List<string> AdditionalIncomingSources => additionalIncomingSources;
     public float TravelCooldown => config.TravelCooldown;

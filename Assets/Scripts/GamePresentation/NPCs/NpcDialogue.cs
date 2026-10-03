@@ -39,6 +39,9 @@ public class NpcDialogue : MonoBehaviour
     [SerializeField, Min(1)] private int giftQuantity = 1;
     [Tooltip("Open the inventory after a successful transfer so the player can see the item.")]
     [SerializeField] private bool openInventoryAfterGift = true;
+    [Tooltip("Optional WorldStateManager flag that must be set for the gift to transfer. A branching " +
+             "dialogue sets it on the successful choice only; empty gives on any completed conversation.")]
+    [SerializeField] private string giftRequiredFlag;
 
     private NpcController npcController;
     private readonly Dictionary<string, DialogueNodeDefinition> nodeLookup = new Dictionary<string, DialogueNodeDefinition>(StringComparer.OrdinalIgnoreCase);
@@ -133,6 +136,11 @@ public class NpcDialogue : MonoBehaviour
 
     public void BeginConversation()
     {
+        // Start every conversation with the gift gate clear so a partial correct selection that is
+        // cancelled (or abandoned) can never award on a later wrong answer.
+        if (!string.IsNullOrWhiteSpace(giftRequiredFlag))
+            WorldStateManager.Instance?.ClearFlag(giftRequiredFlag);
+
         if (npcController != null)
         {
             npcController.SetBehaviorState(NpcBehaviorState.Talking);
@@ -156,6 +164,16 @@ public class NpcDialogue : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(giftItemId))
             return 0;
+
+        // A gated gift only fires when the successful dialogue branch set its flag, so wrong
+        // answers, cancellations, and walking away award nothing.
+        if (!string.IsNullOrWhiteSpace(giftRequiredFlag))
+        {
+            bool flagSet = WorldStateManager.Instance != null &&
+                           WorldStateManager.Instance.HasFlag(giftRequiredFlag);
+            if (!DialogueGiftPolicy.ShouldGive(requiresFlag: true, flagSet: flagSet))
+                return 0;
+        }
 
         ItemDatabase database = ItemDatabase.Instance;
         if (database == null || !database.TryGet(giftItemId, out ItemData giftItem))

@@ -51,6 +51,14 @@ public class PortalManager : MonoBehaviour
         if (sourcePortal == null || traveler == null)
             return false;
 
+        if (sourcePortal.IsArrivalOnly)
+        {
+            Debug.LogWarning(
+                $"Portal '{sourcePortal.PortalId}' is an arrival-only destination and cannot be used as a source.",
+                sourcePortal.Self);
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(sourcePortal.DestinationPortalId))
         {
             Debug.LogWarning(
@@ -280,6 +288,12 @@ public class PortalManager : MonoBehaviour
             FindObjectsByType<PortalTrigger3D>(FindObjectsInactive.Include))
         {
             portals.Add(portal);
+        }
+
+        foreach (PortalArrival3D arrival in
+            FindObjectsByType<PortalArrival3D>(FindObjectsInactive.Include))
+        {
+            portals.Add(arrival);
         }
 
         return portals;

@@ -24,6 +24,12 @@ public interface IPortalRoute
     /// <summary>Optional key item id a traveler must hold (via IKeyHolder) to use this route.</summary>
     string RequiredKeyId { get; }
 
+    /// <summary>
+    /// True for a receiving-only destination: it supplies an arrival point but has no trigger and no
+    /// outgoing route, so travelers can land on it but can never leave through it.
+    /// </summary>
+    bool IsArrivalOnly { get; }
+
     Transform ExitPoint { get; }
     Vector3 ArrivalPosition { get; }
     float TravelCooldown { get; }

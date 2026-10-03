@@ -313,6 +313,61 @@
           "choices": []
         }
       ]
+    },
+    {
+      "dialogueId": "school_workshop_keeper",
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "speakerName": "Workshop Keeper",
+          "text": "The Industrial Arts Shop is closed. Why do you need in?",
+          "nextNodeId": "",
+          "endConversation": false,
+          "choices": [
+            {
+              "text": "I'm checking the old maintenance passage.",
+              "nextNodeId": "reason_ok",
+              "endConversation": false,
+              "setWorldFlag": "school_workshop_access"
+            },
+            {
+              "text": "Just looking around.",
+              "nextNodeId": "wrong",
+              "endConversation": false
+            },
+            {
+              "text": "Never mind.",
+              "nextNodeId": "decline",
+              "endConversation": false
+            }
+          ]
+        },
+        {
+          "id": "reason_ok",
+          "speakerName": "Workshop Keeper",
+          "text": "The old maintenance passage... so you know about it. Take this key - it stays with you.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "wrong",
+          "speakerName": "Workshop Keeper",
+          "text": "Curiosity isn't a reason. Come back when you have business here.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        },
+        {
+          "id": "decline",
+          "speakerName": "Workshop Keeper",
+          "text": "Suit yourself.",
+          "nextNodeId": "",
+          "endConversation": true,
+          "choices": []
+        }
+      ]
     }
   ]
 }
