@@ -739,8 +739,9 @@ public static class SchoolInteriorBuilder
 
         var visual = new GameObject("PortalVisual");
         visual.transform.SetParent(portalObject.transform, false);
-        visual.transform.localPosition = new Vector3(0f, 1f, 0f);
-        visual.transform.localScale = new Vector3(1.1f, 1.1f, 1f);
+        // Kept low so it stays under the room's opacity cover when the workshop is concealed.
+        visual.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+        visual.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
         var renderer = visual.AddComponent<SpriteRenderer>();
         renderer.sprite = squareSprite;
         renderer.color = new Color(0.9f, 0.22f, 0.21f);
