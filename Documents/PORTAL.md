@@ -1,9 +1,9 @@
 # Portal System
 
 > **Game.Data config:** transfer tuning lives in the pure-C# `Game.Core.PortalTriggerConfig`
-> (travel cooldown, required tag) and `Game.Core.PortalManagerConfig` (traveler tag/cooldown, reset
-> velocity, exit velocity), in the `Game.Data` assembly. Routing fields (scene/portal ids, world
-> layer) and the exit `Transform` stay on the components.
+> (travel cooldown, required tag) and `Game.Core.PortalManagerConfig` (traveler tag/cooldown,
+> arrival input lockout, reset velocity, exit velocity), in the `Game.Data` assembly. Routing fields
+> (scene/portal ids, world layer) and the exit `Transform` stay on the components.
 
 Portals are authored entirely in the Unity Inspector. There is no runtime portal
 JSON database and no separate local portal implementation.
@@ -66,6 +66,17 @@ PortalManager.Instance.TryTeleportToPortal(
 `TryUsePortal` follows the route stored on the source portal.
 `TryTeleportToPortal` sends the traveler directly to a destination portal and
 is used by NPC dialogue and scripted travel.
+
+## Arrival input lockout
+
+On a successful placement, `PortalManager` calls
+`PlayerControllerBase.LockMovementForSeconds(ArrivalInputLockoutSeconds)` on the
+traveler (default `0.2s`). This suppresses movement input and cancels any
+in-progress dash so a held movement key cannot immediately walk the player back
+into the portal they just arrived at. It is additive: it does **not** clear a
+dialogue, inventory, or `SceneRules` movement lock, and those systems still lock
+or unlock independently. Tune the duration via **Arrival Input Lockout Seconds**
+on the `PortalManager` config field.
 
 ## Creating a same-scene pair
 

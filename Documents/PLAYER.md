@@ -58,7 +58,13 @@ avatar when play begins.
 ```csharp
 playerController.SetMovementEnabled(false); // freeze movement (used by dialogue/inventory)
 bool moving = playerController.MovementEnabled;
+playerController.LockMovementForSeconds(0.2f); // temporary input lockout (portal arrival)
 ```
+
+`LockMovementForSeconds` is additive on top of `SetMovementEnabled`: it suppresses input (and
+cancels any in-progress dash) for the duration without clearing a dialogue, inventory, or
+`SceneRules` lock. `PortalManager` uses it on arrival so a held movement key cannot walk the player
+back into the portal.
 
 ### Input
 

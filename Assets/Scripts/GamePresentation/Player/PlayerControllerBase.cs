@@ -14,11 +14,14 @@ using UnityEngine;
 /// Unity setup: this is an abstract class; add a concrete subclass, never this type.
 ///
 /// Runtime API: DisplayName, Stats, ManaWallet, CombatReceiver, MovementEnabled,
-///   SetMovementEnabled, MoveSpeed, ApplyAvatarProfile, CapturePositionModel, ApplyPositionModel.
+///   SetMovementEnabled, LockMovementForSeconds, MoveSpeed, ApplyAvatarProfile,
+///   CapturePositionModel, ApplyPositionModel.
 /// </summary>
 [RequireComponent(typeof(EntityStats))]
 public abstract class PlayerControllerBase : MonoBehaviour, IEntityController, ITradeParticipant
 {
+    private float inputLockoutUntil;
+
     /// <summary>HP/MP component. Non-null: the base requires EntityStats.</summary>
     public abstract EntityStats Stats { get; }
 
@@ -36,6 +39,32 @@ public abstract class PlayerControllerBase : MonoBehaviour, IEntityController, I
 
     /// <summary>Locks or unlocks player movement.</summary>
     public abstract void SetMovementEnabled(bool enabled);
+
+    /// <summary>True while a temporary input lockout (e.g. a portal arrival) is active.</summary>
+    protected bool IsMovementLockedOut => Time.time < inputLockoutUntil;
+
+    /// <summary>
+    /// Temporarily suppresses movement input for the given number of seconds. Additive on top of
+    /// <see cref="MovementEnabled"/>: it never clears an existing dialogue/inventory/scene-rules
+    /// lock, and those systems can still lock or unlock independently. Callers that need a hard
+    /// stop should also <see cref="SetMovementEnabled"/> false.
+    /// </summary>
+    public void LockMovementForSeconds(float seconds)
+    {
+        if (seconds <= 0f)
+            return;
+
+        float until = Time.time + seconds;
+        if (until > inputLockoutUntil)
+            inputLockoutUntil = until;
+
+        OnMovementLockoutStarted();
+    }
+
+    /// <summary>Called when a temporary input lockout begins. Override to cancel in-progress motion.</summary>
+    protected virtual void OnMovementLockoutStarted()
+    {
+    }
 
     /// <summary>Applies movement/dash tuning from the active world's avatar profile.</summary>
     public abstract void ApplyAvatarProfile(PlayerAvatarProfile profile);

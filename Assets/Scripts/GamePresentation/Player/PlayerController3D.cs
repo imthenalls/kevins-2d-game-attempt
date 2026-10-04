@@ -200,7 +200,7 @@ public class PlayerController3D : PlayerControllerBase
     {
         dash.TickTimers(Time.deltaTime);
 
-        if (!movementEnabled)
+        if (!movementEnabled || IsMovementLockedOut)
         {
             moveInput = Vector2.zero;
             return;
@@ -236,7 +236,9 @@ public class PlayerController3D : PlayerControllerBase
 
     private void FixedUpdate()
     {
-        if (movementEnabled && dash.IsDashing)
+        bool canMove = movementEnabled && !IsMovementLockedOut;
+
+        if (canMove && dash.IsDashing)
         {
             float dashSpeed = Mathf.Max(settings.MinDashSpeed, settings.MoveSpeed * settings.DashSpeedMultiplier);
             float stepFraction = dash.DashStepFraction(Time.fixedDeltaTime);
@@ -246,7 +248,7 @@ public class PlayerController3D : PlayerControllerBase
             return;
         }
 
-        rb.linearVelocity = movementEnabled ? WorldDirection(moveInput) * settings.MoveSpeed : Vector3.zero;
+        rb.linearVelocity = canMove ? WorldDirection(moveInput) * settings.MoveSpeed : Vector3.zero;
     }
 
     // Maps a screen-relative input (x = right, y = up) onto the XZ ground plane using the camera's
@@ -385,6 +387,17 @@ public class PlayerController3D : PlayerControllerBase
             StopAndClearDashTrail();
             rb.linearVelocity = Vector3.zero;
         }
+    }
+
+    // A portal arrival lockout must also cancel an in-progress dash, otherwise it would resume
+    // once the lockout ends.
+    protected override void OnMovementLockoutStarted()
+    {
+        if (dash == null)
+            return;
+
+        dash.CancelDash();
+        StopAndClearDashTrail();
     }
 
     private Vector3Int WorldToCell(Vector3 position)

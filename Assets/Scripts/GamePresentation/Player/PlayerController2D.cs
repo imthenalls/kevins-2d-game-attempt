@@ -212,7 +212,7 @@ public class PlayerController2D : PlayerControllerBase
     {
         dash.TickTimers(Time.deltaTime);
 
-        if (!movementEnabled)
+        if (!movementEnabled || IsMovementLockedOut)
         {
             moveInput = Vector2.zero;
             return;
@@ -264,7 +264,9 @@ public class PlayerController2D : PlayerControllerBase
 
     private void FixedUpdate()
     {
-        if (movementEnabled && dash.IsDashing)
+        bool canMove = movementEnabled && !IsMovementLockedOut;
+
+        if (canMove && dash.IsDashing)
         {
             float dashSpeed = Mathf.Max(settings.MinDashSpeed, settings.MoveSpeed * settings.DashSpeedMultiplier);
             float stepFraction = dash.DashStepFraction(Time.fixedDeltaTime);
@@ -274,7 +276,7 @@ public class PlayerController2D : PlayerControllerBase
             return;
         }
 
-        rb.linearVelocity = movementEnabled ? moveInput * settings.MoveSpeed : Vector2.zero;
+        rb.linearVelocity = canMove ? moveInput * settings.MoveSpeed : Vector2.zero;
     }
 
     // Starts a fixed-distance dash in the direction the player visual currently faces.
@@ -433,5 +435,16 @@ public class PlayerController2D : PlayerControllerBase
             StopAndClearDashTrail();
             rb.linearVelocity = Vector2.zero;
         }
+    }
+
+    // A portal arrival lockout must also cancel an in-progress dash, otherwise it would resume
+    // once the lockout ends.
+    protected override void OnMovementLockoutStarted()
+    {
+        if (dash == null)
+            return;
+
+        dash.CancelDash();
+        StopAndClearDashTrail();
     }
 }

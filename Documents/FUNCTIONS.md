@@ -80,7 +80,7 @@ For Inspector wiring and scene setup, use the linked system documents in `AGENT.
 
 | Script | Responsibility | Key runtime API |
 |---|---|---|
-| `Assets/Scripts/GamePresentation/Player/PlayerController2D.cs` | Reads movement input and drives the player's `Rigidbody2D`. | `DisplayName`, `Stats`, `CombatReceiver`, `MovementEnabled`, `MoveSpeed`, `SetMovementEnabled()` |
+| `Assets/Scripts/GamePresentation/Player/PlayerController2D.cs` | Reads movement input and drives the player's `Rigidbody2D`. | `DisplayName`, `Stats`, `CombatReceiver`, `MovementEnabled`, `MoveSpeed`, `SetMovementEnabled()`, `LockMovementForSeconds()` |
 | `Assets/Scripts/GamePresentation/Player/PlayerInteractionController.cs` | Finds nearby NPC/world interactables, drives conversations, and applies dialogue-selected manual quest transitions. | Input- and lifecycle-driven component |
 
 ## Portals

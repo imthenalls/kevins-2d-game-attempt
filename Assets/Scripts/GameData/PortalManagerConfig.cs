@@ -14,6 +14,7 @@ namespace Game.Core
     {
         public string DefaultTravelerTag = "Player";
         public float TravelerCooldownSeconds = 0.2f;
+        public float ArrivalInputLockoutSeconds = 0.2f;
         public bool ResetVelocityOnTeleport = true;
         public float ExitVelocityX = 0f;
         public float ExitVelocityY = 0f;

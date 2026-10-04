@@ -233,6 +233,13 @@ public class PortalManager : MonoBehaviour
         MarkTravelerCooldown(traveler.GetEntityId());
         destinationPortal.BlockForSeconds(
             Mathf.Max(config.TravelerCooldownSeconds, destinationPortal.TravelCooldown));
+
+        // Give the traveler a brief input lockout on arrival so a held movement key cannot
+        // immediately walk them back into the portal they arrived at.
+        PlayerControllerBase player = traveler.GetComponentInParent<PlayerControllerBase>();
+        if (player != null)
+            player.LockMovementForSeconds(config.ArrivalInputLockoutSeconds);
+
         return true;
     }
 

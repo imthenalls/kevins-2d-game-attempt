@@ -110,6 +110,7 @@ namespace Game.Tests
             var m = new PortalManagerConfig();
             Assert.AreEqual("Player", m.DefaultTravelerTag);
             Assert.AreEqual(0.2f, m.TravelerCooldownSeconds);
+            Assert.AreEqual(0.2f, m.ArrivalInputLockoutSeconds);
             Assert.IsTrue(m.ResetVelocityOnTeleport);
         }
 
